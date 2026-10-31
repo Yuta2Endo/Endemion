@@ -72,6 +72,9 @@ check("сессия работает", r.status === 200 && r.data.user && r.data
 r = await call("PUT", "/api/library/999", { favorite: true });
 check("несуществующий тайтл", r.status === 404);
 
+r = await call("GET", "/api/positions/1", undefined, { withCookie: false });
+check("место в главе только для вошедших", r.status === 401);
+
 if (first) {
   const { id, chapters } = first;
   r = await call("GET", `/api/titles/${id}`);
@@ -107,6 +110,18 @@ if (first) {
 
   r = await call("GET", "/api/library");
   check("библиотека", r.status === 200 && r.data.items.length === 1 && r.data.items[0].chapter === 3);
+
+  r = await call("PUT", `/api/positions/${id}`, { chapter: 1, page: 2 });
+  check("место в главе сохранено", r.status === 200);
+  r = await call("PUT", `/api/positions/${id}`, { chapter: 1, page: 999 });
+  check("страница за пределами главы отклонена", r.status === 400);
+  r = await call("PUT", `/api/positions/${id}`, { chapter: chapters + 1, page: 1 });
+  check("несуществующая глава отклонена", r.status === 400);
+  r = await call("GET", `/api/positions/${id}`);
+  check("место в главе читается", r.data?.position?.chapter === 1 && r.data.position.page === 2);
+  r = await call("DELETE", `/api/positions/${id}`, { chapter: 1 });
+  r = await call("GET", `/api/positions/${id}`);
+  check("после дочитывания места нет", r.status === 200 && r.data.position === null);
 } else {
   console.log("  --  каталог пуст: проверки тайтла, читалки и библиотеки пропущены");
   r = await call("GET", "/api/library");

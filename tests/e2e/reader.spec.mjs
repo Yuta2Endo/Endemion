@@ -1,7 +1,7 @@
 // Читалка в настоящих браузерах: листание, клавиши, свайпы, настройки, позиция и экран конца главы
 
 import { expect, test } from "@playwright/test";
-import { state } from "./helpers.mjs";
+import { BASE, state } from "./helpers.mjs";
 
 const counter = (page) => page.locator("#pageCounter");
 const total = async (page) => Number(await page.locator("#reader").getAttribute("data-pages"));
@@ -185,6 +185,38 @@ test.describe("сенсорный экран", () => {
     // Два пальца — это pinch-zoom, страница не меняется
     await touch(page, 2, 120);
     await expect(counter(page)).toHaveText(`2 / ${n}`);
+  });
+});
+
+test.describe("место в главе на сервере", () => {
+  test("на другом устройстве чтение продолжается с той же страницы", async ({ browser }, testInfo) => {
+    // Место одно на тайтл и пользователя: в нескольких браузерах сразу тесты мешали бы друг другу
+    test.skip(testInfo.project.name !== "chromium", "проверяется в одном браузере");
+    const [name, value] = state().cookie.split("=");
+    const options = { baseURL: BASE, reducedMotion: "reduce" };
+
+    // Первое «устройство»: дошёл до страницы 4 второй главы
+    const phone = await browser.newContext(options);
+    await phone.addCookies([{ name, value, url: BASE }]);
+    const first = await phone.newPage();
+    await first.goto(`/read/${state().manga}/2`);
+    const n = await total(first);
+    const saved = first.waitForResponse((response) => response.url().includes("/api/positions/") && response.request().method() === "PUT");
+    for (let i = 0; i < 3; i++) await first.keyboard.press("ArrowLeft");
+    await expect(counter(first)).toHaveText(`4 / ${n}`);
+    expect((await saved).ok()).toBe(true);
+    await phone.close();
+
+    // Второе «устройство» с пустым localStorage
+    const computer = await browser.newContext(options);
+    await computer.addCookies([{ name, value, url: BASE }]);
+    const second = await computer.newPage();
+    await second.goto(`/title/${state().manga}`);
+    await expect(second.locator("#readButton")).toHaveText("Продолжить: глава 2, стр. 4");
+    await second.goto(`/read/${state().manga}/2`);
+    await expect(counter(second)).toHaveText(`4 / ${n}`);
+    await expect(second.locator(".toast")).toContainText("Продолжаем со страницы 4");
+    await computer.close();
   });
 });
 

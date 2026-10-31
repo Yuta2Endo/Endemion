@@ -50,6 +50,7 @@ export async function onRequestDelete({ request, env }) {
   // Удаляем явно, не полагаясь на каскад внешних ключей
   await env.DB.batch([
     env.DB.prepare("DELETE FROM library WHERE user_id = ?").bind(user.id),
+    env.DB.prepare("DELETE FROM positions WHERE user_id = ?").bind(user.id),
     env.DB.prepare("DELETE FROM sessions WHERE user_id = ?").bind(user.id),
     env.DB.prepare("DELETE FROM auth_attempts WHERE key = ?").bind(`email:${user.email}`),
     env.DB.prepare("DELETE FROM users WHERE id = ?").bind(user.id)

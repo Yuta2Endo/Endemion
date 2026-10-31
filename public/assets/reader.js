@@ -1,7 +1,7 @@
 // Читалка: листание страниц, лента, настройки, клавиши, свайпы и сохранение прогресса.
 // Разметку со всеми страницами присылает сервер (functions/read/[id]/[chapter].js), здесь только поведение
 
-import { api, getMe, loginUrl } from "./app.js";
+import { api, getMe, loginUrl, toast } from "./app.js";
 
 const body = document.body;
 const reader = document.querySelector("#reader");
@@ -119,7 +119,10 @@ function updatePosition() {
   if (isPaged()) progressBar.style.width = `${Math.round((Math.min(current, total) / total) * 100)}%`;
   if (!onEnd) {
     // После дочитывания позиция не перезаписывается: следующее открытие главы начнётся сначала
-    if (!chapterDone) writeStorage(POSITION_KEY, current);
+    if (!chapterDone) {
+      writeStorage(POSITION_KEY, current);
+      scheduleSave();
+    }
     history.replaceState(null, "", current > 1 ? `#${current}` : location.pathname);
   }
   if (onEnd) finishChapter();
@@ -349,6 +352,9 @@ async function finishChapter() {
   if (!chapterDone) {
     chapterDone = true;
     writeStorage(POSITION_KEY, 1);
+    clearTimeout(saveTimer);
+    // Место в дочитанной главе на сервере больше не нужно: страница тайтла предложит следующую главу
+    if (signedIn) api(POSITION_URL, { method: "DELETE", body: { chapter } });
   }
   if (finished) return;
   finished = true;
@@ -383,15 +389,76 @@ async function finishChapter() {
   }
 }
 
+// ==================== МЕСТО НА СЕРВЕРЕ ====================
+
+// Вошедшему читателю место в главе сохраняется и на сервере: на другом устройстве чтение продолжится с той же страницы
+const POSITION_URL = `/api/positions/${titleId}`;
+let signedIn = false;
+let saveTimer = null;
+// Страница, которая уже записана на сервер: повторно её не отправляем
+let savedPage = 0;
+
+function savePosition(keepalive = false) {
+  clearTimeout(saveTimer);
+  saveTimer = null;
+  if (!signedIn || chapterDone || current > total || current === savedPage) return;
+  const page = current;
+  savedPage = page;
+  // keepalive: запрос дойдёт, даже если вкладку закрывают
+  fetch(POSITION_URL, {
+    method: "PUT",
+    credentials: "same-origin",
+    keepalive,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ chapter, page })
+  }).then((response) => {
+    if (!response.ok && savedPage === page) savedPage = 0;
+  }).catch(() => {
+    if (savedPage === page) savedPage = 0;
+  });
+}
+
+/** Листают быстро: на сервер уходит страница, на которой читатель задержался на пару секунд */
+function scheduleSave() {
+  if (!signedIn || chapterDone) return;
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(savePosition, 2000);
+}
+
+// Вкладку закрыли или свернули раньше, чем прошли две секунды
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "hidden" && saveTimer) savePosition(true);
+});
+
+/**
+ * Место с сервера. Переходим на него, только если адрес не указывает страницу и читатель ещё не начал листать:
+ * пока шёл запрос, он мог уйти на другую страницу сам
+ */
+async function restoreFromServer(start, hasHash) {
+  const { user } = await getMe();
+  if (!user) return;
+  signedIn = true;
+
+  const result = await api(POSITION_URL);
+  const position = result.ok ? result.data.position : null;
+  if (position && position.chapter === chapter && !hasHash && current === start && position.page !== current && position.page <= total) {
+    savedPage = position.page;
+    show(position.page, { scroll: true });
+    toast(`Продолжаем со страницы ${position.page}: на ней вы остановились в прошлый раз.`);
+    return;
+  }
+  scheduleSave();
+}
+
 // ==================== СТАРТ ====================
 
 applySettings();
 
 // Страница из адреса (#5) или место, где остановился в прошлый раз
 const fromHash = Number(location.hash.slice(1));
+const hasHash = Number.isInteger(fromHash) && fromHash >= 1 && fromHash <= total;
 const saved = Number(readStorage(POSITION_KEY));
-const start = Number.isInteger(fromHash) && fromHash >= 1 && fromHash <= total ? fromHash
-  : Number.isInteger(saved) && saved > 1 && saved <= total ? saved : 1;
+const start = hasHash ? fromHash : Number.isInteger(saved) && saved > 1 && saved <= total ? saved : 1;
 
 if (isPaged()) {
   show(start);
@@ -407,3 +474,5 @@ if (isPaged()) {
 body.classList.remove("reader-pending");
 
 stage.focus({ preventScroll: true });
+
+restoreFromServer(start, hasHash);

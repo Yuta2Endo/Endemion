@@ -12,6 +12,7 @@ import * as titleOne from "../functions/api/titles/[id].js";
 import * as libraryList from "../functions/api/library/index.js";
 import * as libraryOne from "../functions/api/library/[id].js";
 import * as updates from "../functions/api/updates.js";
+import * as positionOne from "../functions/api/positions/[id].js";
 import * as config from "../functions/api/config.js";
 import * as titlePage from "../functions/title/[id].js";
 import * as readerPage from "../functions/read/[id]/[chapter].js";
@@ -39,6 +40,7 @@ const ROUTES = [
   ["/api/library", libraryList],
   ["/api/library/:id", libraryOne],
   ["/api/updates", updates],
+  ["/api/positions/:id", positionOne],
   ["/api/config", config],
   ["/api/admin/titles", adminTitles],
   ["/api/admin/titles/:id", adminTitle],

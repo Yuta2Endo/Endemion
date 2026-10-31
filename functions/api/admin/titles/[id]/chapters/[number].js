@@ -37,7 +37,9 @@ export async function onRequestDelete({ request, env, params }) {
   await env.DB.batch([
     env.DB.prepare("DELETE FROM chapters WHERE title_id = ? AND number = ?").bind(title.id, chapter.number),
     // Прогресс читателей не может быть больше числа глав
-    env.DB.prepare("UPDATE library SET chapter = ? WHERE title_id = ? AND chapter > ?").bind(chapter.number - 1, title.id, chapter.number - 1)
+    env.DB.prepare("UPDATE library SET chapter = ? WHERE title_id = ? AND chapter > ?").bind(chapter.number - 1, title.id, chapter.number - 1),
+    // Место в удалённой главе: продолжать там нечего
+    env.DB.prepare("DELETE FROM positions WHERE title_id = ? AND chapter >= ?").bind(title.id, chapter.number)
   ]);
   await deletePages(env.PAGES, chapterPrefix(title.id, chapter.number));
   return json({ ok: true });

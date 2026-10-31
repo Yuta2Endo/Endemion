@@ -14,6 +14,8 @@ poster.style.setProperty("--poster", poster.dataset.poster);
 
 let user = null;
 let entry = { favorite: false, status: null, chapter: 0 };
+// Место в главе, на котором читатель остановился (на любом устройстве), или null
+let position = null;
 
 async function save(changes) {
   if (!user) {
@@ -148,7 +150,14 @@ function renderPanel() {
 function renderReading() {
   const read = entry.chapter;
   const readButton = document.querySelector("#readButton");
-  if (read === 0) {
+  if (position && position.chapter > read && position.chapter <= totalChapters) {
+    // Глава начата, но не дочитана: продолжаем с той страницы, где остановился
+    const hash = position.page > 1 ? `#${position.page}` : "";
+    readButton.textContent = position.page > 1
+      ? `Продолжить: глава ${position.chapter}, стр. ${position.page}`
+      : `Продолжить: глава ${position.chapter}`;
+    readButton.href = `/read/${titleId}/${position.chapter}${hash}`;
+  } else if (read === 0) {
     readButton.textContent = "Читать с 1 главы";
     readButton.href = `/read/${titleId}/1`;
   } else if (read < totalChapters) {
@@ -177,9 +186,10 @@ function render() {
 async function init() {
   user = await initHeader();
   if (user) {
-    const result = await api("/api/library");
+    const [result, place] = await Promise.all([api("/api/library"), totalChapters > 0 ? api(`/api/positions/${titleId}`) : null]);
     const found = result.ok ? result.data.items.find((item) => item.titleId === titleId) : null;
     if (found) entry = found;
+    if (place?.ok) position = place.data.position;
   }
   render();
 }
