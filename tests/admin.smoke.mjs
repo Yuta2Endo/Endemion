@@ -246,7 +246,7 @@ check("жалоба принята", r.status === 201 && Number.isInteger(r.data
 const complaintId = r.data?.id;
 
 r = await call("GET", "/api/admin/complaints");
-const stored = r.data?.complaints.find((item) => item.id === complaintId);
+const stored = r.data?.complaints?.find((item) => item.id === complaintId);
 check("жалоба видна в админке", r.status === 200 && stored?.status === "new");
 check("ссылки жалобы без повторов", stored?.links.length === 2 && stored.links[0] === `${BASE}/title/1`);
 r = await call("PUT", `/api/admin/complaints/${complaintId}`, { status: "deleted" });

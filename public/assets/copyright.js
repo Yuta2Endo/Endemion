@@ -1,6 +1,6 @@
 // Жалоба правообладателя (/copyright). Поля проверяет сервер, здесь только подсказки до отправки
 
-import { api } from "./app.js";
+import { api, getConfig } from "./app.js";
 
 const $ = (selector) => document.querySelector(selector);
 const form = $("#complaintForm");
@@ -30,8 +30,7 @@ function validate(data) {
 // ==================== TURNSTILE ====================
 
 async function initTurnstile() {
-  const config = await api("/api/config");
-  const siteKey = config.ok ? config.data.turnstileSiteKey : "";
+  const { turnstileSiteKey: siteKey } = await getConfig();
   if (!siteKey) return;
 
   const script = document.createElement("script");

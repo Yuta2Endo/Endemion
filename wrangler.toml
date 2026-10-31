@@ -34,6 +34,9 @@ TURNSTILE_SITE_KEY = ""
 # Отправитель писем восстановления пароля, например "Endemion <noreply@ваш-домен>". Домен должен быть подтверждён в Resend,
 # ключ API задаётся секретом: `npx wrangler secret put RESEND_API_KEY`. Пока они не заданы, восстановление пароля выключено
 MAIL_FROM = ""
+# Токен Cloudflare Web Analytics (Web Analytics → Add a site → токен из JS-сниппета). Публичный, не секрет.
+# Пустой — статистика не собирается
+WEB_ANALYTICS_TOKEN = ""
 
 [observability]
 enabled = true

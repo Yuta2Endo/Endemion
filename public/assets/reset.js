@@ -1,7 +1,7 @@
 // Восстановление пароля. Без ссылки из письма — запрос письма, по ссылке — новый пароль.
 // Правила пароля проверяет сервер, здесь только подсказки до отправки
 
-import { api } from "./app.js";
+import { api, getConfig } from "./app.js";
 
 const $ = (selector) => document.querySelector(selector);
 const forgotForm = $("#forgotForm");
@@ -62,14 +62,14 @@ function resetTurnstile() {
 
 async function initForgot() {
   forgotForm.hidden = false;
-  const config = await api("/api/config");
-  if (!config.ok || !config.data.passwordReset) {
+  const config = await getConfig();
+  if (!config.passwordReset) {
     showMessage("Восстановление пароля пока недоступно.");
     forgotForm.querySelector("button").disabled = true;
     return;
   }
 
-  const siteKey = config.data.turnstileSiteKey;
+  const siteKey = config.turnstileSiteKey;
   if (!siteKey) return;
   const script = document.createElement("script");
   script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";

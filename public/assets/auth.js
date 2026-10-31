@@ -1,6 +1,6 @@
 // Вход и регистрация через /api/auth/*. Пароль проверяет сервер, в браузере ничего не хранится
 
-import { api, getMe, safeNext } from "./app.js";
+import { api, getConfig, getMe, safeNext } from "./app.js";
 
 const form = document.querySelector("#authForm");
 const loginMode = document.querySelector("#loginMode");
@@ -78,11 +78,11 @@ function validate() {
 // ==================== TURNSTILE ====================
 
 async function loadConfig() {
-  const config = await api("/api/config");
-  resetAvailable = config.ok && config.data.passwordReset === true;
+  const config = await getConfig();
+  resetAvailable = config.passwordReset === true;
   forgotLink.hidden = mode === "register" || !resetAvailable;
 
-  const siteKey = config.ok ? config.data.turnstileSiteKey : "";
+  const siteKey = config.turnstileSiteKey || "";
   if (!siteKey) return;
 
   const script = document.createElement("script");

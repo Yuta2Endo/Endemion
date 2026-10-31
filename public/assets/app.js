@@ -19,6 +19,30 @@ export async function api(path, { method = "GET", body } = {}) {
   }
 }
 
+let configPromise = null;
+
+/** Публичные настройки сайта (/api/config). Запрос делается один раз на страницу */
+export function getConfig() {
+  if (!configPromise) configPromise = api("/api/config").then((r) => (r.ok && r.data ? r.data : {}));
+  return configPromise;
+}
+
+/**
+ * Cloudflare Web Analytics: скрипт подключается, только если на сайте указан WEB_ANALYTICS_TOKEN.
+ * Статистика без cookie, адреса скрипта и отправки уже разрешены в CSP
+ */
+async function initAnalytics() {
+  const { webAnalyticsToken } = await getConfig();
+  if (!webAnalyticsToken || document.querySelector("script[data-cf-beacon]")) return;
+  const script = document.createElement("script");
+  script.defer = true;
+  script.src = "https://static.cloudflareinsights.com/beacon.min.js";
+  script.dataset.cfBeacon = JSON.stringify({ token: webAnalyticsToken });
+  document.head.append(script);
+}
+
+initAnalytics();
+
 let mePromise = null;
 
 /** Текущий пользователь или null. Запрос делается один раз на страницу */
