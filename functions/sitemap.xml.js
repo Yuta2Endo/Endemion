@@ -10,6 +10,7 @@ export async function onRequestGet({ request, env }) {
   const urls = [
     { loc: `${origin}/`, lastmod: titles.map((t) => t.updatedAt).sort().at(-1) },
     { loc: `${origin}/privacy` },
+    { loc: `${origin}/copyright` },
     ...titles.map((t) => ({ loc: `${origin}/title/${t.id}`, lastmod: t.updatedAt }))
   ];
 

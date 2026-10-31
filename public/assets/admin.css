@@ -305,6 +305,74 @@ a.secondary-button[hidden] {
   display: none;
 }
 
+/* ==================== ЖАЛОБЫ ==================== */
+
+.admin-panel .panel-description a {
+  color: var(--cyan);
+  text-decoration: underline;
+}
+
+.admin-complaint-list {
+  display: grid;
+  gap: 10px;
+  list-style: none;
+}
+
+.admin-complaint {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--panel-soft);
+}
+
+.admin-complaint.is-new {
+  border-color: rgba(246, 209, 125, 0.6);
+}
+
+.admin-complaint header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.admin-complaint header small,
+.admin-complaint dt {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.admin-complaint dl {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 4px 12px;
+  font-size: 14px;
+}
+
+.admin-complaint dd {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.admin-complaint dd a {
+  color: var(--cyan);
+  text-decoration: underline;
+}
+
+.admin-complaint-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.admin-complaint .admin-chapter-actions {
+  justify-content: flex-start;
+}
+
 @media (max-width: 900px) {
   .admin-layout {
     grid-template-columns: 1fr;

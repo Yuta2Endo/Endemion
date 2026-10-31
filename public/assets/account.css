@@ -208,6 +208,34 @@
   text-decoration: underline;
 }
 
+.field textarea {
+  width: 100%;
+  min-height: 110px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 13px;
+  outline: none;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.045);
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.field textarea:focus {
+  border-color: var(--cyan);
+  box-shadow: 0 0 0 3px rgba(116, 227, 255, 0.15);
+}
+
+.field-hint a {
+  color: var(--cyan);
+  text-decoration: underline;
+}
+
+/* Форма жалобы под текстом страницы «Правообладателям» */
+.copyright-panel {
+  margin-top: 22px;
+}
+
 .turnstile:empty {
   display: none;
 }

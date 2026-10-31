@@ -8,7 +8,9 @@ export const LIMITS = {
   // Попыток с одного IP за 15 минут: входы, регистрации и запросы на восстановление пароля
   ip: 30,
   // Писем для восстановления пароля на одну почту за 15 минут: чужой ящик нельзя завалить письмами
-  reset: 3
+  reset: 3,
+  // Жалоб правообладателей с одного IP за 15 минут
+  complaint: 5
 };
 
 async function count(env, key) {
@@ -45,6 +47,15 @@ export async function isResetLimited(env, ip, email) {
 
 export async function recordReset(env, ip, email) {
   await record(env, [`ip:${ip}`, `reset:${email}`]);
+}
+
+/** true, если с этого IP уже отправили слишком много жалоб правообладателей */
+export async function isComplaintLimited(env, ip) {
+  return (await count(env, `complaint:${ip}`)) >= LIMITS.complaint;
+}
+
+export async function recordComplaint(env, ip) {
+  await record(env, [`complaint:${ip}`]);
 }
 
 /** После успешного входа счётчик для почты сбрасывается */

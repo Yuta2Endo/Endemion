@@ -190,8 +190,45 @@ check("тайтл удалён", r.status === 200);
 r = await call("GET", `/api/titles/${id}`);
 check("тайтла больше нет", r.status === 404);
 
+// ---------- жалобы правообладателей ----------
+const COMPLAINT = {
+  name: "Тест <b>Заявитель</b>",
+  email: `rights-${Date.now()}@example.com`,
+  rightholder: "Тестовый правообладатель",
+  work: "Тестовое произведение",
+  links: `${BASE}/title/1\n${BASE}/read/1/2  ${BASE}/title/1`,
+  description: "Произведение опубликовано без разрешения правообладателя.",
+  statement: true
+};
+r = await call("POST", "/api/complaints", { ...COMPLAINT, links: "https://evil.example/page" });
+check("жалоба: ссылка на чужой сайт отклонена", r.status === 400);
+r = await call("POST", "/api/complaints", { ...COMPLAINT, links: "javascript:alert(1)" });
+check("жалоба: javascript-ссылка отклонена", r.status === 400);
+r = await call("POST", "/api/complaints", { ...COMPLAINT, statement: false });
+check("жалоба: без подтверждения не принимается", r.status === 400);
+r = await call("POST", "/api/complaints", { ...COMPLAINT, description: "коротко" });
+check("жалоба: короткое описание отклонено", r.status === 400);
+r = await call("POST", "/api/complaints", COMPLAINT);
+check("жалоба принята", r.status === 201 && Number.isInteger(r.data.id));
+const complaintId = r.data?.id;
+
+r = await call("GET", "/api/admin/complaints");
+const stored = r.data?.complaints.find((item) => item.id === complaintId);
+check("жалоба видна в админке", r.status === 200 && stored?.status === "new");
+check("ссылки жалобы без повторов", stored?.links.length === 2 && stored.links[0] === `${BASE}/title/1`);
+r = await call("PUT", `/api/admin/complaints/${complaintId}`, { status: "deleted" });
+check("неизвестный статус жалобы отклонён", r.status === 400);
+r = await call("PUT", `/api/admin/complaints/${complaintId}`, { status: "resolved" });
+check("жалоба разобрана", r.status === 200 && r.data.complaint.status === "resolved");
+r = await call("DELETE", `/api/admin/complaints/${complaintId}`);
+check("жалоба удалена", r.status === 200);
+r = await call("DELETE", `/api/admin/complaints/${complaintId}`);
+check("удалённой жалобы нет", r.status === 404);
+
 r = await call("DELETE", "/api/me", { password });
 check("тестовый пользователь удалён", r.status === 200);
+r = await call("GET", "/api/admin/complaints");
+check("жалобы без входа не видны", r.status === 401);
 r = await call("GET", "/api/admin/titles");
 check("после удаления доступа нет", r.status === 401);
 

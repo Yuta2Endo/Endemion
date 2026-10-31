@@ -29,6 +29,16 @@
       </aside>
 
       <div class="admin-main">
+        <section class="admin-panel" aria-labelledby="complaintsHeading">
+          <h2 id="complaintsHeading">Жалобы правообладателей</h2>
+          <p class="panel-description">
+            Жалобы с формы <a href="/copyright" target="_blank" rel="noopener">/copyright</a>. Ответ заявителю отправляйте со своей почты.
+            Если жалоба подтвердилась, удалите материалы и отметьте её «Материал удалён».
+          </p>
+          <p class="form-message" id="complaintsMessage" role="status" aria-live="polite"></p>
+          <ul class="admin-complaint-list" id="complaintList"></ul>
+        </section>
+
         <section class="admin-panel" aria-labelledby="titleFormHeading">
           <h2 id="titleFormHeading">Новый тайтл</h2>
           <form id="titleForm" novalidate>

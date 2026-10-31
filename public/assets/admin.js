@@ -461,6 +461,89 @@ window.addEventListener("beforeunload", (event) => {
   if (uploading) event.preventDefault();
 });
 
+// ==================== ЖАЛОБЫ ====================
+
+const complaintList = $("#complaintList");
+const complaintsMessage = $("#complaintsMessage");
+const COMPLAINT_LABELS = { new: "Новая", resolved: "Материал удалён", rejected: "Отклонена" };
+let complaints = [];
+
+function complaintRow(complaint) {
+  const item = element("li", `admin-complaint${complaint.status === "new" ? " is-new" : ""}`);
+
+  const header = element("header");
+  header.append(
+    element("strong", null, `№${complaint.id} · ${COMPLAINT_LABELS[complaint.status]}`),
+    element("small", null, formatDate(complaint.createdAt))
+  );
+
+  // Текст жалобы пришёл от посетителя сайта: только textContent, никакого HTML
+  const details = element("dl");
+  const add = (label, value) => {
+    const dd = element("dd");
+    if (value instanceof Node) dd.append(value);
+    else dd.textContent = value;
+    details.append(element("dt", null, label), dd);
+  };
+  add("Заявитель", complaint.name);
+  const mail = element("a", null, complaint.email);
+  mail.href = `mailto:${encodeURIComponent(complaint.email).replace("%40", "@")}`;
+  add("Почта", mail);
+  add("Правообладатель", complaint.rightholder);
+  add("Произведение", complaint.work);
+  const links = element("div");
+  for (const href of complaint.links) {
+    // Сервер принимает только ссылки на этот сайт, но открываем их всё равно без доступа к этой вкладке
+    const link = element("a", null, href);
+    link.href = href;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    links.append(link, element("br"));
+  }
+  add("Ссылки", links);
+
+  const actions = element("div", "admin-chapter-actions");
+  for (const [status, label] of Object.entries(COMPLAINT_LABELS)) {
+    if (status === complaint.status) continue;
+    const text = status === "new" ? "Вернуть в новые" : label;
+    actions.append(button(text, "secondary-button", () => setComplaintStatus(complaint, status)));
+  }
+  actions.append(button("Удалить жалобу", "danger-button", () => deleteComplaint(complaint)));
+
+  item.append(header, details, element("p", "admin-complaint-text", complaint.description), actions);
+  return item;
+}
+
+function renderComplaints() {
+  const fresh = complaints.filter((complaint) => complaint.status === "new").length;
+  $("#complaintsHeading").textContent = fresh ? `Жалобы правообладателей (новых: ${fresh})` : "Жалобы правообладателей";
+  complaintList.replaceChildren(
+    ...(complaints.length ? complaints.map(complaintRow) : [element("li", "admin-empty", "Жалоб нет.")])
+  );
+}
+
+async function loadComplaints() {
+  const result = await api("/api/admin/complaints");
+  if (!result.ok) return setMessage(complaintsMessage, result.data?.error || "Не удалось загрузить жалобы.");
+  complaints = result.data.complaints;
+  renderComplaints();
+}
+
+async function setComplaintStatus(complaint, status) {
+  const result = await api(`/api/admin/complaints/${complaint.id}`, { method: "PUT", body: { status } });
+  if (!result.ok) return setMessage(complaintsMessage, result.data?.error || "Не удалось изменить жалобу.");
+  setMessage(complaintsMessage, `Жалоба №${complaint.id}: ${COMPLAINT_LABELS[status].toLowerCase()}.`, true);
+  await loadComplaints();
+}
+
+async function deleteComplaint(complaint) {
+  if (!confirm(`Удалить жалобу №${complaint.id} с данными заявителя? Это нельзя отменить.`)) return;
+  const result = await api(`/api/admin/complaints/${complaint.id}`, { method: "DELETE" });
+  if (!result.ok) return setMessage(complaintsMessage, result.data?.error || "Не удалось удалить жалобу.");
+  setMessage(complaintsMessage, `Жалоба №${complaint.id} удалена.`, true);
+  await loadComplaints();
+}
+
 // ==================== СТАРТ ====================
 
 async function init() {
@@ -482,6 +565,7 @@ async function init() {
   }
   titles = result.data.titles;
   adminLayout.hidden = false;
+  loadComplaints();
 
   // Адрес /admin#5 открывает тайтл 5: после обновления страницы остаёшься на том же тайтле
   const fromHash = Number(location.hash.slice(1));

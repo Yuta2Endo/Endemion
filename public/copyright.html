@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#080b18">
+  <title>Правообладателям — Endemion</title>
+  <meta name="description" content="Как сообщить Endemion о произведении, размещённом без разрешения правообладателя.">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/assets/base.css">
+  <link rel="stylesheet" href="/assets/account.css">
+  <script type="module" src="/assets/copyright.js"></script>
+</head>
+<body>
+  <main class="account-shell">
+    <nav class="account-nav">
+      <a class="logo" href="/"><span class="logo-mark" aria-hidden="true">E</span>ENDEMION</a>
+      <a class="back-link" href="/">← На главную</a>
+    </nav>
+
+    <article class="doc">
+      <!-- ЧЕРНОВИК. Перед запуском проверьте текст с юристом -->
+      <h1>Правообладателям</h1>
+      <p class="doc-updated">Редакция от 31 октября 2026 года</p>
+
+      <p>Endemion публикует главы только с разрешения правообладателей. Если на сайте без вашего разрешения
+      размещено произведение, права на которое принадлежат вам или человеку либо компании, от имени которых
+      вы действуете, сообщите нам через форму ниже.</p>
+
+      <h2>Что указать</h2>
+      <ul>
+        <li>Кто подаёт жалобу и почту для ответа.</li>
+        <li>Кому принадлежат права и о каком произведении речь.</li>
+        <li>Ссылки на страницы Endemion: страницу тайтла, главы или отдельной картинки.</li>
+        <li>На чём основаны права: например, договор, публикация под вашим именем или доверенность от правообладателя.</li>
+      </ul>
+
+      <h2>Что будет дальше</h2>
+      <p>Мы проверим жалобу. Если она подтвердится, материалы будут удалены с сайта. Ответ придёт на почту,
+      указанную в форме. Если сведений не хватит, мы попросим их уточнить.</p>
+      <p>Форма предназначена только для жалоб правообладателей. По вопросам об аккаунте и персональных данных
+      пишите на адрес из <a href="/privacy">политики конфиденциальности</a>.</p>
+    </article>
+
+    <section class="account-panel copyright-panel" aria-labelledby="complaintTitle">
+      <h2 class="form-title" id="complaintTitle">Жалоба правообладателя</h2>
+
+      <form id="complaintForm" novalidate>
+        <div class="field">
+          <label for="complaintName">Заявитель: имя или название организации</label>
+          <input id="complaintName" type="text" autocomplete="name" maxlength="200" required>
+        </div>
+        <div class="field">
+          <label for="complaintEmail">Почта для ответа</label>
+          <input id="complaintEmail" type="email" autocomplete="email" maxlength="254" required>
+        </div>
+        <div class="field">
+          <label for="complaintRightholder">Правообладатель</label>
+          <input id="complaintRightholder" type="text" maxlength="200" required aria-describedby="rightholderHint">
+          <small class="field-hint" id="rightholderHint">Если права принадлежат вам, повторите имя заявителя.</small>
+        </div>
+        <div class="field">
+          <label for="complaintWork">Произведение</label>
+          <input id="complaintWork" type="text" maxlength="300" required placeholder="Название и автор">
+        </div>
+        <div class="field">
+          <label for="complaintLinks">Ссылки на страницы Endemion, по одной в строке</label>
+          <textarea id="complaintLinks" rows="4" maxlength="10000" required aria-describedby="linksHint"></textarea>
+          <small class="field-hint" id="linksHint">Страница тайтла, главы или отдельной картинки. Не больше 20 ссылок.</small>
+        </div>
+        <div class="field">
+          <label for="complaintDescription">На чём основаны права и что нужно сделать</label>
+          <textarea id="complaintDescription" rows="6" maxlength="5000" required></textarea>
+        </div>
+
+        <label class="consent">
+          <input id="complaintStatement" type="checkbox">
+          <span>Подтверждаю, что сведения в жалобе достоверны и я правообладатель или вправе действовать от его имени.</span>
+        </label>
+        <p class="field-hint">Имя, почта и текст жалобы хранятся, пока жалоба рассматривается. Подробнее — в <a href="/privacy">политике конфиденциальности</a>.</p>
+
+        <!-- Turnstile появляется, только если на сайте указан ключ TURNSTILE_SITE_KEY -->
+        <div class="turnstile" id="turnstile"></div>
+
+        <button class="main-button" id="complaintSubmit" type="submit">Отправить жалобу</button>
+        <div class="form-message" id="complaintMessage" role="alert" aria-live="assertive"></div>
+      </form>
+    </section>
+  </main>
+</body>
+</html>

@@ -27,6 +27,9 @@ import * as adminPublish from "../functions/api/admin/titles/[id]/chapters/[numb
 import * as adminPages from "../functions/api/admin/titles/[id]/chapters/[number]/pages/index.js";
 import * as adminPage from "../functions/api/admin/titles/[id]/chapters/[number]/pages/[page].js";
 import * as adminCover from "../functions/api/admin/titles/[id]/cover.js";
+import * as adminComplaints from "../functions/api/admin/complaints/index.js";
+import * as adminComplaint from "../functions/api/admin/complaints/[id].js";
+import * as complaints from "../functions/api/complaints/index.js";
 import * as coverImage from "../functions/covers/[id].js";
 import * as robots from "../functions/robots.txt.js";
 import * as sitemap from "../functions/sitemap.xml.js";
@@ -48,6 +51,9 @@ const ROUTES = [
   ["/api/updates", updates],
   ["/api/positions/:id", positionOne],
   ["/api/config", config],
+  ["/api/complaints", complaints],
+  ["/api/admin/complaints", adminComplaints],
+  ["/api/admin/complaints/:id", adminComplaint],
   ["/api/admin/titles", adminTitles],
   ["/api/admin/titles/:id", adminTitle],
   ["/api/admin/titles/:id/cover", adminCover],
