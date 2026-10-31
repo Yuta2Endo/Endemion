@@ -3,3 +3,6 @@ node_modules/
 .dev.vars
 # Выгрузки рабочей базы (npm run db:backup): в них почты и хеши паролей
 backups/
+# Результаты браузерных тестов (npm run test:e2e)
+test-results/
+playwright-report/

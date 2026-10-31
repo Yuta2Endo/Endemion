@@ -35,7 +35,11 @@ npm run db:migrate:local
 npm run dev                 # http://localhost:8787
 npm test                    # юнит-тесты
 npm run test:api            # проверка API на запущенном dev-сервере
+npm run test:admin          # проверка админки на запущенном dev-сервере
+npm run test:e2e            # читалка в Chromium, Firefox, WebKit, Android и iPhone (Playwright)
 ```
+
+Браузеры для `test:e2e` ставятся один раз: `npx playwright install chromium firefox webkit`. Если dev-сервер не запущен, Playwright запустит его сам. Тесты создают свои тайтлы с демо-страницами и в конце удаляют их.
 
 ## Деплой
 
