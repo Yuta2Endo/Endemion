@@ -19,15 +19,277 @@
 
 .admin-denied[hidden],
 .admin-layout[hidden],
-.admin-panel[hidden] {
+.admin-panel[hidden],
+.admin-titles[hidden] {
   display: none;
 }
 
+/* Меню разделов слева, раздел справа */
 .admin-layout {
   display: grid;
-  grid-template-columns: 280px 1fr;
+  grid-template-columns: 200px minmax(0, 1fr);
   gap: 22px;
   align-items: start;
+}
+
+/* Раздел «Тайтлы»: список тайтлов слева, форма и главы справа */
+.admin-titles {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  gap: 22px;
+  align-items: start;
+}
+
+/* ==================== МЕНЮ ==================== */
+
+.admin-menu {
+  position: sticky;
+  top: 20px;
+  display: grid;
+  gap: 4px;
+  padding: 18px;
+}
+
+.admin-menu h1 {
+  margin: 0 0 10px 10px;
+  font-size: 20px;
+}
+
+.admin-menu a {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  color: var(--muted);
+}
+
+.admin-menu a:hover {
+  color: var(--text);
+  background: var(--panel-soft);
+}
+
+.admin-menu a[aria-current="page"] {
+  color: var(--text);
+  background: rgba(116, 227, 255, 0.12);
+  font-weight: 800;
+}
+
+.admin-badge {
+  min-width: 22px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  color: #07101b;
+  background: var(--yellow);
+  font-size: 12px;
+  font-weight: 800;
+  text-align: center;
+}
+
+.admin-badge[hidden] {
+  display: none;
+}
+
+/* ==================== СВОДКА ==================== */
+
+.admin-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 10px;
+  margin-bottom: 24px;
+}
+
+.admin-stat {
+  display: grid;
+  gap: 4px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--panel-soft);
+}
+
+.admin-stat span,
+.admin-stat small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.admin-stat strong {
+  color: var(--cyan);
+  font-size: 26px;
+}
+
+.admin-stat.is-alert {
+  border-color: rgba(246, 209, 125, 0.6);
+}
+
+.admin-stat.is-alert strong {
+  color: var(--yellow);
+}
+
+.admin-more-link {
+  margin-top: 14px;
+}
+
+/* ==================== ФИЛЬТРЫ И СПИСКИ ==================== */
+
+.admin-filters {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: 0 14px;
+}
+
+.admin-count {
+  margin-bottom: 10px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.admin-count:empty {
+  display: none;
+}
+
+.admin-more {
+  min-height: 40px;
+  margin-top: 12px;
+  padding: 0 18px;
+}
+
+.admin-more[hidden] {
+  display: none;
+}
+
+/* ==================== ПОЛЬЗОВАТЕЛИ ==================== */
+
+.admin-user-list {
+  display: grid;
+  gap: 8px;
+  list-style: none;
+}
+
+.admin-user {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px 14px;
+  align-items: center;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--panel-soft);
+}
+
+.admin-user.is-blocked {
+  border-color: rgba(255, 121, 173, 0.45);
+}
+
+.admin-user-info {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.admin-user-info strong,
+.admin-user-info small {
+  overflow-wrap: anywhere;
+}
+
+.admin-user-info small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.admin-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.admin-tags:empty {
+  display: none;
+}
+
+.admin-tag {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--panel-light);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.admin-tag.is-admin {
+  color: #07101b;
+  background: var(--cyan);
+}
+
+.admin-tag.is-blocked {
+  color: #07101b;
+  background: var(--pink);
+}
+
+.admin-tag.is-self {
+  color: #07101b;
+  background: var(--green);
+}
+
+/* ==================== ЖУРНАЛ ==================== */
+
+.admin-audit-list {
+  display: grid;
+  gap: 6px;
+  list-style: none;
+}
+
+.admin-audit-entry {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr) auto;
+  gap: 4px 14px;
+  align-items: baseline;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--panel-soft);
+  font-size: 14px;
+}
+
+.admin-audit-entry time,
+.admin-audit-entry small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.admin-audit-entry span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* ==================== ПОДТВЕРЖДЕНИЕ ПАРОЛЕМ ==================== */
+
+.admin-dialog {
+  width: min(440px, calc(100% - 32px));
+  padding: 26px;
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  color: var(--text);
+  background: #10162a;
+  box-shadow: 0 25px 80px rgba(0, 0, 0, 0.5);
+}
+
+.admin-dialog::backdrop {
+  background: rgba(4, 7, 18, 0.7);
+}
+
+.admin-dialog h2 {
+  margin-bottom: 10px;
+  font-size: 20px;
+}
+
+.admin-dialog p {
+  margin-bottom: 16px;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
 }
 
 .admin-main {
@@ -373,8 +635,9 @@ a.secondary-button[hidden] {
   justify-content: flex-start;
 }
 
-@media (max-width: 900px) {
-  .admin-layout {
+/* Меню и список тайтлов вместе занимают слишком много места: список тайтлов уходит наверх раздела */
+@media (max-width: 1100px) {
+  .admin-titles {
     grid-template-columns: 1fr;
   }
 
@@ -387,6 +650,24 @@ a.secondary-button[hidden] {
   }
 }
 
+/* Меню разделов — строка кнопок над разделом */
+@media (max-width: 900px) {
+  .admin-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-menu {
+    position: static;
+    display: flex;
+    flex-wrap: wrap;
+  }
+
+  .admin-menu h1 {
+    width: 100%;
+    margin: 0 0 4px;
+  }
+}
+
 @media (max-width: 600px) {
   .admin-panel {
     padding: 18px;
@@ -394,7 +675,10 @@ a.secondary-button[hidden] {
 
   .admin-title-head,
   .admin-grid,
-  .admin-chapter {
+  .admin-chapter,
+  .admin-filters,
+  .admin-user,
+  .admin-audit-entry {
     grid-template-columns: 1fr;
   }
 

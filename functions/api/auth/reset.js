@@ -23,7 +23,7 @@ export async function onRequestPost({ request, env }) {
     .first();
   if (!row) return error(INVALID);
 
-  const user = await env.DB.prepare("SELECT id, email FROM users WHERE id = ?").bind(row.user_id).first();
+  const user = await env.DB.prepare("SELECT id, email FROM users WHERE id = ? AND blocked_at IS NULL").bind(row.user_id).first();
   if (!user) return error(INVALID);
 
   await env.DB.batch([

@@ -40,7 +40,7 @@ export async function currentUser(env, request) {
   const row = await env.DB.prepare(
     `SELECT users.id, users.name, users.email, users.created_at, users.is_admin, sessions.expires_at
      FROM sessions JOIN users ON users.id = sessions.user_id
-     WHERE sessions.token_hash = ?`
+     WHERE sessions.token_hash = ? AND users.blocked_at IS NULL`
   ).bind(await sha256(token)).first();
   if (!row || row.expires_at < Date.now()) return null;
   return { id: row.id, name: row.name, email: row.email, createdAt: row.created_at, isAdmin: row.is_admin === 1 };

@@ -2,6 +2,7 @@
 // Публикация проходит, только если в R2 есть все страницы 1..pages. После неё старые файлы удаляются
 
 import { deleteOldPages, findChapter, MAX_PAGES, missingPage, requireAdmin } from "../../../../../../_lib/admin.js";
+import { audit, titleLabel } from "../../../../../../_lib/audit.js";
 import { error, json, readJson } from "../../../../../../_lib/http.js";
 import { getChapter } from "../../../../../../_lib/titles.js";
 
@@ -9,7 +10,7 @@ const MAX_SIDE = 20000;
 const isSide = (value) => Number.isInteger(value) && value > 0 && value <= MAX_SIDE;
 
 export async function onRequestPost({ request, env, params, waitUntil }) {
-  const { response } = await requireAdmin(env, request);
+  const { user, response } = await requireAdmin(env, request);
   if (response) return response;
   const found = await findChapter(env, params);
   if (found.response) return found.response;
@@ -39,5 +40,6 @@ export async function onRequestPost({ request, env, params, waitUntil }) {
 
   // Старые версии читателям уже не нужны: страница отдаётся по версии из базы
   waitUntil(deleteOldPages(env.PAGES, title.id, chapter.number, version, body.pages));
+  await audit(env, user, "pages.publish", `${titleLabel(title)}, глава ${chapter.number}, страниц: ${body.pages}`);
   return json({ chapter: await getChapter(env, title.id, chapter.number) });
 }

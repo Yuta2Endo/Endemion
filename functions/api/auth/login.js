@@ -27,12 +27,16 @@ export async function onRequestPost({ request, env }) {
     return error("Подтвердите, что вы не робот.", 403);
   }
 
-  const user = await env.DB.prepare("SELECT id, name, email, password_hash FROM users WHERE email = ?").bind(email).first();
+  const user = await env.DB.prepare("SELECT id, name, email, password_hash, blocked_at FROM users WHERE email = ?").bind(email).first();
   const valid = await verifyPassword(password, user ? user.password_hash : DUMMY_HASH);
 
   if (!user || !valid) {
     await recordAttempt(env, ip, email);
     return error("Неверная почта или пароль.", 401);
+  }
+  // О блокировке сообщаем только после верного пароля: по ответу нельзя узнать, что чужой аккаунт заблокирован
+  if (user.blocked_at) {
+    return error("Аккаунт заблокирован. Если это ошибка, напишите на адрес из политики конфиденциальности.", 403);
   }
 
   await clearAttempts(env, email);

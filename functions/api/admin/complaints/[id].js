@@ -1,12 +1,13 @@
 // /api/admin/complaints/:id — отметить результат разбора жалобы или удалить её
 
 import { requireAdmin } from "../../../_lib/admin.js";
+import { audit } from "../../../_lib/audit.js";
 import { COMPLAINT_COLUMNS, COMPLAINT_STATUSES, toComplaint } from "../../../_lib/complaints.js";
 import { error, json, readJson } from "../../../_lib/http.js";
 import { parseId } from "../../../_lib/titles.js";
 
 export async function onRequestPut({ request, env, params }) {
-  const { response } = await requireAdmin(env, request);
+  const { user, response } = await requireAdmin(env, request);
   if (response) return response;
 
   const id = parseId(params.id);
@@ -20,15 +21,18 @@ export async function onRequestPut({ request, env, params }) {
       .first()
     : null;
   if (!row) return error("Жалоба не найдена.", 404);
+  // В журнал попадает только номер жалобы: данные заявителя остаются в самой жалобе
+  await audit(env, user, `complaint.${body.status}`, `жалоба №${id}`);
   return json({ complaint: toComplaint(row) });
 }
 
 export async function onRequestDelete({ request, env, params }) {
-  const { response } = await requireAdmin(env, request);
+  const { user, response } = await requireAdmin(env, request);
   if (response) return response;
 
   const id = parseId(params.id);
   const result = id ? await env.DB.prepare("DELETE FROM complaints WHERE id = ?").bind(id).run() : null;
   if (!result?.meta.changes) return error("Жалоба не найдена.", 404);
+  await audit(env, user, "complaint.delete", `жалоба №${id}`);
   return json({ ok: true });
 }

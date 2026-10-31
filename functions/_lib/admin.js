@@ -1,10 +1,13 @@
 // Админка: проверка прав, разбор данных тайтлов и глав, страницы в R2.
 // Права проверяются в каждом обработчике /api/admin/*: интерфейсу админки сервер не доверяет
 
-import { error } from "./http.js";
+import { verifyPassword } from "./crypto.js";
+import { clientIp, error } from "./http.js";
 import { chapterPrefix, pageKey } from "./pages.js";
+import { isLimited, recordAttempt, RETRY_AFTER_SECONDS } from "./rateLimit.js";
 import { currentUser } from "./session.js";
 import { getChapter, getTitle, parseId, searchText, TYPES } from "./titles.js";
+import { PASSWORD_MAX } from "./validate.js";
 
 export const MAX_PAGES = 500;
 export const MAX_PAGE_BYTES = 15 * 1024 * 1024;
@@ -19,6 +22,24 @@ export async function requireAdmin(env, request) {
   if (!user) return { response: error("Войдите в профиль.", 401) };
   if (!user.isAdmin) return { response: error("Нужны права администратора.", 403) };
   return { user };
+}
+
+/**
+ * Пароль администратора для опасных действий: выдача и снятие прав, удаление аккаунта.
+ * Украденная сессия без пароля их не выполнит. Неудачные попытки ограничены, как при входе.
+ * Возвращает ответ с ошибкой или null, если пароль верный
+ */
+export async function confirmPassword(env, request, user, password) {
+  const ip = clientIp(request);
+  if (await isLimited(env, ip, user.email)) {
+    return error("Слишком много неудачных попыток. Попробуйте через 15 минут.", 429, { "Retry-After": String(RETRY_AFTER_SECONDS) });
+  }
+  if (typeof password === "string" && password && password.length <= PASSWORD_MAX) {
+    const row = await env.DB.prepare("SELECT password_hash FROM users WHERE id = ?").bind(user.id).first();
+    if (row && (await verifyPassword(password, row.password_hash))) return null;
+  }
+  await recordAttempt(env, ip, user.email);
+  return error("Неверный пароль.", 403);
 }
 
 /** Тайтл из адреса /api/admin/titles/:id/... или ответ 404 */

@@ -3,6 +3,7 @@
 import { verifyPassword } from "../../_lib/crypto.js";
 import { error, json, readJson } from "../../_lib/http.js";
 import { currentUser, destroySession } from "../../_lib/session.js";
+import { deleteUserStatements } from "../../_lib/users.js";
 import { normalizeName, validateName } from "../../_lib/validate.js";
 
 /** Гость получает { user: null } с кодом 200: страницам проще, а в консоли браузера нет ошибок */
@@ -47,15 +48,7 @@ export async function onRequestDelete({ request, env }) {
   const row = await env.DB.prepare("SELECT password_hash FROM users WHERE id = ?").bind(user.id).first();
   if (!row || !(await verifyPassword(password, row.password_hash))) return error("Неверный пароль.", 403);
 
-  // Удаляем явно, не полагаясь на каскад внешних ключей
-  await env.DB.batch([
-    env.DB.prepare("DELETE FROM library WHERE user_id = ?").bind(user.id),
-    env.DB.prepare("DELETE FROM positions WHERE user_id = ?").bind(user.id),
-    env.DB.prepare("DELETE FROM sessions WHERE user_id = ?").bind(user.id),
-    env.DB.prepare("DELETE FROM password_resets WHERE user_id = ?").bind(user.id),
-    env.DB.prepare("DELETE FROM auth_attempts WHERE key = ?").bind(`email:${user.email}`),
-    env.DB.prepare("DELETE FROM users WHERE id = ?").bind(user.id)
-  ]);
+  await env.DB.batch(deleteUserStatements(env, user));
 
   const setCookie = await destroySession(env, request);
   return json({ ok: true }, 200, { "Set-Cookie": setCookie });

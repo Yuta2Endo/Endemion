@@ -1,12 +1,13 @@
 // /api/admin/titles/:id/chapters/:number — изменить главу или удалить последнюю главу вместе с её страницами
 
 import { deletePages, findChapter, parseChapter, requireAdmin } from "../../../../../_lib/admin.js";
+import { audit, titleLabel } from "../../../../../_lib/audit.js";
 import { error, json, readJson } from "../../../../../_lib/http.js";
 import { chapterPrefix } from "../../../../../_lib/pages.js";
 import { getChapter } from "../../../../../_lib/titles.js";
 
 export async function onRequestPut({ request, env, params }) {
-  const { response } = await requireAdmin(env, request);
+  const { user, response } = await requireAdmin(env, request);
   if (response) return response;
   const found = await findChapter(env, params);
   if (found.response) return found.response;
@@ -22,11 +23,12 @@ export async function onRequestPut({ request, env, params }) {
      WHERE title_id = ? AND number = ?`
   ).bind(chapter.name, chapter.volume, chapter.sideStory, chapter.releasedAt, found.title.id, found.chapter.number).run();
 
+  await audit(env, user, "chapter.update", `${titleLabel(found.title)}, глава ${found.chapter.number}`);
   return json({ chapter: await getChapter(env, found.title.id, found.chapter.number) });
 }
 
 export async function onRequestDelete({ request, env, params }) {
-  const { response } = await requireAdmin(env, request);
+  const { user, response } = await requireAdmin(env, request);
   if (response) return response;
   const found = await findChapter(env, params);
   if (found.response) return found.response;
@@ -42,5 +44,6 @@ export async function onRequestDelete({ request, env, params }) {
     env.DB.prepare("DELETE FROM positions WHERE title_id = ? AND chapter >= ?").bind(title.id, chapter.number)
   ]);
   await deletePages(env.PAGES, chapterPrefix(title.id, chapter.number));
+  await audit(env, user, "chapter.delete", `${titleLabel(title)}, глава ${chapter.number}`);
   return json({ ok: true });
 }

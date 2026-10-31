@@ -1,11 +1,12 @@
 // /api/admin/titles/:id — изменить или удалить тайтл. При удалении стираются его главы, записи библиотек и страницы в R2
 
 import { deletePages, findTitle, parseTitle, requireAdmin, TITLE_COLUMNS, titleValues } from "../../../_lib/admin.js";
+import { audit, titleLabel } from "../../../_lib/audit.js";
 import { error, json, readJson } from "../../../_lib/http.js";
 import { getTitle } from "../../../_lib/titles.js";
 
 export async function onRequestPut({ request, env, params }) {
-  const { response } = await requireAdmin(env, request);
+  const { user, response } = await requireAdmin(env, request);
   if (response) return response;
   const found = await findTitle(env, params);
   if (found.response) return found.response;
@@ -19,11 +20,13 @@ export async function onRequestPut({ request, env, params }) {
     `UPDATE titles SET ${TITLE_COLUMNS.map((name) => `${name} = ?`).join(", ")}, updated_at = datetime('now') WHERE id = ?`
   ).bind(...titleValues(title), found.title.id).run();
 
-  return json({ title: await getTitle(env, found.title.id) });
+  const saved = await getTitle(env, found.title.id);
+  await audit(env, user, "title.update", titleLabel(saved));
+  return json({ title: saved });
 }
 
 export async function onRequestDelete({ request, env, params }) {
-  const { response } = await requireAdmin(env, request);
+  const { user, response } = await requireAdmin(env, request);
   if (response) return response;
   const found = await findTitle(env, params);
   if (found.response) return found.response;
@@ -32,5 +35,6 @@ export async function onRequestDelete({ request, env, params }) {
   await env.DB.prepare("DELETE FROM titles WHERE id = ?").bind(found.title.id).run();
   await deletePages(env.PAGES, `${found.title.id}/`);
   await deletePages(env.PAGES, `covers/${found.title.id}/`);
+  await audit(env, user, "title.delete", titleLabel(found.title));
   return json({ ok: true });
 }

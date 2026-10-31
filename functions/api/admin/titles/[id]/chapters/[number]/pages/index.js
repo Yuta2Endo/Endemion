@@ -1,12 +1,13 @@
 // DELETE /api/admin/titles/:id/chapters/:number/pages — убрать загруженные страницы: глава снова показывает демо-рисунки
 
 import { deletePages, findChapter, requireAdmin } from "../../../../../../../_lib/admin.js";
+import { audit, titleLabel } from "../../../../../../../_lib/audit.js";
 import { json } from "../../../../../../../_lib/http.js";
 import { chapterPrefix } from "../../../../../../../_lib/pages.js";
 import { getChapter } from "../../../../../../../_lib/titles.js";
 
 export async function onRequestDelete({ request, env, params }) {
-  const { response } = await requireAdmin(env, request);
+  const { user, response } = await requireAdmin(env, request);
   if (response) return response;
   const found = await findChapter(env, params);
   if (found.response) return found.response;
@@ -19,5 +20,6 @@ export async function onRequestDelete({ request, env, params }) {
   ).bind(title.id, chapter.number).run();
   await deletePages(env.PAGES, chapterPrefix(title.id, chapter.number));
 
+  await audit(env, user, "pages.delete", `${titleLabel(title)}, глава ${chapter.number}`);
   return json({ chapter: await getChapter(env, title.id, chapter.number) });
 }

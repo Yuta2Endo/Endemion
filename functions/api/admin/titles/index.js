@@ -1,6 +1,7 @@
 // /api/admin/titles — список тайтлов для админки (без кеша) и создание тайтла
 
 import { deletePages, parseTitle, requireAdmin, TITLE_COLUMNS, titleValues } from "../../../_lib/admin.js";
+import { audit, titleLabel } from "../../../_lib/audit.js";
 import { error, json, readJson } from "../../../_lib/http.js";
 import { getTitle, listTitles } from "../../../_lib/titles.js";
 
@@ -11,7 +12,7 @@ export async function onRequestGet({ request, env }) {
 }
 
 export async function onRequestPost({ request, env }) {
-  const { response } = await requireAdmin(env, request);
+  const { user, response } = await requireAdmin(env, request);
   if (response) return response;
 
   const body = await readJson(request);
@@ -27,5 +28,7 @@ export async function onRequestPost({ request, env }) {
   // id освобождается после удаления последнего тайтла: файлы прежнего тайтла с этим id не должны попасть в новый
   await deletePages(env.PAGES, `${row.id}/`);
   await deletePages(env.PAGES, `covers/${row.id}/`);
-  return json({ title: await getTitle(env, row.id) }, 201);
+  const saved = await getTitle(env, row.id);
+  await audit(env, user, "title.create", titleLabel(saved));
+  return json({ title: saved }, 201);
 }

@@ -30,6 +30,10 @@ import * as adminCover from "../functions/api/admin/titles/[id]/cover.js";
 import * as adminComplaints from "../functions/api/admin/complaints/index.js";
 import * as adminComplaint from "../functions/api/admin/complaints/[id].js";
 import * as complaints from "../functions/api/complaints/index.js";
+import * as adminStats from "../functions/api/admin/stats.js";
+import * as adminUsers from "../functions/api/admin/users/index.js";
+import * as adminUser from "../functions/api/admin/users/[id].js";
+import * as adminAudit from "../functions/api/admin/audit.js";
 import * as coverImage from "../functions/covers/[id].js";
 import * as robots from "../functions/robots.txt.js";
 import * as sitemap from "../functions/sitemap.xml.js";
@@ -54,6 +58,10 @@ const ROUTES = [
   ["/api/complaints", complaints],
   ["/api/admin/complaints", adminComplaints],
   ["/api/admin/complaints/:id", adminComplaint],
+  ["/api/admin/stats", adminStats],
+  ["/api/admin/users", adminUsers],
+  ["/api/admin/users/:id", adminUser],
+  ["/api/admin/audit", adminAudit],
   ["/api/admin/titles", adminTitles],
   ["/api/admin/titles/:id", adminTitle],
   ["/api/admin/titles/:id/cover", adminCover],

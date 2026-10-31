@@ -1,12 +1,13 @@
 // /api/admin/titles/:id/cover — загрузить обложку тайтла (тело запроса — файл картинки) или убрать её
 
 import { deletePages, findTitle, imageType, MAX_COVER_BYTES, requireAdmin } from "../../../../_lib/admin.js";
+import { audit, titleLabel } from "../../../../_lib/audit.js";
 import { error, json } from "../../../../_lib/http.js";
 import { coverKey } from "../../../../_lib/pages.js";
 import { getTitle } from "../../../../_lib/titles.js";
 
 export async function onRequestPut({ request, env, params }) {
-  const { response } = await requireAdmin(env, request);
+  const { user, response } = await requireAdmin(env, request);
   if (response) return response;
   const found = await findTitle(env, params);
   if (found.response) return found.response;
@@ -33,16 +34,18 @@ export async function onRequestPut({ request, env, params }) {
   }
   if (title.coverVersion) await env.PAGES.delete(coverKey(title.id, title.coverVersion));
 
+  await audit(env, user, "cover.upload", titleLabel(title));
   return json({ title: await getTitle(env, title.id) });
 }
 
 export async function onRequestDelete({ request, env, params }) {
-  const { response } = await requireAdmin(env, request);
+  const { user, response } = await requireAdmin(env, request);
   if (response) return response;
   const found = await findTitle(env, params);
   if (found.response) return found.response;
 
   await env.DB.prepare("UPDATE titles SET cover_version = NULL WHERE id = ?").bind(found.title.id).run();
   await deletePages(env.PAGES, `covers/${found.title.id}/`);
+  await audit(env, user, "cover.delete", titleLabel(found.title));
   return json({ title: await getTitle(env, found.title.id) });
 }

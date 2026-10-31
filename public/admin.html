@@ -21,15 +21,175 @@
 
     <p class="admin-denied" id="denied" hidden>Эта страница доступна только администраторам.</p>
 
-    <section class="admin-layout" id="admin" hidden>
-      <aside class="admin-panel admin-sidebar" aria-labelledby="titlesHeading">
-        <h1 id="titlesHeading">Тайтлы</h1>
-        <button class="main-button" id="newTitleButton" type="button">+ Новый тайтл</button>
-        <ul class="admin-title-list" id="titleList"></ul>
-      </aside>
+    <div class="admin-layout" id="admin" hidden>
+      <nav class="admin-panel admin-menu" aria-labelledby="adminHeading">
+        <h1 id="adminHeading">Админка</h1>
+        <a href="#dashboard" data-section="dashboard">Сводка</a>
+        <a href="#titles" data-section="titles">Тайтлы</a>
+        <a href="#complaints" data-section="complaints">Жалобы <span class="admin-badge" id="complaintsBadge" hidden></span></a>
+        <a href="#users" data-section="users">Пользователи</a>
+        <a href="#audit" data-section="audit">Журнал</a>
+      </nav>
 
       <div class="admin-main">
-        <section class="admin-panel" aria-labelledby="complaintsHeading">
+        <!-- ==================== СВОДКА ==================== -->
+        <section class="admin-panel" data-panel="dashboard" aria-labelledby="dashboardHeading" hidden>
+          <h2 id="dashboardHeading">Сводка</h2>
+          <div class="admin-stats" id="stats"></div>
+          <p class="form-message" id="statsMessage" role="status" aria-live="polite"></p>
+          <h3>Последние действия</h3>
+          <ol class="admin-audit-list" id="recentAudit"></ol>
+          <a class="secondary-button admin-more-link" href="#audit">Весь журнал</a>
+        </section>
+
+        <!-- ==================== ТАЙТЛЫ ==================== -->
+        <div class="admin-titles" data-panel="titles" hidden>
+          <aside class="admin-panel admin-sidebar" aria-labelledby="titlesHeading">
+            <h2 id="titlesHeading">Тайтлы</h2>
+            <button class="main-button" id="newTitleButton" type="button">+ Новый тайтл</button>
+            <div class="field">
+              <label for="titleSearch">Поиск по названию</label>
+              <input id="titleSearch" type="search" maxlength="100" autocomplete="off">
+            </div>
+            <div class="field">
+              <label for="titleTypeFilter">Тип</label>
+              <select id="titleTypeFilter">
+                <option value="">Все типы</option>
+                <option value="manga">Манга</option>
+                <option value="manhwa">Манхва</option>
+                <option value="manhua">Маньхуа</option>
+              </select>
+            </div>
+            <p class="admin-count" id="titleCount" role="status" aria-live="polite"></p>
+            <ul class="admin-title-list" id="titleList"></ul>
+          </aside>
+
+          <div class="admin-main">
+            <section class="admin-panel" aria-labelledby="titleFormHeading">
+              <h2 id="titleFormHeading">Новый тайтл</h2>
+              <form id="titleForm" novalidate>
+                <div class="admin-title-head">
+                  <div class="admin-poster" id="posterPreview" aria-hidden="true"></div>
+                  <div class="admin-grid">
+                    <div class="field admin-wide">
+                      <label for="fieldTitle">Название</label>
+                      <input id="fieldTitle" name="title" type="text" maxlength="120" required>
+                    </div>
+                    <div class="field">
+                      <label for="fieldType">Тип</label>
+                      <select id="fieldType" name="type">
+                        <option value="manga">Манга</option>
+                        <option value="manhwa">Манхва</option>
+                        <option value="manhua">Маньхуа</option>
+                      </select>
+                    </div>
+                    <div class="field">
+                      <label for="fieldStatus">Выпуск</label>
+                      <select id="fieldStatus" name="status">
+                        <option value="ongoing">Выходит</option>
+                        <option value="completed">Завершён</option>
+                      </select>
+                    </div>
+                    <div class="field">
+                      <label for="fieldYear">Год</label>
+                      <input id="fieldYear" name="year" type="number" min="1900" max="2100" step="1" inputmode="numeric" required>
+                    </div>
+                    <div class="field">
+                      <label for="fieldRating">Рейтинг (0–10)</label>
+                      <input id="fieldRating" name="rating" type="number" min="0" max="10" step="0.1" inputmode="decimal" required>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="admin-grid">
+                  <div class="field admin-wide">
+                    <label for="fieldGenres">Жанры через запятую</label>
+                    <input id="fieldGenres" name="genres" type="text" maxlength="300" placeholder="Экшен, Фэнтези" required>
+                  </div>
+                  <div class="field">
+                    <label for="fieldAuthor">Автор</label>
+                    <input id="fieldAuthor" name="author" type="text" maxlength="120" required>
+                  </div>
+                  <div class="field">
+                    <label for="fieldTranslator">Перевод</label>
+                    <input id="fieldTranslator" name="translator" type="text" maxlength="120" required>
+                  </div>
+                  <div class="field">
+                    <label for="fieldSymbol">Символ обложки</label>
+                    <input id="fieldSymbol" name="symbol" type="text" maxlength="6" placeholder="✦" required>
+                  </div>
+                  <fieldset class="field admin-colors">
+                    <legend>Цвета обложки</legend>
+                    <input name="color0" type="color" aria-label="Цвет обложки 1">
+                    <input name="color1" type="color" aria-label="Цвет обложки 2">
+                    <input name="color2" type="color" aria-label="Цвет обложки 3">
+                  </fieldset>
+                  <div class="field admin-wide admin-cover" id="coverField" hidden>
+                    <span class="admin-cover-label">Обложка (JPEG, PNG, WebP или AVIF до 5 МБ). Без обложки показывается градиент с символом</span>
+                    <div class="admin-actions">
+                      <label class="secondary-button admin-upload" id="coverUpload">Загрузить обложку
+                        <input class="visually-hidden" id="coverInput" type="file" accept="image/jpeg,image/png,image/webp,image/avif">
+                      </label>
+                      <button class="secondary-button" id="coverRemove" type="button" hidden>Убрать обложку</button>
+                    </div>
+                  </div>
+                  <div class="field admin-wide">
+                    <label for="fieldDescription">Описание</label>
+                    <textarea id="fieldDescription" name="description" rows="4" maxlength="2000" required></textarea>
+                  </div>
+                </div>
+
+                <div class="admin-actions">
+                  <button class="main-button" type="submit">Сохранить тайтл</button>
+                  <a class="secondary-button" id="viewTitleLink" href="/" target="_blank" rel="noopener" hidden>Открыть на сайте</a>
+                  <button class="danger-button" id="deleteTitleButton" type="button" hidden>Удалить тайтл</button>
+                </div>
+                <p class="form-message" id="titleMessage" role="status" aria-live="polite"></p>
+              </form>
+            </section>
+
+            <section class="admin-panel" id="chaptersSection" aria-labelledby="chaptersHeading" hidden>
+              <h2 id="chaptersHeading">Главы</h2>
+              <p class="panel-description">
+                Главы идут подряд с первой, удалить можно только последнюю. Страницы — картинки JPEG, PNG, WebP или AVIF
+                до 15 МБ. Порядок страниц берётся из имён файлов: 1.jpg, 2.jpg … 10.jpg.
+                Загружайте только главы, которые вы вправе публиковать.
+              </p>
+
+              <form class="admin-chapter-form" id="chapterForm" novalidate>
+                <h3 id="chapterFormHeading">Новая глава</h3>
+                <div class="admin-grid">
+                  <div class="field admin-wide">
+                    <label for="chapterName">Название главы (необязательно)</label>
+                    <input id="chapterName" name="name" type="text" maxlength="120">
+                  </div>
+                  <div class="field">
+                    <label for="chapterVolume">Том (необязательно)</label>
+                    <input id="chapterVolume" name="volume" type="number" min="1" max="999" step="1" inputmode="numeric">
+                  </div>
+                  <div class="field">
+                    <label for="chapterDate">Дата выхода (пусто — сегодня)</label>
+                    <input id="chapterDate" name="releasedAt" type="date">
+                  </div>
+                  <label class="consent admin-wide">
+                    <input name="sideStory" type="checkbox">
+                    <span>Экстра (побочная история)</span>
+                  </label>
+                </div>
+                <div class="admin-actions">
+                  <button class="main-button" type="submit">Добавить главу</button>
+                  <button class="secondary-button" id="chapterCancel" type="button" hidden>Отмена</button>
+                </div>
+              </form>
+
+              <p class="form-message" id="chapterMessage" role="status" aria-live="polite"></p>
+              <ol class="admin-chapter-list" id="chapterList" reversed></ol>
+            </section>
+          </div>
+        </div>
+
+        <!-- ==================== ЖАЛОБЫ ==================== -->
+        <section class="admin-panel" data-panel="complaints" aria-labelledby="complaintsHeading" hidden>
           <h2 id="complaintsHeading">Жалобы правообладателей</h2>
           <p class="panel-description">
             Жалобы с формы <a href="/copyright" target="_blank" rel="noopener">/copyright</a>. Ответ заявителю отправляйте со своей почты.
@@ -39,128 +199,73 @@
           <ul class="admin-complaint-list" id="complaintList"></ul>
         </section>
 
-        <section class="admin-panel" aria-labelledby="titleFormHeading">
-          <h2 id="titleFormHeading">Новый тайтл</h2>
-          <form id="titleForm" novalidate>
-            <div class="admin-title-head">
-              <div class="admin-poster" id="posterPreview" aria-hidden="true"></div>
-              <div class="admin-grid">
-                <div class="field admin-wide">
-                  <label for="fieldTitle">Название</label>
-                  <input id="fieldTitle" name="title" type="text" maxlength="120" required>
-                </div>
-                <div class="field">
-                  <label for="fieldType">Тип</label>
-                  <select id="fieldType" name="type">
-                    <option value="manga">Манга</option>
-                    <option value="manhwa">Манхва</option>
-                    <option value="manhua">Маньхуа</option>
-                  </select>
-                </div>
-                <div class="field">
-                  <label for="fieldStatus">Выпуск</label>
-                  <select id="fieldStatus" name="status">
-                    <option value="ongoing">Выходит</option>
-                    <option value="completed">Завершён</option>
-                  </select>
-                </div>
-                <div class="field">
-                  <label for="fieldYear">Год</label>
-                  <input id="fieldYear" name="year" type="number" min="1900" max="2100" step="1" inputmode="numeric" required>
-                </div>
-                <div class="field">
-                  <label for="fieldRating">Рейтинг (0–10)</label>
-                  <input id="fieldRating" name="rating" type="number" min="0" max="10" step="0.1" inputmode="decimal" required>
-                </div>
-              </div>
+        <!-- ==================== ПОЛЬЗОВАТЕЛИ ==================== -->
+        <section class="admin-panel" data-panel="users" aria-labelledby="usersHeading" hidden>
+          <h2 id="usersHeading">Пользователи</h2>
+          <p class="panel-description">
+            Заблокированный не может войти, его сеансы завершаются сразу. Выдать или снять права администратора и удалить
+            аккаунт можно только после ввода своего пароля. Свой аккаунт меняйте в профиле.
+          </p>
+          <div class="admin-filters">
+            <div class="field">
+              <label for="userSearch">Почта или имя</label>
+              <input id="userSearch" type="search" maxlength="100" autocomplete="off">
             </div>
-
-            <div class="admin-grid">
-              <div class="field admin-wide">
-                <label for="fieldGenres">Жанры через запятую</label>
-                <input id="fieldGenres" name="genres" type="text" maxlength="300" placeholder="Экшен, Фэнтези" required>
-              </div>
-              <div class="field">
-                <label for="fieldAuthor">Автор</label>
-                <input id="fieldAuthor" name="author" type="text" maxlength="120" required>
-              </div>
-              <div class="field">
-                <label for="fieldTranslator">Перевод</label>
-                <input id="fieldTranslator" name="translator" type="text" maxlength="120" required>
-              </div>
-              <div class="field">
-                <label for="fieldSymbol">Символ обложки</label>
-                <input id="fieldSymbol" name="symbol" type="text" maxlength="6" placeholder="✦" required>
-              </div>
-              <fieldset class="field admin-colors">
-                <legend>Цвета обложки</legend>
-                <input name="color0" type="color" aria-label="Цвет обложки 1">
-                <input name="color1" type="color" aria-label="Цвет обложки 2">
-                <input name="color2" type="color" aria-label="Цвет обложки 3">
-              </fieldset>
-              <div class="field admin-wide admin-cover" id="coverField" hidden>
-                <span class="admin-cover-label">Обложка (JPEG, PNG, WebP или AVIF до 5 МБ). Без обложки показывается градиент с символом</span>
-                <div class="admin-actions">
-                  <label class="secondary-button admin-upload" id="coverUpload">Загрузить обложку
-                    <input class="visually-hidden" id="coverInput" type="file" accept="image/jpeg,image/png,image/webp,image/avif">
-                  </label>
-                  <button class="secondary-button" id="coverRemove" type="button" hidden>Убрать обложку</button>
-                </div>
-              </div>
-              <div class="field admin-wide">
-                <label for="fieldDescription">Описание</label>
-                <textarea id="fieldDescription" name="description" rows="4" maxlength="2000" required></textarea>
-              </div>
+            <div class="field">
+              <label for="userFilter">Показать</label>
+              <select id="userFilter">
+                <option value="all">Всех</option>
+                <option value="admins">Администраторов</option>
+                <option value="blocked">Заблокированных</option>
+              </select>
             </div>
-
-            <div class="admin-actions">
-              <button class="main-button" type="submit">Сохранить тайтл</button>
-              <a class="secondary-button" id="viewTitleLink" href="/" target="_blank" rel="noopener" hidden>Открыть на сайте</a>
-              <button class="danger-button" id="deleteTitleButton" type="button" hidden>Удалить тайтл</button>
-            </div>
-            <p class="form-message" id="titleMessage" role="status" aria-live="polite"></p>
-          </form>
+          </div>
+          <p class="admin-count" id="userCount" role="status" aria-live="polite"></p>
+          <p class="form-message" id="usersMessage" role="status" aria-live="polite"></p>
+          <ul class="admin-user-list" id="userList"></ul>
+          <button class="secondary-button admin-more" id="usersMore" type="button" hidden>Показать ещё</button>
         </section>
 
-        <section class="admin-panel" id="chaptersSection" aria-labelledby="chaptersHeading" hidden>
-          <h2 id="chaptersHeading">Главы</h2>
-          <p class="panel-description">
-            Главы идут подряд с первой, удалить можно только последнюю. Страницы — картинки JPEG, PNG, WebP или AVIF
-            до 15 МБ. Порядок страниц берётся из имён файлов: 1.jpg, 2.jpg … 10.jpg.
-            Загружайте только главы, которые вы вправе публиковать.
-          </p>
-
-          <form class="admin-chapter-form" id="chapterForm" novalidate>
-            <h3 id="chapterFormHeading">Новая глава</h3>
-            <div class="admin-grid">
-              <div class="field admin-wide">
-                <label for="chapterName">Название главы (необязательно)</label>
-                <input id="chapterName" name="name" type="text" maxlength="120">
-              </div>
-              <div class="field">
-                <label for="chapterVolume">Том (необязательно)</label>
-                <input id="chapterVolume" name="volume" type="number" min="1" max="999" step="1" inputmode="numeric">
-              </div>
-              <div class="field">
-                <label for="chapterDate">Дата выхода (пусто — сегодня)</label>
-                <input id="chapterDate" name="releasedAt" type="date">
-              </div>
-              <label class="consent admin-wide">
-                <input name="sideStory" type="checkbox">
-                <span>Экстра (побочная история)</span>
-              </label>
+        <!-- ==================== ЖУРНАЛ ==================== -->
+        <section class="admin-panel" data-panel="audit" aria-labelledby="auditHeading" hidden>
+          <h2 id="auditHeading">Журнал действий</h2>
+          <p class="panel-description">Кто из администраторов и когда что изменил. Записи хранятся год.</p>
+          <div class="admin-filters">
+            <div class="field">
+              <label for="auditGroup">Показать</label>
+              <select id="auditGroup">
+                <option value="">Все действия</option>
+                <option value="titles">Тайтлы и обложки</option>
+                <option value="chapters">Главы и страницы</option>
+                <option value="complaints">Жалобы</option>
+                <option value="users">Пользователи</option>
+              </select>
             </div>
-            <div class="admin-actions">
-              <button class="main-button" type="submit">Добавить главу</button>
-              <button class="secondary-button" id="chapterCancel" type="button" hidden>Отмена</button>
-            </div>
-          </form>
-
-          <p class="form-message" id="chapterMessage" role="status" aria-live="polite"></p>
-          <ol class="admin-chapter-list" id="chapterList" reversed></ol>
+          </div>
+          <p class="form-message" id="auditMessage" role="status" aria-live="polite"></p>
+          <ol class="admin-audit-list" id="auditList"></ol>
+          <button class="secondary-button admin-more" id="auditMore" type="button" hidden>Показать ещё</button>
         </section>
       </div>
-    </section>
+    </div>
   </main>
+
+  <!-- Подтверждение паролем для опасных действий с пользователями -->
+  <dialog class="admin-dialog" id="passwordDialog" aria-labelledby="passwordDialogTitle">
+    <form method="dialog" id="passwordForm">
+      <h2 id="passwordDialogTitle">Подтвердите паролем</h2>
+      <p id="passwordDialogText"></p>
+      <!-- Скрытая почта помогает менеджеру паролей подставить пароль своего аккаунта -->
+      <input id="passwordUsername" type="email" autocomplete="username" hidden>
+      <div class="field">
+        <label for="passwordInput">Ваш пароль</label>
+        <input id="passwordInput" type="password" autocomplete="current-password" maxlength="128" required>
+      </div>
+      <div class="admin-actions">
+        <button class="main-button" type="submit" value="confirm">Подтвердить</button>
+        <button class="secondary-button" type="submit" value="cancel" formnovalidate>Отмена</button>
+      </div>
+    </form>
+  </dialog>
 </body>
 </html>

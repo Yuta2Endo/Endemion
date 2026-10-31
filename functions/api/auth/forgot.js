@@ -53,7 +53,8 @@ export async function onRequestPost({ request, env, waitUntil }) {
   if (!(await verifyTurnstile(env, body.turnstileToken, ip))) return error("Подтвердите, что вы не робот.", 403);
   await recordReset(env, ip, email);
 
-  const user = await env.DB.prepare("SELECT id, name FROM users WHERE email = ?").bind(email).first();
+  // Заблокированному письмо не отправляется, ответ тот же
+  const user = await env.DB.prepare("SELECT id, name FROM users WHERE email = ? AND blocked_at IS NULL").bind(email).first();
   if (!user) return json({ message: SENT });
 
   // На Workers запрос доходит до этого кода, только если домен в адресе принадлежит сайту, поэтому origin можно брать из запроса

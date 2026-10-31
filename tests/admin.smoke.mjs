@@ -258,6 +258,108 @@ check("жалоба удалена", r.status === 200);
 r = await call("DELETE", `/api/admin/complaints/${complaintId}`);
 check("удалённой жалобы нет", r.status === 404);
 
+// ---------- сводка ----------
+r = await call("GET", "/api/admin/stats");
+check("сводка", r.status === 200 && r.data.users.total >= 1 && r.data.users.admins >= 1 && typeof r.data.content.titles === "number");
+
+// ---------- журнал действий ----------
+r = await call("GET", "/api/admin/audit?group=titles&limit=100");
+const titleActions = (r.data?.entries || []).filter((entry) => entry.target.includes(`(#${id})`)).map((entry) => entry.action);
+check("журнал: создание, правка и удаление тайтла", r.status === 200 &&
+  ["title.create", "title.update", "title.delete", "cover.upload"].every((action) => titleActions.includes(action)));
+r = await call("GET", "/api/admin/audit?group=chapters&limit=100");
+const chapterActions = (r.data?.entries || []).filter((entry) => entry.target.includes(`(#${id})`)).map((entry) => entry.action);
+check("журнал: главы и страницы", ["chapter.create", "chapter.delete", "pages.publish", "pages.delete"].every((a) => chapterActions.includes(a)));
+r = await call("GET", "/api/admin/audit?group=secret");
+check("журнал: неизвестная группа отклонена", r.status === 400);
+
+// ---------- пользователи ----------
+// Второй пользователь со своей cookie: на нём проверяются блокировка, сеансы и права
+async function callAs(jar, method, path, body) {
+  const headers = { Origin: new URL(BASE).origin };
+  if (jar.cookie) headers.Cookie = jar.cookie;
+  if (body !== undefined) headers["Content-Type"] = "application/json";
+  const response = await fetch(BASE + path, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
+  const setCookie = response.headers.get("set-cookie");
+  if (setCookie) jar.cookie = setCookie.split(";")[0];
+  return { status: response.status, data: await response.json().catch(() => null) };
+}
+
+const other = { cookie: "" };
+const otherEmail = `member-${Date.now()}@example.com`;
+const otherPassword = "member-password-1";
+r = await callAs(other, "POST", "/api/auth/register", { name: "Участник", email: otherEmail, password: otherPassword, consent: true });
+check("второй пользователь", r.status === 201);
+
+r = await call("GET", "/api/me");
+const myId = r.data?.user?.id;
+r = await call("GET", `/api/admin/users?q=${encodeURIComponent(otherEmail.toUpperCase())}`);
+const member = r.data?.users?.[0];
+check("пользователи: поиск по почте без учёта регистра", r.status === 200 && r.data.total === 1 && member?.email === otherEmail);
+check("пользователи: число сеансов", member?.sessions === 1 && member.isAdmin === false && member.blockedAt === null);
+r = await call("GET", "/api/admin/users?filter=admins&limit=100");
+check("пользователи: фильтр администраторов", r.status === 200 && r.data.users.some((user) => user.id === myId) &&
+  !r.data.users.some((user) => user.id === member?.id));
+r = await call("GET", "/api/admin/users?filter=secret");
+check("пользователи: неизвестный фильтр отклонён", r.status === 400);
+
+const userUrl = `/api/admin/users/${member?.id}`;
+r = await call("PUT", `/api/admin/users/${myId}`, { action: "block" });
+check("свой аккаунт из админки не меняется", r.status === 409);
+r = await call("PUT", userUrl, { action: "explode" });
+check("неизвестное действие отклонено", r.status === 400);
+
+r = await call("PUT", userUrl, { action: "block" });
+check("блокировка", r.status === 200 && Boolean(r.data.user.blockedAt) && r.data.user.sessions === 0);
+r = await callAs(other, "GET", "/api/me");
+check("заблокированный выходит сразу", r.data?.user === null);
+r = await callAs(other, "POST", "/api/auth/login", { email: otherEmail, password: otherPassword });
+check("заблокированный не входит", r.status === 403);
+r = await callAs(other, "POST", "/api/auth/login", { email: otherEmail, password: "wrong-password-1" });
+check("неверный пароль заблокированного — как у всех", r.status === 401);
+r = await call("PUT", userUrl, { action: "block" });
+check("повторная блокировка", r.status === 409);
+r = await call("PUT", userUrl, { action: "grantAdmin", password });
+check("заблокированному права не выдаются", r.status === 409);
+r = await call("PUT", userUrl, { action: "unblock" });
+check("разблокировка", r.status === 200 && r.data.user.blockedAt === null);
+r = await callAs(other, "POST", "/api/auth/login", { email: otherEmail, password: otherPassword });
+check("после разблокировки вход", r.status === 200);
+
+r = await call("PUT", userUrl, { action: "logout" });
+check("завершение сеансов", r.status === 200 && r.data.user.sessions === 0);
+r = await callAs(other, "GET", "/api/me");
+check("после завершения сеансов вход нужен заново", r.data?.user === null);
+
+r = await call("PUT", userUrl, { action: "grantAdmin" });
+check("права без пароля не выдаются", r.status === 403);
+r = await call("PUT", userUrl, { action: "grantAdmin", password: "wrong-password-1" });
+check("права с неверным паролем не выдаются", r.status === 403);
+r = await call("PUT", userUrl, { action: "grantAdmin", password });
+check("права выданы через админку", r.status === 200 && r.data.user.isAdmin === true);
+r = await call("PUT", userUrl, { action: "block" });
+check("администратора нельзя заблокировать", r.status === 409);
+r = await call("DELETE", userUrl, { password });
+check("администратора нельзя удалить", r.status === 409);
+r = await call("PUT", userUrl, { action: "revokeAdmin", password });
+check("права сняты", r.status === 200 && r.data.user.isAdmin === false);
+
+r = await call("DELETE", userUrl, { password: "wrong-password-1" });
+check("удаление с неверным паролем отклонено", r.status === 403);
+r = await call("DELETE", userUrl, { password });
+check("аккаунт удалён из админки", r.status === 200);
+r = await call("GET", `/api/admin/users?q=${encodeURIComponent(otherEmail)}`);
+check("удалённого пользователя нет", r.data?.total === 0);
+r = await callAs(other, "POST", "/api/auth/login", { email: otherEmail, password: otherPassword });
+check("удалённый не входит", r.status === 401);
+
+r = await call("GET", "/api/admin/audit?group=users&limit=100");
+const memberLabel = `пользователь #${member?.id}`;
+const userActions = (r.data?.entries || []).filter((entry) => entry.target === memberLabel).map((entry) => entry.action);
+check("журнал: действия с пользователем", ["user.block", "user.unblock", "user.logout", "user.grantAdmin", "user.revokeAdmin", "user.delete"]
+  .every((action) => userActions.includes(action)));
+check("журнал: без почты пользователя", !(r.data?.entries || []).some((entry) => entry.target.includes(otherEmail)));
+
 r = await call("DELETE", "/api/me", { password });
 check("тестовый пользователь удалён", r.status === 200);
 r = await call("GET", "/api/admin/complaints");
