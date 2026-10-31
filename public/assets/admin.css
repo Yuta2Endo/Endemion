@@ -184,6 +184,17 @@
   cursor: pointer;
 }
 
+.admin-cover[hidden] {
+  display: none;
+}
+
+.admin-cover-label {
+  display: block;
+  margin-bottom: 7px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
 .admin-actions {
   display: flex;
   flex-wrap: wrap;

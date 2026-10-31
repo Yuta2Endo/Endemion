@@ -31,5 +31,6 @@ export async function onRequestDelete({ request, env, params }) {
   // Главы и записи библиотек удаляются каскадом (ON DELETE CASCADE)
   await env.DB.prepare("DELETE FROM titles WHERE id = ?").bind(found.title.id).run();
   await deletePages(env.PAGES, `${found.title.id}/`);
+  await deletePages(env.PAGES, `covers/${found.title.id}/`);
   return json({ ok: true });
 }

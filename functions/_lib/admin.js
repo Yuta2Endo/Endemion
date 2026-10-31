@@ -8,6 +8,7 @@ import { getChapter, getTitle, parseId, TYPES } from "./titles.js";
 
 export const MAX_PAGES = 500;
 export const MAX_PAGE_BYTES = 15 * 1024 * 1024;
+export const MAX_COVER_BYTES = 5 * 1024 * 1024;
 
 const RELEASE = ["ongoing", "completed"];
 const COLOR = /^#[0-9a-f]{6}$/i;

@@ -4,7 +4,7 @@
 // (это проверяют триггеры в migrations/0007_chapters.sql), поэтому номер последней главы равен их числу.
 // У тайтла без глав датой обновления считается дата изменения карточки
 const SELECT = `SELECT t.id, t.title, t.type, t.year, t.status, COALESCE(c.chapters, 0) AS chapters, t.rating, t.genres,
-  t.author, t.translator, t.symbol, t.poster, t.description, COALESCE(c.released_at, t.updated_at) AS updated_at
+  t.author, t.translator, t.symbol, t.poster, t.description, t.cover_version, COALESCE(c.released_at, t.updated_at) AS updated_at
 FROM titles t
 LEFT JOIN (SELECT title_id, MAX(number) AS chapters, MAX(released_at) AS released_at FROM chapters GROUP BY title_id) c
   ON c.title_id = t.id`;
@@ -36,9 +36,17 @@ export function toTitle(row) {
     translator: row.translator,
     symbol: row.symbol,
     poster: row.poster,
+    // Адрес загруженной обложки или null. Версия в адресе меняется при замене, поэтому кеш не мешает
+    cover: row.cover_version ? `/covers/${row.id}?v=${row.cover_version}` : null,
+    coverVersion: row.cover_version,
     description: row.description,
     updatedAt: row.updated_at
   };
+}
+
+/** Фон обложки для CSS: картинка поверх градиента или только градиент. Такая же функция есть в public/assets/app.js */
+export function posterBackground(title) {
+  return title.cover ? `url("${title.cover}") center / cover no-repeat, ${title.poster}` : title.poster;
 }
 
 export async function listTitles(env, order = "rating") {

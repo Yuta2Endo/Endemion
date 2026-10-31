@@ -88,6 +88,15 @@
                 <input name="color1" type="color" aria-label="Цвет обложки 2">
                 <input name="color2" type="color" aria-label="Цвет обложки 3">
               </fieldset>
+              <div class="field admin-wide admin-cover" id="coverField" hidden>
+                <span class="admin-cover-label">Обложка (JPEG, PNG, WebP или AVIF до 5 МБ). Без обложки показывается градиент с символом</span>
+                <div class="admin-actions">
+                  <label class="secondary-button admin-upload" id="coverUpload">Загрузить обложку
+                    <input class="visually-hidden" id="coverInput" type="file" accept="image/jpeg,image/png,image/webp,image/avif">
+                  </label>
+                  <button class="secondary-button" id="coverRemove" type="button" hidden>Убрать обложку</button>
+                </div>
+              </div>
               <div class="field admin-wide">
                 <label for="fieldDescription">Описание</label>
                 <textarea id="fieldDescription" name="description" rows="4" maxlength="2000" required></textarea>

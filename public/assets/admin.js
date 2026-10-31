@@ -1,7 +1,7 @@
 // Админка: тайтлы, главы и загрузка страниц. Права проверяет сервер в каждом запросе /api/admin/*,
 // эта страница только показывает формы
 
-import { api, chaptersText, getMe, loginUrl, toast, TYPE_LABELS } from "./app.js";
+import { api, chaptersText, getMe, loginUrl, posterBackground, toast, TYPE_LABELS } from "./app.js";
 
 const $ = (selector) => document.querySelector(selector);
 
@@ -20,6 +20,10 @@ const chapterHeading = $("#chapterFormHeading");
 const chapterCancel = $("#chapterCancel");
 const chapterMessage = $("#chapterMessage");
 const chapterList = $("#chapterList");
+const coverField = $("#coverField");
+const coverInput = $("#coverInput");
+const coverRemove = $("#coverRemove");
+const MAX_COVER_BYTES = 5 * 1024 * 1024;
 
 const DEFAULT_COLORS = ["#1f2a4d", "#5d4a8a", "#e3b5c9"];
 // Те же ограничения проверяет сервер (functions/_lib/admin.js)
@@ -94,9 +98,56 @@ function posterColors(poster) {
 
 function updatePreview() {
   const [c0, c1, c2] = [0, 1, 2].map((i) => titleField(`color${i}`).value);
-  posterPreview.style.background = `linear-gradient(145deg, ${c0}, ${c1} 55%, ${c2})`;
-  posterPreview.textContent = titleField("symbol").value.trim();
+  const poster = `linear-gradient(145deg, ${c0}, ${c1} 55%, ${c2})`;
+  const cover = current?.cover || null;
+  posterPreview.style.background = posterBackground({ cover, poster });
+  posterPreview.textContent = cover ? "" : titleField("symbol").value.trim();
 }
+
+/** Обложку можно загрузить только у сохранённого тайтла: ключ в R2 строится по его id */
+function renderCover() {
+  coverField.hidden = !current;
+  coverRemove.hidden = !current?.cover;
+}
+
+function replaceCurrent(saved) {
+  current = { ...saved, chapters: current?.chapters ?? saved.chapters };
+  titles = titles.map((title) => (title.id === current.id ? current : title));
+  renderTitles();
+  renderCover();
+  updatePreview();
+}
+
+coverInput.addEventListener("change", async () => {
+  const file = coverInput.files[0];
+  coverInput.value = "";
+  if (!file || !current) return;
+  if (!IMAGE_TYPES.includes(file.type)) return setMessage(titleMessage, "Обложка должна быть картинкой JPEG, PNG, WebP или AVIF.");
+  if (file.size > MAX_COVER_BYTES) return setMessage(titleMessage, "Обложка должна быть не больше 5 МБ.");
+
+  setMessage(titleMessage, "Загружаю обложку…");
+  let response = null;
+  try {
+    response = await fetch(`${titleUrl(current.id)}/cover`, {
+      method: "PUT",
+      body: file,
+      credentials: "same-origin",
+      headers: { "Content-Type": file.type }
+    });
+  } catch {}
+  const data = response ? await response.json().catch(() => null) : null;
+  if (!response?.ok) return setMessage(titleMessage, data?.error || "Не удалось загрузить обложку.");
+  replaceCurrent(data.title);
+  setMessage(titleMessage, "Обложка загружена.", true);
+});
+
+coverRemove.addEventListener("click", async () => {
+  if (!current?.cover || !confirm("Убрать обложку? Вместо неё будет градиент с символом.")) return;
+  const result = await api(`${titleUrl(current.id)}/cover`, { method: "DELETE" });
+  if (!result.ok) return setMessage(titleMessage, result.data?.error || "Не удалось убрать обложку.");
+  replaceCurrent(result.data.title);
+  setMessage(titleMessage, "Обложка убрана.", true);
+});
 
 function fillTitleForm(title) {
   titleField("title").value = title?.title ?? "";
@@ -123,6 +174,7 @@ async function selectTitle(id) {
   current = titles.find((title) => title.id === id) || null;
   history.replaceState(null, "", current ? `#${current.id}` : location.pathname);
   fillTitleForm(current);
+  renderCover();
   renderTitles();
   setMessage(titleMessage, "");
   setMessage(chapterMessage, "");

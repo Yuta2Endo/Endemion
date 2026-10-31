@@ -1,6 +1,6 @@
 // Главная страница: каталог из API, поиск, фильтры по типу и жанру, избранное и прогресс из библиотеки пользователя
 
-import { api, chaptersText, getMe, initHeader, loginUrl, STATUS_LABELS, toast, TYPE_LABELS } from "./app.js";
+import { api, chaptersText, getMe, initHeader, loginUrl, posterBackground, STATUS_LABELS, toast, TYPE_LABELS } from "./app.js";
 
 const grid = document.querySelector("#titleGrid");
 const popularGrid = document.querySelector("#popularGrid");
@@ -145,11 +145,14 @@ function card(item) {
 
   const poster = element("div", "card-poster");
   // Градиент обложки ставится через CSSOM: встроенный атрибут style запретил бы строгий CSP
-  poster.style.setProperty("--poster", item.poster);
+  poster.style.setProperty("--poster", posterBackground(item));
   poster.append(element("span", `type-badge type-${item.type}`, TYPE_LABELS[item.type]));
-  const symbol = element("span", "poster-symbol", item.symbol);
-  symbol.setAttribute("aria-hidden", "true");
-  poster.append(symbol);
+  // Символ рисуется только на градиенте: поверх загруженной обложки он не нужен
+  if (!item.cover) {
+    const symbol = element("span", "poster-symbol", item.symbol);
+    symbol.setAttribute("aria-hidden", "true");
+    poster.append(symbol);
+  }
 
   const favorite = element("button", "favorite", entry?.favorite ? "♥" : "♡");
   favorite.type = "button";
@@ -225,8 +228,8 @@ function renderUpdates(items) {
   updatesList.replaceChildren(
     ...items.map((item) => {
       const row = element("article", "update-row");
-      const thumb = element("div", "update-thumb", item.symbol);
-      thumb.style.setProperty("--poster", item.poster);
+      const thumb = element("div", "update-thumb", item.cover ? "" : item.symbol);
+      thumb.style.setProperty("--poster", posterBackground(item));
       thumb.setAttribute("aria-hidden", "true");
 
       const text = element("div");

@@ -96,6 +96,31 @@ check("обложка собрана из цветов", title?.poster === "line
 r = await call("PUT", `/api/admin/titles/${id}`, { ...TITLE, status: "completed" });
 check("тайтл изменён", r.status === 200 && r.data.title.status === "completed");
 
+// ---------- обложка ----------
+r = await call("PUT", `/api/admin/titles/${id}/cover`, Buffer.from("<svg onload=alert(1)>"), { raw: true, type: "image/png" });
+check("обложка не картинка отклонена", r.status === 415);
+r = await call("PUT", `/api/admin/titles/${id}/cover`, PNG, { raw: true, type: "image/png" });
+check("обложка загружена", r.status === 200 && r.data.title.cover === `/covers/${id}?v=1`);
+let cover = await fetch(`${BASE}/covers/${id}?v=1`);
+check("обложка отдаётся из R2", cover.status === 200 && cover.headers.get("content-type") === "image/png" &&
+  (cover.headers.get("cache-control") || "").includes("immutable"));
+r = await call("PUT", `/api/admin/titles/${id}/cover`, PNG_2, { raw: true, type: "image/png" });
+check("обложка заменена", r.status === 200 && r.data.title.cover === `/covers/${id}?v=2`);
+cover = await fetch(`${BASE}/covers/${id}?v=2`);
+check("отдаётся новая обложка", Buffer.from(await cover.arrayBuffer()).equals(PNG_2));
+
+let titleHtml = await (await fetch(`${BASE}/title/${id}`)).text();
+check("превью ссылки с обложкой", titleHtml.includes(`<meta property="og:image" content="${BASE}/covers/${id}?v=2">`));
+check("schema.org без закрывающих тегов из базы", titleHtml.includes('"@type":"ComicSeries"') && titleHtml.includes("\\u003c&>") &&
+  !/"name":"[^"]*<&>/.test(titleHtml));
+
+r = await call("DELETE", `/api/admin/titles/${id}/cover`);
+check("обложка убрана", r.status === 200 && r.data.title.cover === null);
+cover = await fetch(`${BASE}/covers/${id}?v=2`);
+check("убранная обложка не отдаётся", cover.status === 404);
+titleHtml = await (await fetch(`${BASE}/title/${id}`)).text();
+check("без обложки — общая картинка сайта", titleHtml.includes("/assets/og-image.png"));
+
 r = await call("POST", `/api/admin/titles/${id}/chapters`, { name: "Начало", volume: 1, sideStory: false, releasedAt: "2026-02-31" });
 check("несуществующая дата отклонена", r.status === 400);
 r = await call("POST", `/api/admin/titles/${id}/chapters`, { name: "Начало", volume: 1, sideStory: false, releasedAt: "2026-10-01" });

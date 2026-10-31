@@ -24,6 +24,8 @@ import * as adminChapter from "../functions/api/admin/titles/[id]/chapters/[numb
 import * as adminPublish from "../functions/api/admin/titles/[id]/chapters/[number]/publish.js";
 import * as adminPages from "../functions/api/admin/titles/[id]/chapters/[number]/pages/index.js";
 import * as adminPage from "../functions/api/admin/titles/[id]/chapters/[number]/pages/[page].js";
+import * as adminCover from "../functions/api/admin/titles/[id]/cover.js";
+import * as coverImage from "../functions/covers/[id].js";
 import * as robots from "../functions/robots.txt.js";
 import * as sitemap from "../functions/sitemap.xml.js";
 import { error } from "../functions/_lib/http.js";
@@ -44,6 +46,7 @@ const ROUTES = [
   ["/api/config", config],
   ["/api/admin/titles", adminTitles],
   ["/api/admin/titles/:id", adminTitle],
+  ["/api/admin/titles/:id/cover", adminCover],
   ["/api/admin/titles/:id/chapters", adminChapters],
   ["/api/admin/titles/:id/chapters/:number", adminChapter],
   ["/api/admin/titles/:id/chapters/:number/publish", adminPublish],
@@ -52,6 +55,7 @@ const ROUTES = [
   ["/title/:id", titlePage],
   ["/read/:id/:chapter", readerPage],
   ["/pages/:id/:chapter/:page", pageImage],
+  ["/covers/:id", coverImage],
   ["/robots.txt", robots],
   ["/sitemap.xml", sitemap]
 ].map(([pattern, module]) => ({ parts: pattern.split("/").filter(Boolean), module }));

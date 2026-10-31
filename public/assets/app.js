@@ -114,6 +114,11 @@ export const TYPE_LABELS = {
   manhua: "Маньхуа"
 };
 
+/** Фон обложки для CSS: картинка поверх градиента или только градиент. Такая же функция есть в functions/_lib/titles.js */
+export function posterBackground(title) {
+  return title.cover ? `url("${title.cover}") center / cover no-repeat, ${title.poster}` : title.poster;
+}
+
 /** 1 глава, 3 главы, 5 глав */
 export function chaptersText(n) {
   const mod10 = n % 10;

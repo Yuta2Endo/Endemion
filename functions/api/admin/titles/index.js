@@ -26,5 +26,6 @@ export async function onRequestPost({ request, env }) {
 
   // id освобождается после удаления последнего тайтла: файлы прежнего тайтла с этим id не должны попасть в новый
   await deletePages(env.PAGES, `${row.id}/`);
+  await deletePages(env.PAGES, `covers/${row.id}/`);
   return json({ title: await getTitle(env, row.id) }, 201);
 }

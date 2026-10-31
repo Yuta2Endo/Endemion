@@ -2,7 +2,23 @@
 // Избранное, статус и прочитанные главы дорисовывает /assets/title.js
 
 import { escapeHtml as e, html, notFound } from "../_lib/html.js";
-import { formatDate, getTitle, listChapters, parseId, plural, TYPES } from "../_lib/titles.js";
+import { formatDate, getTitle, listChapters, parseId, plural, posterBackground, TYPES } from "../_lib/titles.js";
+
+/** Разметка schema.org для поисковиков. «<» экранируется: строка из базы не сможет закрыть тег </script> */
+function structuredData(title, url, image) {
+  const data = {
+    "@context": "https://schema.org",
+    "@type": "ComicSeries",
+    name: title.title,
+    description: title.description,
+    url,
+    inLanguage: "ru",
+    genre: title.genres,
+    author: { "@type": "Person", name: title.author },
+    ...(image ? { image } : {})
+  };
+  return JSON.stringify(data).replaceAll("<", "\\u003c");
+}
 
 /** Строка списка глав: номер, название, том, пометка экстры и дата выхода */
 function chapterItem(titleId, chapter) {
@@ -26,6 +42,9 @@ export async function onRequestGet({ params, env, request }) {
   const chapters = `${title.chapters} ${plural(title.chapters, "глава", "главы", "глав")}`;
   const statusText = title.status === "ongoing" ? "Выходит" : "Завершён";
   const description = `${type.label}, ${title.year}. ${title.description} ${chapters}, перевод: ${title.translator}.`;
+  // Превью ссылки: загруженная обложка или общая картинка сайта
+  const cover = title.cover ? `${origin}${title.cover}` : null;
+  const image = cover || `${origin}/assets/og-image.png`;
 
   const page = `<!doctype html>
 <html lang="ru">
@@ -41,9 +60,11 @@ export async function onRequestGet({ params, env, request }) {
   <meta property="og:title" content="${e(title.title)} — ${e(type.label)}">
   <meta property="og:description" content="${e(description)}">
   <meta property="og:url" content="${e(url)}">
-  <meta property="og:image" content="${e(origin)}/assets/og-image.png">
+  <meta property="og:image" content="${e(image)}">
+  ${cover ? `<meta property="og:image:alt" content="${e(`Обложка «${title.title}»`)}">` : ""}
   <meta property="og:locale" content="ru_RU">
-  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:card" content="${cover ? "summary" : "summary_large_image"}">
+  <script type="application/ld+json">${structuredData(title, url, cover)}</script>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/assets/base.css">
   <link rel="stylesheet" href="/assets/catalog.css">
@@ -71,9 +92,9 @@ export async function onRequestGet({ params, env, request }) {
     <nav class="breadcrumbs" aria-label="Навигация"><a href="/#catalog">Каталог</a> <span aria-hidden="true">/</span> <span>${e(title.title)}</span></nav>
 
     <section class="title-hero">
-      <div class="card-poster title-poster" data-poster="${e(title.poster)}">
+      <div class="card-poster title-poster" data-poster="${e(posterBackground(title))}"${cover ? ` role="img" aria-label="${e(`Обложка «${title.title}»`)}"` : ""}>
         <span class="type-badge type-${e(title.type)}">${e(type.label)}</span>
-        <span class="poster-symbol" aria-hidden="true">${e(title.symbol)}</span>
+        ${cover ? "" : `<span class="poster-symbol" aria-hidden="true">${e(title.symbol)}</span>`}
       </div>
 
       <div class="title-info">
@@ -132,7 +153,7 @@ export async function onRequestGet({ params, env, request }) {
 
   <footer class="footer">
     <div class="container footer-inner">
-      <div><strong>ENDEMION</strong><small> — демо-каталог. Тайтлы, авторы и команды перевода вымышленные.</small></div>
+      <div><strong>ENDEMION</strong><small> — каталог манги, манхвы и маньхуа на русском.</small></div>
       <nav class="footer-links" aria-label="Документы"><a href="/privacy">Политика конфиденциальности</a></nav>
     </div>
   </footer>

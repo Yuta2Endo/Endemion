@@ -57,6 +57,11 @@ export function chapterPrefix(titleId, chapter) {
   return `${titleId}/${chapter}/`;
 }
 
+/** Ключ обложки в R2. Префикс covers/ не пересекается с ключами страниц: они начинаются с числа */
+export function coverKey(titleId, version) {
+  return `covers/${titleId}/${version}`;
+}
+
 /** Ключ картинки страницы в R2: версия — номер загрузки, см. migrations/0009_admin.sql */
 export function pageKey(titleId, chapter, version, page) {
   return `${chapterPrefix(titleId, chapter)}${version}/${page}`;

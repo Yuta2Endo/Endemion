@@ -1,6 +1,6 @@
 // Профиль: данные аккаунта, библиотека по статусам, смена имени и пароля, выход и удаление
 
-import { api, getMe, loginUrl, STATUS_LABELS, TYPE_LABELS } from "./app.js";
+import { api, getMe, loginUrl, posterBackground, STATUS_LABELS, TYPE_LABELS } from "./app.js";
 
 const profile = document.querySelector("#profile");
 const list = document.querySelector("#libraryList");
@@ -66,7 +66,7 @@ function renderLibrary() {
         const card = document.createElement("a");
         card.className = "favorite-card";
         card.href = `/title/${title.id}`;
-        card.style.setProperty("--poster", title.poster);
+        card.style.setProperty("--poster", posterBackground(title));
 
         const text = document.createElement("div");
         const name = document.createElement("strong");
