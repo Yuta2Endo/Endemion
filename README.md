@@ -1,7 +1,7 @@
 # Endemion
 
 Каталог манги, манхвы и маньхуа на Cloudflare Workers: статические страницы в `public/`, API в `functions/`, база — Cloudflare D1.
-Сайт: https://endemion.sasha-guseynov2005tm.workers.dev
+Сайт: https://endemion.online (свой сервер, см. [DEPLOY.md](DEPLOY.md)). Старый адрес на `workers.dev` перенаправляет на него.
 
 ## Структура
 
@@ -87,7 +87,7 @@ npx wrangler d1 execute endemion --remote --command "UPDATE users SET is_admin =
 
 Не загружайте сайт через панель Cloudflare перетаскиванием папки: так заменится Worker, и API с базой перестанут работать.
 
-При переходе на свой домен заменить адрес `https://endemion.sasha-guseynov2005tm.workers.dev/` в `public/index.html` (canonical и og).
+Сейчас Worker на Cloudflare только перенаправляет старый адрес `workers.dev` на `endemion.online` (`REDIRECT_TO` в `wrangler.toml`). Рабочий сайт — на своём сервере, база в Cloudflare D1 больше не используется. Если удалить `REDIRECT_TO`, Worker снова станет полноценным сайтом со своей базой D1.
 
 Необязательно:
 - Turnstile: создать виджет в панели Cloudflare, публичный ключ вписать в `TURNSTILE_SITE_KEY` в `wrangler.toml`, секретный задать командой `npx wrangler secret put TURNSTILE_SECRET_KEY`.

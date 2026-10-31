@@ -12,8 +12,9 @@ binding = "ASSETS"
 html_handling = "auto-trailing-slash"
 # Неизвестный адрес получает public/404.html с кодом 404
 not_found_handling = "404-page"
-# Эти пути сначала обрабатывает Worker (src/worker.js), а не поиск статического файла
-run_worker_first = ["/api/*", "/title/*", "/read/*", "/pages/*", "/covers/*", "/robots.txt", "/sitemap.xml"]
+# Все адреса сначала обрабатывает Worker (src/worker.js): он перенаправляет старый адрес workers.dev на новый домен,
+# а то, что не относится к его маршрутам, отдаёт из статических файлов
+run_worker_first = true
 
 [[d1_databases]]
 binding = "DB"
@@ -28,6 +29,8 @@ binding = "PAGES"
 bucket_name = "endemion-pages"
 
 [vars]
+# Сайт переехал на свой сервер. Запросы на *.workers.dev перенаправляются сюда; локальный wrangler dev не затрагивается
+REDIRECT_TO = "https://endemion.online"
 # Ключи Turnstile (защита формы от ботов) необязательны: без них форма работает без капчи.
 # Публичный ключ можно указать здесь, секретный — только через `npx wrangler secret put TURNSTILE_SECRET_KEY`
 TURNSTILE_SITE_KEY = ""

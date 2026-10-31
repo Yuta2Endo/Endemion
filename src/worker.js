@@ -122,9 +122,29 @@ async function run(found, context) {
   return method === "HEAD" ? new Response(null, response) : response;
 }
 
+// Service worker, который браузеры получают со старого адреса: он удаляет сам себя, чтобы не мешать переезду
+const RETIRED_SERVICE_WORKER = `self.addEventListener("install", () => self.skipWaiting());
+self.addEventListener("activate", (event) => event.waitUntil(self.registration.unregister()));
+`;
+
+/** Старый адрес workers.dev: постоянное перенаправление на тот же путь на новом домене */
+function redirectToNewSite(request, url, target) {
+  if (url.pathname === "/sw.js") {
+    return new Response(RETIRED_SERVICE_WORKER, {
+      headers: { "Content-Type": "text/javascript; charset=utf-8", "Cache-Control": "no-cache" }
+    });
+  }
+  const location = new URL(url.pathname + url.search, target);
+  // 308 сохраняет метод запроса. Изменяющие запросы на новом сайте всё равно отклонит проверка Origin
+  const status = request.method === "GET" || request.method === "HEAD" ? 301 : 308;
+  return new Response(null, { status, headers: { Location: location.href, "Cache-Control": "public, max-age=3600" } });
+}
+
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    // Сайт переехал на свой сервер. На своём сервере REDIRECT_TO не задаётся, а в wrangler dev адрес не workers.dev
+    if (env.REDIRECT_TO && url.hostname.endsWith(".workers.dev")) return redirectToNewSite(request, url, env.REDIRECT_TO);
     const isApi = url.pathname === "/api" || url.pathname.startsWith("/api/");
     const found = match(url.pathname);
 

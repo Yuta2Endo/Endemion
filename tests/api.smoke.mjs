@@ -1,5 +1,5 @@
 // Проверка API на запущенном локальном сервере: `npm run dev`, затем `node tests/api.smoke.mjs`.
-// Для сайта: BASE_URL=https://endemion.sasha-guseynov2005tm.workers.dev node tests/api.smoke.mjs
+// Для сайта: BASE_URL=https://endemion.online node tests/api.smoke.mjs
 // Создаёт тестового пользователя со случайной почтой и в конце удаляет его
 
 const BASE = process.env.BASE_URL || "http://127.0.0.1:8787";
