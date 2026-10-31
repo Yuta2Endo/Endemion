@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#080b18">
+  <meta name="robots" content="noindex">
+  <title>Админка — Endemion</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/assets/base.css">
+  <link rel="stylesheet" href="/assets/account.css">
+  <link rel="stylesheet" href="/assets/admin.css">
+  <script type="module" src="/assets/admin.js"></script>
+</head>
+<body>
+  <main class="account-shell admin-shell">
+    <nav class="account-nav">
+      <a class="logo" href="/"><span class="logo-mark" aria-hidden="true">E</span>ENDEMION</a>
+      <a class="back-link" href="/profile">← В профиль</a>
+    </nav>
+
+    <p class="admin-denied" id="denied" hidden>Эта страница доступна только администраторам.</p>
+
+    <section class="admin-layout" id="admin" hidden>
+      <aside class="admin-panel admin-sidebar" aria-labelledby="titlesHeading">
+        <h1 id="titlesHeading">Тайтлы</h1>
+        <button class="main-button" id="newTitleButton" type="button">+ Новый тайтл</button>
+        <ul class="admin-title-list" id="titleList"></ul>
+      </aside>
+
+      <div class="admin-main">
+        <section class="admin-panel" aria-labelledby="titleFormHeading">
+          <h2 id="titleFormHeading">Новый тайтл</h2>
+          <form id="titleForm" novalidate>
+            <div class="admin-title-head">
+              <div class="admin-poster" id="posterPreview" aria-hidden="true"></div>
+              <div class="admin-grid">
+                <div class="field admin-wide">
+                  <label for="fieldTitle">Название</label>
+                  <input id="fieldTitle" name="title" type="text" maxlength="120" required>
+                </div>
+                <div class="field">
+                  <label for="fieldType">Тип</label>
+                  <select id="fieldType" name="type">
+                    <option value="manga">Манга</option>
+                    <option value="manhwa">Манхва</option>
+                    <option value="manhua">Маньхуа</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label for="fieldStatus">Выпуск</label>
+                  <select id="fieldStatus" name="status">
+                    <option value="ongoing">Выходит</option>
+                    <option value="completed">Завершён</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label for="fieldYear">Год</label>
+                  <input id="fieldYear" name="year" type="number" min="1900" max="2100" step="1" inputmode="numeric" required>
+                </div>
+                <div class="field">
+                  <label for="fieldRating">Рейтинг (0–10)</label>
+                  <input id="fieldRating" name="rating" type="number" min="0" max="10" step="0.1" inputmode="decimal" required>
+                </div>
+              </div>
+            </div>
+
+            <div class="admin-grid">
+              <div class="field admin-wide">
+                <label for="fieldGenres">Жанры через запятую</label>
+                <input id="fieldGenres" name="genres" type="text" maxlength="300" placeholder="Экшен, Фэнтези" required>
+              </div>
+              <div class="field">
+                <label for="fieldAuthor">Автор</label>
+                <input id="fieldAuthor" name="author" type="text" maxlength="120" required>
+              </div>
+              <div class="field">
+                <label for="fieldTranslator">Перевод</label>
+                <input id="fieldTranslator" name="translator" type="text" maxlength="120" required>
+              </div>
+              <div class="field">
+                <label for="fieldSymbol">Символ обложки</label>
+                <input id="fieldSymbol" name="symbol" type="text" maxlength="6" placeholder="✦" required>
+              </div>
+              <fieldset class="field admin-colors">
+                <legend>Цвета обложки</legend>
+                <input name="color0" type="color" aria-label="Цвет обложки 1">
+                <input name="color1" type="color" aria-label="Цвет обложки 2">
+                <input name="color2" type="color" aria-label="Цвет обложки 3">
+              </fieldset>
+              <div class="field admin-wide">
+                <label for="fieldDescription">Описание</label>
+                <textarea id="fieldDescription" name="description" rows="4" maxlength="2000" required></textarea>
+              </div>
+            </div>
+
+            <div class="admin-actions">
+              <button class="main-button" type="submit">Сохранить тайтл</button>
+              <a class="secondary-button" id="viewTitleLink" href="/" target="_blank" rel="noopener" hidden>Открыть на сайте</a>
+              <button class="danger-button" id="deleteTitleButton" type="button" hidden>Удалить тайтл</button>
+            </div>
+            <p class="form-message" id="titleMessage" role="status" aria-live="polite"></p>
+          </form>
+        </section>
+
+        <section class="admin-panel" id="chaptersSection" aria-labelledby="chaptersHeading" hidden>
+          <h2 id="chaptersHeading">Главы</h2>
+          <p class="panel-description">
+            Главы идут подряд с первой, удалить можно только последнюю. Страницы — картинки JPEG, PNG, WebP или AVIF
+            до 15 МБ. Порядок страниц берётся из имён файлов: 1.jpg, 2.jpg … 10.jpg.
+            Загружайте только главы, которые вы вправе публиковать.
+          </p>
+
+          <form class="admin-chapter-form" id="chapterForm" novalidate>
+            <h3 id="chapterFormHeading">Новая глава</h3>
+            <div class="admin-grid">
+              <div class="field admin-wide">
+                <label for="chapterName">Название главы (необязательно)</label>
+                <input id="chapterName" name="name" type="text" maxlength="120">
+              </div>
+              <div class="field">
+                <label for="chapterVolume">Том (необязательно)</label>
+                <input id="chapterVolume" name="volume" type="number" min="1" max="999" step="1" inputmode="numeric">
+              </div>
+              <div class="field">
+                <label for="chapterDate">Дата выхода (пусто — сегодня)</label>
+                <input id="chapterDate" name="releasedAt" type="date">
+              </div>
+              <label class="consent admin-wide">
+                <input name="sideStory" type="checkbox">
+                <span>Экстра (побочная история)</span>
+              </label>
+            </div>
+            <div class="admin-actions">
+              <button class="main-button" type="submit">Добавить главу</button>
+              <button class="secondary-button" id="chapterCancel" type="button" hidden>Отмена</button>
+            </div>
+          </form>
+
+          <p class="form-message" id="chapterMessage" role="status" aria-live="polite"></p>
+          <ol class="admin-chapter-list" id="chapterList" reversed></ol>
+        </section>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

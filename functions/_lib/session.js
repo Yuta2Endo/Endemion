@@ -38,12 +38,12 @@ export async function currentUser(env, request) {
   const token = readCookie(request, SESSION_COOKIE);
   if (!token || !/^[0-9a-f]{64}$/.test(token)) return null;
   const row = await env.DB.prepare(
-    `SELECT users.id, users.name, users.email, users.created_at, sessions.expires_at
+    `SELECT users.id, users.name, users.email, users.created_at, users.is_admin, sessions.expires_at
      FROM sessions JOIN users ON users.id = sessions.user_id
      WHERE sessions.token_hash = ?`
   ).bind(await sha256(token)).first();
   if (!row || row.expires_at < Date.now()) return null;
-  return { id: row.id, name: row.name, email: row.email, createdAt: row.created_at };
+  return { id: row.id, name: row.name, email: row.email, createdAt: row.created_at, isAdmin: row.is_admin === 1 };
 }
 
 /** Удалить текущую сессию и вернуть заголовок, который стирает cookie */

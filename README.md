@@ -47,6 +47,18 @@ npm run test:api            # проверка API на запущенном dev
 
 Восстановление базы: `npx wrangler d1 execute endemion --remote --file backups/<файл>.sql` в пустую базу или откат на момент до миграции через `npx wrangler d1 time-travel restore endemion --timestamp=<время>`.
 
+## Админка
+
+Страница `/admin`: тайтлы, главы и загрузка страниц в R2 (бакет `endemion-pages`). Права выдаются только командой, через сайт стать администратором нельзя:
+
+```
+npx wrangler d1 execute endemion --remote --command "UPDATE users SET is_admin = 1 WHERE email = 'почта@example.com'"
+```
+
+Снять права: то же с `is_admin = 0`. Страницы главы сначала грузятся в черновик и видны читателям только после публикации, поэтому оборванная загрузка не ломает главу. Проверка админки на локальном сервере: `npm run test:admin`.
+
+Публикуйте только главы, на которые есть права.
+
 Не загружайте сайт через панель Cloudflare перетаскиванием папки: так заменится Worker, и API с базой перестанут работать.
 
 При переходе на свой домен заменить адрес `https://endemion.sasha-guseynov2005tm.workers.dev/` в `public/index.html` (canonical и og).

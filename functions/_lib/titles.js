@@ -51,7 +51,7 @@ export async function getTitle(env, id) {
   return row ? toTitle(row) : null;
 }
 
-const CHAPTER_COLUMNS = "number, name, volume, side_story, released_at, pages, page_width, page_height";
+const CHAPTER_COLUMNS = "number, name, volume, side_story, released_at, pages, page_width, page_height, pages_version";
 
 export function toChapter(row) {
   return {
@@ -63,7 +63,9 @@ export function toChapter(row) {
     // null — страницы не загружены, показываются демо-рисунки
     pages: row.pages,
     pageWidth: row.page_width,
-    pageHeight: row.page_height
+    pageHeight: row.page_height,
+    // Номер опубликованной загрузки: входит в ключ R2 и в адрес картинки (?v=), чтобы браузер не показывал старые страницы
+    pagesVersion: row.pages_version
   };
 }
 

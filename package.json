@@ -11,7 +11,8 @@
     "predeploy": "npm test",
     "deploy": "wrangler deploy",
     "test": "node --test tests/crypto.test.mjs tests/pages.test.mjs",
-    "test:api": "node tests/api.smoke.mjs"
+    "test:api": "node tests/api.smoke.mjs",
+    "test:admin": "node tests/admin.smoke.mjs"
   },
   "devDependencies": {
     "wrangler": "^4.156.0"

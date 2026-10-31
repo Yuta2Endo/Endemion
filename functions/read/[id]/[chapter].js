@@ -24,6 +24,8 @@ export async function onRequestGet({ params, env, request }) {
   // Загруженные страницы из R2 или демо-рисунки, если файлов у главы нет
   const size = chapterLayout(title, chapter, info);
   const total = size.total;
+  // После новой загрузки адрес картинок меняется, и браузер не покажет старые страницы из кеша
+  const version = size.uploaded ? `?v=${size.version}` : "";
   const base = `/read/${title.id}`;
   const hasPrev = chapter > 1;
   const hasNext = chapter < title.chapters;
@@ -32,7 +34,7 @@ export async function onRequestGet({ params, env, request }) {
 
   const images = Array.from({ length: total }, (_, i) => {
     const page = i + 1;
-    return `<img class="reader-page${page === 1 ? " is-current" : ""}" src="/pages/${title.id}/${chapter}/${page}" ` +
+    return `<img class="reader-page${page === 1 ? " is-current" : ""}" src="/pages/${title.id}/${chapter}/${page}${version}" ` +
       `width="${size.width}" height="${size.height}" alt="Страница ${page} из ${total}" ` +
       `loading="${page <= 2 ? "eager" : "lazy"}" decoding="async" data-page="${page}">`;
   }).join("\n        ");

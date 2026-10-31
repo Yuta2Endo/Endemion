@@ -1,0 +1,329 @@
+/* Админка: тайтлы слева, форма тайтла и главы справа. Поля и кнопки — из account.css */
+
+.admin-shell {
+  width: min(1240px, calc(100% - 32px));
+}
+
+.admin-shell .account-nav {
+  margin-bottom: 30px;
+}
+
+.admin-denied {
+  padding: 30px;
+  border: 1px solid var(--border);
+  border-radius: 26px;
+  color: var(--muted);
+  background: var(--panel);
+  text-align: center;
+}
+
+.admin-denied[hidden],
+.admin-layout[hidden],
+.admin-panel[hidden] {
+  display: none;
+}
+
+.admin-layout {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 22px;
+  align-items: start;
+}
+
+.admin-main {
+  display: grid;
+  gap: 22px;
+  min-width: 0;
+}
+
+.admin-panel {
+  padding: 26px;
+  border: 1px solid var(--border);
+  border-radius: 26px;
+  background: var(--panel);
+  box-shadow: 0 25px 80px rgba(0, 0, 0, 0.23);
+}
+
+.admin-panel h1,
+.admin-panel h2 {
+  margin-bottom: 18px;
+  font-size: 24px;
+  word-break: break-word;
+}
+
+.admin-panel h3 {
+  margin-bottom: 14px;
+  font-size: 17px;
+}
+
+/* ==================== СПИСОК ТАЙТЛОВ ==================== */
+
+.admin-sidebar {
+  position: sticky;
+  top: 20px;
+}
+
+.admin-sidebar .main-button {
+  margin: 0 0 16px;
+}
+
+.admin-title-list {
+  display: grid;
+  gap: 6px;
+  max-height: 60vh;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.admin-title-item {
+  display: grid;
+  gap: 2px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  color: var(--text);
+  background: var(--panel-soft);
+  text-align: left;
+}
+
+.admin-title-item:hover {
+  border-color: rgba(116, 227, 255, 0.55);
+}
+
+.admin-title-item[aria-current="true"] {
+  border-color: var(--cyan);
+  background: rgba(116, 227, 255, 0.1);
+}
+
+.admin-title-item strong {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.admin-title-item small,
+.admin-empty {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+/* ==================== ФОРМЫ ==================== */
+
+.admin-title-head {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 18px;
+  align-items: start;
+}
+
+.admin-poster {
+  display: grid;
+  height: 168px;
+  place-items: center;
+  border-radius: 16px;
+  color: #fff;
+  font-size: 48px;
+  text-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+.admin-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 14px;
+}
+
+.admin-wide {
+  grid-column: 1 / -1;
+}
+
+.field select,
+.field textarea {
+  width: 100%;
+  min-height: 48px;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: 13px;
+  outline: none;
+  color: var(--text);
+  background: var(--bg-soft);
+}
+
+.field textarea {
+  padding: 12px 14px;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.field select:focus,
+.field textarea:focus {
+  border-color: var(--cyan);
+  box-shadow: 0 0 0 3px rgba(116, 227, 255, 0.15);
+}
+
+.admin-colors {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+  border: 0;
+}
+
+.admin-colors legend {
+  margin-bottom: 7px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.admin-colors input {
+  width: 56px;
+  height: 48px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.admin-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.admin-actions .main-button {
+  width: auto;
+  margin-top: 0;
+  padding: 0 24px;
+}
+
+.admin-actions .secondary-button,
+.admin-actions .danger-button {
+  padding: 0 18px;
+}
+
+/* Ссылки и подписи, оформленные как кнопки */
+a.secondary-button,
+label.secondary-button {
+  display: inline-grid;
+  place-items: center;
+  padding: 0 14px;
+  cursor: pointer;
+}
+
+a.secondary-button[hidden] {
+  display: none;
+}
+
+/* ==================== ГЛАВЫ ==================== */
+
+.admin-chapter-form {
+  margin-bottom: 8px;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: var(--panel-soft);
+}
+
+.admin-chapter-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+  list-style: none;
+}
+
+.admin-chapter {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px 14px;
+  align-items: center;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--panel-soft);
+}
+
+.admin-chapter-info {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.admin-chapter-info strong {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.admin-chapter-info small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.admin-chapter-info small.admin-warning {
+  color: var(--yellow);
+}
+
+.admin-chapter-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.admin-chapter-actions .secondary-button,
+.admin-chapter-actions .danger-button {
+  min-height: 36px;
+  padding: 0 12px;
+  font-size: 13px;
+}
+
+/* Поле выбора файлов спрятано, рамка фокуса — у подписи */
+.admin-upload:focus-within {
+  outline: 2px solid var(--cyan);
+  outline-offset: 2px;
+}
+
+.admin-progress {
+  grid-column: 1 / -1;
+  color: var(--cyan);
+  font-size: 13px;
+}
+
+.admin-progress[hidden] {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .admin-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-sidebar {
+    position: static;
+  }
+
+  .admin-title-list {
+    max-height: 240px;
+  }
+}
+
+@media (max-width: 600px) {
+  .admin-panel {
+    padding: 18px;
+  }
+
+  .admin-title-head,
+  .admin-grid,
+  .admin-chapter {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-poster {
+    height: 120px;
+  }
+
+  .admin-chapter-actions {
+    justify-content: flex-start;
+  }
+}

@@ -16,6 +16,13 @@ import * as config from "../functions/api/config.js";
 import * as titlePage from "../functions/title/[id].js";
 import * as readerPage from "../functions/read/[id]/[chapter].js";
 import * as pageImage from "../functions/pages/[id]/[chapter]/[page].js";
+import * as adminTitles from "../functions/api/admin/titles/index.js";
+import * as adminTitle from "../functions/api/admin/titles/[id].js";
+import * as adminChapters from "../functions/api/admin/titles/[id]/chapters/index.js";
+import * as adminChapter from "../functions/api/admin/titles/[id]/chapters/[number].js";
+import * as adminPublish from "../functions/api/admin/titles/[id]/chapters/[number]/publish.js";
+import * as adminPages from "../functions/api/admin/titles/[id]/chapters/[number]/pages/index.js";
+import * as adminPage from "../functions/api/admin/titles/[id]/chapters/[number]/pages/[page].js";
 import * as robots from "../functions/robots.txt.js";
 import * as sitemap from "../functions/sitemap.xml.js";
 import { error } from "../functions/_lib/http.js";
@@ -33,6 +40,13 @@ const ROUTES = [
   ["/api/library/:id", libraryOne],
   ["/api/updates", updates],
   ["/api/config", config],
+  ["/api/admin/titles", adminTitles],
+  ["/api/admin/titles/:id", adminTitle],
+  ["/api/admin/titles/:id/chapters", adminChapters],
+  ["/api/admin/titles/:id/chapters/:number", adminChapter],
+  ["/api/admin/titles/:id/chapters/:number/publish", adminPublish],
+  ["/api/admin/titles/:id/chapters/:number/pages", adminPages],
+  ["/api/admin/titles/:id/chapters/:number/pages/:page", adminPage],
   ["/title/:id", titlePage],
   ["/read/:id/:chapter", readerPage],
   ["/pages/:id/:chapter/:page", pageImage],

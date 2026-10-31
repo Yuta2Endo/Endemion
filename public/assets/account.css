@@ -321,6 +321,16 @@
   color: var(--pink);
 }
 
+/* Ссылка «Админка» в профиле выглядит как кнопка */
+.admin-link {
+  display: grid;
+  place-items: center;
+}
+
+.admin-link[hidden] {
+  display: none;
+}
+
 .danger-button:hover {
   border-color: var(--pink);
   background: rgba(255, 121, 173, 0.08);

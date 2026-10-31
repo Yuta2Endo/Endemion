@@ -44,6 +44,7 @@ export function chapterLayout(title, chapter, info) {
     return {
       uploaded: true,
       total: info.pages,
+      version: info.pagesVersion,
       width: info.pageWidth || size.width,
       height: info.pageHeight || size.height
     };
@@ -51,9 +52,14 @@ export function chapterLayout(title, chapter, info) {
   return { uploaded: false, total: pageCount(title, chapter), ...size };
 }
 
-/** Ключ картинки страницы в R2 */
-export function pageKey(titleId, chapter, page) {
-  return `${titleId}/${chapter}/${page}`;
+/** Все файлы главы в R2 лежат под этим префиксом. Косая черта в конце: глава 1 не захватит главу 10 */
+export function chapterPrefix(titleId, chapter) {
+  return `${titleId}/${chapter}/`;
+}
+
+/** Ключ картинки страницы в R2: версия — номер загрузки, см. migrations/0009_admin.sql */
+export function pageKey(titleId, chapter, version, page) {
+  return `${chapterPrefix(titleId, chapter)}${version}/${page}`;
 }
 
 export function renderPage(title, chapter, page) {

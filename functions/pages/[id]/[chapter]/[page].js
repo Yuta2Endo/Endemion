@@ -32,7 +32,7 @@ export async function onRequestGet({ params, env, request }) {
     });
   }
 
-  const object = env.PAGES ? await env.PAGES.get(pageKey(title.id, chapter, page)) : null;
+  const object = env.PAGES ? await env.PAGES.get(pageKey(title.id, chapter, layout.version, page)) : null;
   const type = object?.httpMetadata?.contentType;
   if (!object || !IMAGE_TYPES.has(type)) return notFound(env, request);
 

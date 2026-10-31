@@ -102,6 +102,8 @@ async function init() {
 
   renderUser(me.user, me.stats);
   renderLibrary();
+  // Ссылка только для удобства: права на /api/admin/* проверяет сервер
+  document.querySelector("#adminLink").hidden = !me.user.isAdmin;
   profile.hidden = false;
 }
 
