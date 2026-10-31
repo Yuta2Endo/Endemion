@@ -84,6 +84,17 @@ function renderLibrary() {
   );
 }
 
+/** Все тайтлы с полки пользователя. Каталог отдаётся страницами, поэтому полка загружается по 100 тайтлов */
+async function loadShelfTitles() {
+  const all = [];
+  for (let offset = 0; ; offset += 100) {
+    const result = await api(`/api/titles?tab=library&limit=100&offset=${offset}`);
+    if (!result.ok) return all;
+    all.push(...result.data.titles);
+    if (!result.data.titles.length || all.length >= result.data.total) return all;
+  }
+}
+
 async function refreshStats() {
   const me = await api("/api/me");
   if (me.ok && me.data.user) renderUser(me.data.user, me.data.stats);
@@ -96,8 +107,8 @@ async function init() {
     return;
   }
 
-  const [catalog, library] = await Promise.all([api("/api/titles"), api("/api/library")]);
-  titles = new Map((catalog.ok ? catalog.data.titles : []).map((item) => [item.id, item]));
+  const [catalog, library] = await Promise.all([loadShelfTitles(), api("/api/library")]);
+  titles = new Map(catalog.map((item) => [item.id, item]));
   items = library.ok ? library.data.items : [];
 
   renderUser(me.user, me.stats);

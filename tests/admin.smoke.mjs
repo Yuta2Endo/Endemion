@@ -75,11 +75,17 @@ const TITLE = {
   rating: 7.25,
   genres: ["Экшен", " Экшен ", "Фэнтези"],
   author: "Endemion",
-  translator: "Endemion",
+  translator: "Ёжик Endemion",
   symbol: "✦",
   colors: ["#10233F", "#2f6fb5", "#8be0ff"],
   description: "Тестовый тайтл."
 };
+
+/** id тайтлов в выдаче каталога по параметрам адреса */
+async function search(params) {
+  const result = await call("GET", `/api/titles?${new URLSearchParams(params)}`);
+  return { status: result.status, ids: result.data?.titles?.map((item) => item.id) || [], data: result.data };
+}
 
 r = await call("POST", "/api/admin/titles", { ...TITLE, colors: ["red", "#000000", "#ffffff"] });
 check("цвета обложки только #rrggbb", r.status === 400);
@@ -93,8 +99,35 @@ const id = title?.id;
 check("жанры без повторов, рейтинг округлён", title?.genres.join(",") === "Экшен,Фэнтези" && title?.rating === 7.3);
 check("обложка собрана из цветов", title?.poster === "linear-gradient(145deg, #10233f, #2f6fb5 55%, #8be0ff)");
 
+// ---------- поиск по каталогу ----------
+let s = await search({ q: "ПРОВЕРКА" });
+check("поиск: кириллица без учёта регистра", s.status === 200 && s.ids.includes(id));
+s = await search({ q: "админки фэнтези" });
+check("поиск: слова из разных полей", s.ids.includes(id));
+s = await search({ q: "ежик" });
+check("поиск: «е» находит «ё»", s.ids.includes(id));
+s = await search({ q: "%" });
+check("поиск: % ищется как символ", s.status === 200 && !s.ids.includes(id));
+s = await search({ q: "проверка", type: "manga" });
+check("поиск: фильтр по типу", s.status === 200 && !s.ids.includes(id));
+s = await search({ genre: "Фэнтези" });
+check("поиск: фильтр по жанру", s.ids.includes(id));
+s = await search({ genre: "Драма" });
+check("поиск: чужой жанр не находит", !s.ids.includes(id));
+s = await search({ tab: "ongoing", q: "проверка" });
+check("поиск: подборка «Выходят»", s.ids.includes(id));
+s = await search({ limit: "1", offset: "0", facets: "1" });
+check("поиск: страница и общее число", s.ids.length === 1 && s.data.total >= 1);
+check("поиск: число по типам и жанры", s.data.facets?.typeCounts.manhwa >= 1 && s.data.facets.genres.includes("Фэнтези"));
+s = await search({ limit: "0" });
+check("поиск: limit 0 отклонён", s.status === 400);
+s = await search({ tab: "secret" });
+check("поиск: неизвестная подборка отклонена", s.status === 400);
+
 r = await call("PUT", `/api/admin/titles/${id}`, { ...TITLE, status: "completed" });
 check("тайтл изменён", r.status === 200 && r.data.title.status === "completed");
+s = await search({ tab: "completed", q: "проверка" });
+check("поиск: после правки тайтл в «Завершённых»", s.ids.includes(id));
 
 // ---------- обложка ----------
 r = await call("PUT", `/api/admin/titles/${id}/cover`, Buffer.from("<svg onload=alert(1)>"), { raw: true, type: "image/png" });

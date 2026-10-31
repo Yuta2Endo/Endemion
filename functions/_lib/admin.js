@@ -4,7 +4,7 @@
 import { error } from "./http.js";
 import { chapterPrefix, pageKey } from "./pages.js";
 import { currentUser } from "./session.js";
-import { getChapter, getTitle, parseId, TYPES } from "./titles.js";
+import { getChapter, getTitle, parseId, searchText, TYPES } from "./titles.js";
 
 export const MAX_PAGES = 500;
 export const MAX_PAGE_BYTES = 15 * 1024 * 1024;
@@ -94,11 +94,12 @@ export function parseTitle(body) {
   };
 }
 
-/** Значения для INSERT и UPDATE в порядке столбцов TITLE_COLUMNS */
-export const TITLE_COLUMNS = ["title", "type", "year", "status", "rating", "genres", "author", "translator", "symbol", "poster", "description"];
+/** Значения для INSERT и UPDATE в порядке столбцов TITLE_COLUMNS. search_text пересчитывается при каждом сохранении */
+export const TITLE_COLUMNS = ["title", "type", "year", "status", "rating", "genres", "author", "translator", "symbol", "poster", "description", "search_text"];
 
 export function titleValues(title) {
-  return TITLE_COLUMNS.map((name) => (name === "genres" ? JSON.stringify(title.genres) : title[name]));
+  return TITLE_COLUMNS.map((name) =>
+    name === "genres" ? JSON.stringify(title.genres) : name === "search_text" ? searchText(title) : title[name]);
 }
 
 /** Данные главы из формы. releasedAt: null — сейчас (новая глава) или без изменений (правка) */

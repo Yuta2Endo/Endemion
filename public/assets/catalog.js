@@ -1,4 +1,5 @@
-// Главная страница: каталог из API, поиск, фильтры по типу и жанру, избранное и прогресс из библиотеки пользователя
+// Главная страница: каталог с поиском на сервере (/api/titles) и постраничной выдачей, фильтры по типу, жанру и подборкам,
+// избранное и прогресс из библиотеки пользователя
 
 import { api, chaptersText, getMe, initHeader, loginUrl, posterBackground, STATUS_LABELS, toast, TYPE_LABELS } from "./app.js";
 
@@ -9,9 +10,20 @@ const emptyState = document.querySelector("#emptyState");
 const resultsStatus = document.querySelector("#resultsStatus");
 const searchInput = document.querySelector("#searchInput");
 const genresBox = document.querySelector("#genres");
+const loadMore = document.querySelector("#loadMore");
+
+const PAGE_SIZE = 24;
+// Поиск уходит на сервер, когда пользователь перестал печатать
+const SEARCH_DELAY = 250;
 
 const state = {
+  // Загруженные страницы выдачи и сколько всего тайтлов подходит под фильтры
   titles: [],
+  total: 0,
+  // Сколько тайтлов в каталоге без фильтров
+  catalogSize: 0,
+  popular: [],
+  facets: { typeCounts: {}, genres: [] },
   type: "all",
   tab: "all",
   genre: "Все",
@@ -21,79 +33,116 @@ const state = {
   library: new Map()
 };
 
+// Номер последнего запроса выдачи: ответ на устаревший запрос (фильтр успели сменить) отбрасывается
+let requestId = 0;
+let searchTimer = null;
+
 // Избранное из версии сайта про аниме: его id указывают на другие тайтлы, переносить нечего
 localStorage.removeItem("endemion-favorites");
 
 // ==================== ДАННЫЕ ====================
 
-async function load() {
-  showSkeletons();
-  const [catalog, updates, me] = await Promise.all([api("/api/titles"), api("/api/updates"), getMe()]);
+function catalogUrl(offset, withFacets) {
+  const params = new URLSearchParams({ limit: String(PAGE_SIZE), offset: String(offset) });
+  const query = state.query.trim();
+  if (query) params.set("q", query);
+  if (state.type !== "all") params.set("type", state.type);
+  if (state.genre !== "Все") params.set("genre", state.genre);
+  if (state.tab !== "all") params.set("tab", state.tab);
+  if (withFacets) params.set("facets", "1");
+  return `/api/titles?${params}`;
+}
 
-  if (!catalog.ok) {
+function applyFacets(facets) {
+  state.facets = facets;
+  if (state.type === "all") state.catalogSize = Object.values(facets.typeCounts).reduce((sum, n) => sum + n, 0);
+  renderTypeCounts();
+  renderGenres();
+}
+
+/** Первая страница выдачи по текущим фильтрам. withFacets — заодно обновить число тайтлов по типам и список жанров */
+async function fetchCatalog({ withFacets = false } = {}) {
+  const id = ++requestId;
+  showSkeletons();
+  const result = await api(catalogUrl(0, withFacets));
+  if (id !== requestId) return;
+
+  if (!result.ok) {
+    state.titles = [];
+    state.total = 0;
     grid.replaceChildren();
-    showEmpty(catalog.data?.error || "Не удалось загрузить каталог. Обновите страницу.");
+    loadMore.hidden = true;
+    showEmpty(result.data?.error || "Не удалось загрузить каталог. Обновите страницу.");
     return;
   }
 
-  state.titles = catalog.data.titles;
+  if (result.data.facets) {
+    applyFacets(result.data.facets);
+    // У нового типа нет выбранного жанра: снимаем жанр и загружаем выдачу заново
+    if (state.genre !== "Все" && !state.facets.genres.includes(state.genre)) {
+      state.genre = "Все";
+      setPressed("[data-genre]", "genre", state.genre);
+      return fetchCatalog();
+    }
+  }
+  state.titles = result.data.titles;
+  state.total = result.data.total;
+  render();
+}
+
+async function fetchMore() {
+  const id = requestId;
+  loadMore.disabled = true;
+  const result = await api(catalogUrl(state.titles.length, false));
+  loadMore.disabled = false;
+  if (id !== requestId) return;
+  if (!result.ok) {
+    toast(result.data?.error || "Не удалось загрузить. Попробуйте ещё раз.");
+    return;
+  }
+
+  // Пока листали, в каталог могли добавить тайтл: страницы сдвинулись, повторы убираем
+  const known = new Set(state.titles.map((item) => item.id));
+  const start = state.titles.length;
+  state.titles = [...state.titles, ...result.data.titles.filter((item) => !known.has(item.id))];
+  state.total = result.data.total;
+  render();
+  // Фокус на первую новую карточку: с клавиатуры не нужно проходить заново весь список
+  grid.querySelectorAll(".card-title a")[start]?.focus();
+}
+
+async function load() {
+  const [me, popular, updates] = await Promise.all([
+    getMe(),
+    api(`/api/titles?limit=4`),
+    api("/api/updates"),
+    fetchCatalog({ withFacets: true })
+  ]);
+
   state.user = me.user;
   if (state.user) {
     const library = await api("/api/library");
     if (library.ok) state.library = new Map(library.data.items.map((item) => [item.titleId, item]));
   }
+  state.popular = popular.ok ? popular.data.titles : [];
 
-  renderTypeCounts();
-  renderGenres();
-  render();
+  if (state.titles.length) render();
   renderPopular();
   renderUpdates(updates.ok ? updates.data.titles : []);
 }
 
 // ==================== ФИЛЬТРЫ ====================
 
-function matches(item) {
-  const query = state.query.toLowerCase().trim();
-  const entry = state.library.get(item.id);
-
-  const matchesQuery =
-    !query ||
-    item.title.toLowerCase().includes(query) ||
-    item.author.toLowerCase().includes(query) ||
-    item.translator.toLowerCase().includes(query) ||
-    TYPE_LABELS[item.type].toLowerCase().includes(query) ||
-    item.genres.some((genre) => genre.toLowerCase().includes(query));
-
-  const matchesType = state.type === "all" || item.type === state.type;
-  const matchesGenre = state.genre === "Все" || item.genres.includes(state.genre);
-
-  const matchesTab = {
-    all: true,
-    popular: item.rating >= 8.8,
-    ongoing: item.status === "ongoing",
-    completed: item.status === "completed",
-    reading: entry?.status === "reading",
-    favorites: entry?.favorite === true
-  }[state.tab];
-
-  return matchesQuery && matchesType && matchesGenre && matchesTab;
-}
-
 function renderTypeCounts() {
   for (const [type, id] of [["manga", "#countManga"], ["manhwa", "#countManhwa"], ["manhua", "#countManhua"]]) {
-    const count = state.titles.filter((item) => item.type === type).length;
-    document.querySelector(id).textContent = `${count} в каталоге`;
+    document.querySelector(id).textContent = `${state.facets.typeCounts[type] ?? 0} в каталоге`;
   }
 }
 
-/** Жанры только тех тайтлов, которые подходят под выбранный тип */
+/** Жанры только тех тайтлов, которые подходят под выбранный тип: список присылает сервер */
 function renderGenres() {
-  const pool = state.titles.filter((item) => state.type === "all" || item.type === state.type);
-  const genres = [...new Set(pool.flatMap((item) => item.genres))].sort((a, b) => a.localeCompare(b, "ru"));
-  if (state.genre !== "Все" && !genres.includes(state.genre)) state.genre = "Все";
-
   genresBox.replaceChildren(
-    ...["Все", ...genres].map((genre) => {
+    ...["Все", ...state.facets.genres].map((genre) => {
       const button = document.createElement("button");
       button.type = "button";
       button.className = "genre";
@@ -115,8 +164,8 @@ function setType(type) {
   state.type = type;
   setPressed("[data-type]", "type", type);
   document.querySelectorAll("[data-type-card]").forEach((card) => card.classList.toggle("active", card.dataset.typeCard === type));
-  renderGenres();
-  render();
+  // Жанры зависят от типа
+  fetchCatalog({ withFacets: true });
 }
 
 function setTab(tab) {
@@ -127,7 +176,15 @@ function setTab(tab) {
   }
   state.tab = tab;
   setPressed("[data-tab]", "tab", tab);
-  render();
+  fetchCatalog();
+}
+
+function setQuery(value, { now = false } = {}) {
+  clearTimeout(searchTimer);
+  if (value.trim() === state.query.trim() && !now) return;
+  state.query = value;
+  if (now) fetchCatalog();
+  else searchTimer = setTimeout(fetchCatalog, SEARCH_DELAY);
 }
 
 // ==================== КАРТОЧКИ ====================
@@ -183,7 +240,7 @@ function card(item) {
   footer.append(element("span", `release release-${item.status}`, item.status === "ongoing" ? "Выходит" : "Завершён"));
   info.append(footer);
 
-  if (entry?.chapter > 0) {
+  if (entry?.chapter > 0 && item.chapters > 0) {
     const progress = element("div", "progress-line");
     progress.setAttribute("role", "img");
     progress.setAttribute("aria-label", `Прочитано ${entry.chapter} из ${item.chapters} глав`);
@@ -198,13 +255,13 @@ function card(item) {
 }
 
 function render() {
-  const filtered = state.titles.filter(matches);
-  grid.replaceChildren(...filtered.map(card));
-  resultsStatus.textContent = `Найдено тайтлов: ${filtered.length}`;
+  grid.replaceChildren(...state.titles.map(card));
+  resultsStatus.textContent = `Найдено тайтлов: ${state.total}`;
+  loadMore.hidden = state.titles.length >= state.total;
 
-  if (filtered.length > 0) {
+  if (state.titles.length > 0) {
     emptyState.hidden = true;
-  } else if (state.titles.length === 0) {
+  } else if (state.catalogSize === 0) {
     showEmpty("Каталог пока пуст. Тайтлы скоро появятся.");
   } else if (state.tab === "favorites") {
     showEmpty("В избранном пока пусто. Нажми ♡ на карточке, чтобы сохранить тайтл.");
@@ -216,8 +273,7 @@ function render() {
 }
 
 function renderPopular() {
-  const popular = [...state.titles].sort((a, b) => b.rating - a.rating).slice(0, 4);
-  popularGrid.replaceChildren(...popular.map(card));
+  popularGrid.replaceChildren(...state.popular.map(card));
 }
 
 function renderUpdates(items) {
@@ -253,6 +309,8 @@ function showEmpty(message) {
 }
 
 function showSkeletons() {
+  emptyState.hidden = true;
+  loadMore.hidden = true;
   grid.replaceChildren(...Array.from({ length: 4 }, () => element("div", "skeleton")));
 }
 
@@ -270,8 +328,13 @@ async function toggleFavorite(id) {
     return;
   }
   state.library.set(id, result.data.item);
-  render();
   renderPopular();
+  // В подборке «Избранное» состав выдачи изменился: загружаем её заново
+  if (state.tab === "favorites") {
+    await fetchCatalog();
+    return;
+  }
+  render();
   // Фокус возвращается на кнопку: после перерисовки старой кнопки уже нет
   document.querySelector(`#titleGrid [data-favorite="${id}"]`)?.focus();
 }
@@ -301,20 +364,18 @@ genresBox.addEventListener("click", (event) => {
   if (!button) return;
   state.genre = button.dataset.genre;
   setPressed("[data-genre]", "genre", state.genre);
-  render();
+  fetchCatalog();
 });
 
-searchInput.addEventListener("input", () => {
-  state.query = searchInput.value;
-  render();
-});
+searchInput.addEventListener("input", () => setQuery(searchInput.value));
 
 document.querySelector("#searchForm").addEventListener("submit", (event) => {
   event.preventDefault();
-  state.query = searchInput.value;
-  render();
+  setQuery(searchInput.value, { now: true });
   document.querySelector("#catalog").scrollIntoView({ block: "start" });
 });
+
+loadMore.addEventListener("click", fetchMore);
 
 document.querySelector("#favoritesTop").addEventListener("click", () => {
   setTab("favorites");

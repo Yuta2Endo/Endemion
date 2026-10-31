@@ -429,6 +429,17 @@ h1 span {
   background: linear-gradient(90deg, var(--cyan), var(--pink));
 }
 
+/* Следующая страница выдачи каталога */
+.load-more {
+  display: flex;
+  justify-content: center;
+  margin-top: 24px;
+}
+
+.load-more [hidden] {
+  display: none;
+}
+
 .empty {
   padding: 50px 20px;
   border: 1px dashed var(--border);

@@ -49,6 +49,86 @@ export function posterBackground(title) {
   return title.cover ? `url("${title.cover}") center / cover no-repeat, ${title.poster}` : title.poster;
 }
 
+/** Текст для поиска: нижний регистр, «ё» как «е», одиночные пробелы. Такие же правила у запроса и у search_text */
+export function normalizeSearch(value) {
+  return String(value).toLowerCase().replaceAll("ё", "е").replace(/\s+/g, " ").trim();
+}
+
+/** Строка search_text тайтла: по ней ищет /api/titles. Обновляется при каждом сохранении тайтла в админке */
+export function searchText(title) {
+  return normalizeSearch([title.title, title.author, title.translator, TYPES[title.type].label, ...title.genres].join(" "));
+}
+
+export const PAGE_SIZE = 24;
+export const MAX_PAGE_SIZE = 100;
+// Вкладка «Популярное»
+export const POPULAR_RATING = 8.8;
+// Слов в запросе, по которым ищем: длинный запрос не должен превращаться в десятки условий
+const MAX_WORDS = 8;
+
+// Условие для полки пользователя. Ключ проверяет API, в SQL не подставляется ничего от пользователя
+const SHELVES = {
+  favorites: "l.favorite = 1",
+  reading: "l.status = 'reading'",
+  library: "1 = 1"
+};
+
+/**
+ * Поиск по каталогу. Каждое слово запроса должно встретиться в названии, авторе, переводе, типе или жанрах.
+ * shelf: { userId, kind } — только тайтлы с полки пользователя. Возвращает одну страницу и общее число найденных
+ */
+export async function searchTitles(env, {
+  query = "", type = null, genre = null, release = null, popular = false, shelf = null,
+  order = "rating", limit = PAGE_SIZE, offset = 0
+} = {}) {
+  const where = [];
+  const binds = [];
+  for (const word of normalizeSearch(query).split(" ").filter(Boolean).slice(0, MAX_WORDS)) {
+    // % и _ в запросе ищутся как обычные символы
+    where.push("t.search_text LIKE ? ESCAPE '\\'");
+    binds.push(`%${word.replace(/[\\%_]/g, "\\$&")}%`);
+  }
+  if (type) {
+    where.push("t.type = ?");
+    binds.push(type);
+  }
+  if (genre) {
+    where.push("EXISTS (SELECT 1 FROM json_each(t.genres) g WHERE g.value = ?)");
+    binds.push(genre);
+  }
+  if (release) {
+    where.push("t.status = ?");
+    binds.push(release);
+  }
+  if (popular) {
+    where.push("t.rating >= ?");
+    binds.push(POPULAR_RATING);
+  }
+  if (shelf) {
+    where.push(`EXISTS (SELECT 1 FROM library l WHERE l.title_id = t.id AND l.user_id = ? AND ${SHELVES[shelf.kind]})`);
+    binds.push(shelf.userId);
+  }
+
+  const filter = where.length ? ` WHERE ${where.join(" AND ")}` : "";
+  // t.id в конце сортировки: у тайтлов с одинаковым рейтингом порядок не меняется между страницами
+  const [page, count] = await env.DB.batch([
+    env.DB.prepare(`${SELECT}${filter} ORDER BY ${ORDERS[order] || ORDERS.rating}, t.id LIMIT ? OFFSET ?`).bind(...binds, limit, offset),
+    env.DB.prepare(`SELECT COUNT(*) AS n FROM titles t${filter}`).bind(...binds)
+  ]);
+  return { titles: page.results.map(toTitle), total: count.results[0].n };
+}
+
+/** Число тайтлов каждого типа и жанры тайтлов выбранного типа (type = null — всех типов): для фильтров на главной */
+export async function catalogFacets(env, type = null) {
+  const [types, genres] = await env.DB.batch([
+    env.DB.prepare("SELECT type, COUNT(*) AS n FROM titles GROUP BY type"),
+    env.DB.prepare("SELECT DISTINCT g.value AS genre FROM titles t, json_each(t.genres) g WHERE ? IS NULL OR t.type = ?").bind(type, type)
+  ]);
+  const typeCounts = Object.fromEntries(Object.keys(TYPES).map((name) => [name, 0]));
+  for (const row of types.results) typeCounts[row.type] = row.n;
+  return { typeCounts, genres: genres.results.map((row) => row.genre).sort((a, b) => a.localeCompare(b, "ru")) };
+}
+
 export async function listTitles(env, order = "rating") {
   const { results } = await env.DB.prepare(`${SELECT} ORDER BY ${ORDERS[order] || ORDERS.rating}`).all();
   return results.map(toTitle);

@@ -74,6 +74,10 @@ check("несуществующий тайтл", r.status === 404);
 
 r = await call("GET", "/api/positions/1", undefined, { withCookie: false });
 check("место в главе только для вошедших", r.status === 401);
+r = await call("GET", "/api/titles?tab=favorites", undefined, { withCookie: false });
+check("подборка «Избранное» только для вошедших", r.status === 401);
+r = await call("GET", "/api/titles?tab=favorites");
+check("подборка «Избранное» у вошедшего", r.status === 200 && Array.isArray(r.data.titles));
 
 if (first) {
   const { id, chapters } = first;
