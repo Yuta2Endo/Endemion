@@ -3,7 +3,7 @@
 
 import { escapeHtml as e, html, notFound } from "../../_lib/html.js";
 import { PAGE_SIZES, pageCount, pageKind } from "../../_lib/pages.js";
-import { getTitle, parseId, TYPES } from "../../_lib/titles.js";
+import { getChapter, getTitle, parseId, TYPES } from "../../_lib/titles.js";
 
 function radios(name, options) {
   return options
@@ -16,6 +16,8 @@ export async function onRequestGet({ params, env, request }) {
   const chapter = parseId(params.chapter);
   const title = id && chapter && env.DB ? await getTitle(env, id) : null;
   if (!title || chapter > title.chapters) return notFound(env, request);
+  const info = await getChapter(env, title.id, chapter);
+  const chapterLabel = `${info?.sideStory ? "Экстра · " : ""}Глава ${chapter}${info?.name ? `: ${info.name}` : ""}`;
 
   const type = TYPES[title.type];
   const kind = pageKind(title);
@@ -70,7 +72,7 @@ export async function onRequestGet({ params, env, request }) {
     <a class="reader-icon" href="/title/${title.id}" aria-label="К странице тайтла" title="К странице тайтла">←</a>
     <div class="reader-heading">
       <strong>${e(title.title)}</strong>
-      <span>${e(type.label)} · Глава ${chapter} из ${title.chapters}</span>
+      <span>${e(type.label)} · ${e(chapterLabel)} · всего ${title.chapters}</span>
     </div>
     <label class="visually-hidden" for="chapterSelect">Перейти к главе</label>
     <select class="reader-select" id="chapterSelect">${options}</select>

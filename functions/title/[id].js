@@ -2,12 +2,23 @@
 // Избранное, статус и прочитанные главы дорисовывает /assets/title.js
 
 import { escapeHtml as e, html, notFound } from "../_lib/html.js";
-import { getTitle, parseId, plural, TYPES } from "../_lib/titles.js";
+import { formatDate, getTitle, listChapters, parseId, plural, TYPES } from "../_lib/titles.js";
+
+/** Строка списка глав: номер, название, том, пометка экстры и дата выхода */
+function chapterItem(titleId, chapter) {
+  const label = chapter.sideStory ? `Экстра · глава ${chapter.number}` : `Глава ${chapter.number}`;
+  const details = [chapter.volume ? `Том ${chapter.volume}` : "", formatDate(chapter.releasedAt)].filter(Boolean).join(" · ");
+  return `<li><a href="/read/${titleId}/${chapter.number}" data-chapter="${chapter.number}"${chapter.sideStory ? ` class="is-side"` : ""}>` +
+    `<span class="chapter-label"><strong>${e(label)}</strong>${chapter.name ? `<span class="chapter-name">${e(chapter.name)}</span>` : ""}` +
+    `<small>${e(details)}</small></span></a></li>`;
+}
 
 export async function onRequestGet({ params, env, request }) {
   const id = parseId(params.id);
   const title = id && env.DB ? await getTitle(env, id) : null;
   if (!title) return notFound(env, request);
+  const chapterList = await listChapters(env, title.id);
+  const hasChapters = chapterList.length > 0;
 
   const type = TYPES[title.type];
   const origin = new URL(request.url).origin;
@@ -83,16 +94,16 @@ export async function onRequestGet({ params, env, request }) {
           <div><dt>Формат</dt><dd>${e(type.format)}</dd></div>
         </dl>
 
-        <div class="read-actions">
+        ${hasChapters ? `<div class="read-actions">
           <a class="primary-btn read-btn" id="readButton" href="/read/${title.id}/1">Читать с 1 главы</a>
           <a class="ghost-btn" href="/read/${title.id}/${title.chapters}">Последняя глава ${title.chapters}</a>
-        </div>
+        </div>` : `<p class="read-actions-empty">Главы пока не добавлены.</p>`}
 
         <div class="library-controls" id="libraryControls" aria-live="polite"></div>
       </div>
     </section>
 
-    <section class="section" aria-labelledby="chaptersTitle">
+    ${hasChapters ? `<section class="section" aria-labelledby="chaptersTitle">
       <div class="section-heading">
         <div>
           <div class="eyebrow">Главы</div>
@@ -101,7 +112,7 @@ export async function onRequestGet({ params, env, request }) {
         <p>Отмечай, сколько глав прочитано: Endemion запомнит место, и в профиле будет видно, с какой главы продолжить.</p>
       </div>
       <div class="chapter-panel" id="chapterPanel"></div>
-    </section>
+    </section>` : ""}
 
     <section class="section" aria-labelledby="listTitle">
       <div class="section-heading">
@@ -109,14 +120,13 @@ export async function onRequestGet({ params, env, request }) {
           <div class="eyebrow">Читать</div>
           <h2 id="listTitle">Список глав</h2>
         </div>
-        <p>Страницы глав — демонстрационные рисунки: тайтлы вымышленные, сканов нет.</p>
+        <p>Экстры (побочные истории) отмечены розовой полоской слева.</p>
       </div>
-      <ol class="chapter-list" id="chapterList" reversed>
-        ${Array.from({ length: title.chapters }, (_, i) => {
-          const n = title.chapters - i;
-          return `<li><a href="/read/${title.id}/${n}" data-chapter="${n}"><span>Глава ${n}</span></a></li>`;
-        }).join("")}
-      </ol>
+      ${hasChapters
+        ? `<ol class="chapter-list" id="chapterList" reversed>
+        ${chapterList.map((chapter) => chapterItem(title.id, chapter)).join("\n        ")}
+      </ol>`
+        : `<p class="empty">Глав пока нет.</p>`}
     </section>
   </main>
 

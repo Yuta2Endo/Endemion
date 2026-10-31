@@ -168,6 +168,8 @@ function renderReading() {
 
 function render() {
   renderControls();
+  // У тайтла без глав нет ни панели прогресса, ни списка глав
+  if (totalChapters === 0) return;
   renderPanel();
   renderReading();
 }

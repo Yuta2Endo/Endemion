@@ -1,12 +1,19 @@
 // Каталог манги, манхвы и маньхуа в D1
 
-const COLUMNS = "id, title, type, year, status, chapters, rating, genres, author, translator, symbol, poster, description, updated_at";
+// Число глав и дата последней главы считаются по таблице chapters. Главы идут подряд с 1
+// (это проверяют триггеры в migrations/0007_chapters.sql), поэтому номер последней главы равен их числу.
+// У тайтла без глав датой обновления считается дата изменения карточки
+const SELECT = `SELECT t.id, t.title, t.type, t.year, t.status, COALESCE(c.chapters, 0) AS chapters, t.rating, t.genres,
+  t.author, t.translator, t.symbol, t.poster, t.description, COALESCE(c.released_at, t.updated_at) AS updated_at
+FROM titles t
+LEFT JOIN (SELECT title_id, MAX(number) AS chapters, MAX(released_at) AS released_at FROM chapters GROUP BY title_id) c
+  ON c.title_id = t.id`;
 
 // Порядок сортировки выбирается из списка: в SQL не подставляется ничего, что пришло от пользователя
 const ORDERS = {
-  rating: "rating DESC",
+  rating: "t.rating DESC",
   updated: "updated_at DESC",
-  id: "id"
+  id: "t.id"
 };
 
 export const TYPES = {
@@ -35,13 +42,47 @@ export function toTitle(row) {
 }
 
 export async function listTitles(env, order = "rating") {
-  const { results } = await env.DB.prepare(`SELECT ${COLUMNS} FROM titles ORDER BY ${ORDERS[order] || ORDERS.rating}`).all();
+  const { results } = await env.DB.prepare(`${SELECT} ORDER BY ${ORDERS[order] || ORDERS.rating}`).all();
   return results.map(toTitle);
 }
 
 export async function getTitle(env, id) {
-  const row = await env.DB.prepare(`SELECT ${COLUMNS} FROM titles WHERE id = ?`).bind(id).first();
+  const row = await env.DB.prepare(`${SELECT} WHERE t.id = ?`).bind(id).first();
   return row ? toTitle(row) : null;
+}
+
+const CHAPTER_COLUMNS = "number, name, volume, side_story, released_at";
+
+export function toChapter(row) {
+  return {
+    number: row.number,
+    name: row.name,
+    volume: row.volume,
+    sideStory: row.side_story === 1,
+    releasedAt: row.released_at
+  };
+}
+
+/** Главы тайтла, новые сверху */
+export async function listChapters(env, titleId) {
+  const { results } = await env.DB.prepare(`SELECT ${CHAPTER_COLUMNS} FROM chapters WHERE title_id = ? ORDER BY number DESC`)
+    .bind(titleId)
+    .all();
+  return results.map(toChapter);
+}
+
+export async function getChapter(env, titleId, number) {
+  const row = await env.DB.prepare(`SELECT ${CHAPTER_COLUMNS} FROM chapters WHERE title_id = ? AND number = ?`)
+    .bind(titleId, number)
+    .first();
+  return row ? toChapter(row) : null;
+}
+
+const DATE_FORMAT = new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
+
+/** «2026-05-12 10:00:00» из D1 → «12 мая 2026 г.» */
+export function formatDate(value) {
+  return DATE_FORMAT.format(new Date(`${value.replace(" ", "T")}Z`));
 }
 
 /** id из адреса: только положительное целое число */
