@@ -36,7 +36,7 @@ TURNSTILE_SITE_KEY = ""
 MAIL_FROM = ""
 # Токен Cloudflare Web Analytics (Web Analytics → Add a site → токен из JS-сниппета). Публичный, не секрет.
 # Пустой — статистика не собирается
-WEB_ANALYTICS_TOKEN = ""
+WEB_ANALYTICS_TOKEN = "17c0bf0efcb1443e9cb740a20b5fd615"
 
 [observability]
 enabled = true
