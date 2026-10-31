@@ -1,0 +1,92 @@
+# Запуск на своём сервере (Docker + VPS)
+
+Сайт запускается тем же кодом, что и на Cloudflare. Вместо сервисов Cloudflare: база SQLite (файл `data/endemion.sqlite`), картинки на диске (`data/files`) или в S3-хранилище, HTTPS через Caddy с сертификатом Let's Encrypt.
+
+## Что нужно
+
+- VPS с Ubuntu 24.04 или Debian 12: 1 ядро, 1–2 ГБ памяти, диск под картинки глав (100 глав по 20 страниц — примерно 0,6–2 ГБ).
+- Домен. У регистратора две A-записи на IP сервера: `example.ru` и `www.example.ru`. Без них Caddy не получит сертификат.
+- Порты 80 и 443 открыты (в панели хостинга и в firewall сервера).
+
+## 1. Подготовить сервер
+
+```
+sudo apt update && sudo apt upgrade -y
+curl -fsSL https://get.docker.com | sudo sh
+sudo usermod -aG docker $USER        # затем выйти и зайти по SSH заново
+sudo ufw allow OpenSSH && sudo ufw allow 80 && sudo ufw allow 443/tcp && sudo ufw allow 443/udp && sudo ufw enable
+```
+
+## 2. Скачать код
+
+Репозиторий приватный. Проще всего — ключ только для чтения (deploy key):
+
+```
+ssh-keygen -t ed25519 -f ~/.ssh/endemion -N ""
+cat ~/.ssh/endemion.pub
+```
+
+Показанный ключ добавить в GitHub: репозиторий → Settings → Deploy keys → Add deploy key (без права записи). Затем:
+
+```
+GIT_SSH_COMMAND="ssh -i ~/.ssh/endemion" git clone git@github.com:Yuta2Endo/Endemion.git endemion
+cd endemion
+git config core.sshCommand "ssh -i ~/.ssh/endemion"
+```
+
+## 3. Настройки
+
+```
+cp .env.example .env
+nano .env
+```
+
+Обязательно: `SITE_DOMAIN` (домен без `https://`) и `PUBLIC_URL` (`https://` и домен). Остальное по комментариям в файле. Файл `.env` не попадает в git и в образ.
+
+Папка данных должна принадлежать пользователю, от которого работает приложение в контейнере (uid 1000):
+
+```
+mkdir -p data && sudo chown 1000:1000 data
+```
+
+## 4. Перенести базу с Cloudflare
+
+Делать прямо перед переключением: всё, что пользователи изменят на старом сайте после выгрузки, не перенесётся.
+
+На своём компьютере, в папке проекта:
+
+```
+npm run db:backup
+scp backups/endemion-<дата>.sql пользователь@сервер:~/endemion/data/
+```
+
+На сервере:
+
+```
+docker compose run --rm app node server/import-d1.mjs /app/data/endemion-<дата>.sql
+rm data/endemion-<дата>.sql
+```
+
+В выгрузке почты и хеши паролей: после переноса файл удалить. Права администратора переносятся вместе с базой. Загруженных страниц и обложек в R2 сейчас нет, переносить файлы не нужно.
+
+## 5. Запустить
+
+```
+docker compose up -d --build
+docker compose logs -f app       # Ctrl+C — выйти из логов, сайт продолжит работать
+```
+
+При запуске сервер сам применяет новые миграции (перед этим делает резервную копию базы). Проверка: `https://example.ru/healthz` отвечает `ok`, сайт открывается, вход работает.
+
+## Обслуживание
+
+- **Обновить сайт:** `git pull && docker compose up -d --build`.
+- **Логи:** `docker compose logs --tail 200 app`.
+- **Права администратора:** `docker compose exec app node server/grant-admin.mjs почта@example.ru` (снять — добавить `--revoke`).
+- **Резервные копии:** сервер раз в сутки кладёт копию базы в `data/backups` и хранит последние 14 (`BACKUP_HOURS`, `BACKUP_KEEP` в `.env`). Вручную: `docker compose exec app node server/backup.mjs`. Копии на том же диске не спасут при поломке сервера: регулярно забирайте `data/backups` к себе, например `scp -r пользователь@сервер:~/endemion/data/backups .` или через снапшоты диска у хостинга.
+- **Восстановить базу:** `docker compose stop app`, заменить `data/endemion.sqlite` копией из `data/backups` (файлы `endemion.sqlite-wal` и `endemion.sqlite-shm` удалить), `docker compose start app`.
+- **Картинки в S3:** заполнить строки `S3_*` в `.env` и перезапустить. Файлы из `data/files` при этом нужно скопировать в хранилище отдельно.
+
+## Что зависит от Cloudflare
+
+Капча Turnstile и Web Analytics — сервисы Cloudflare: если Cloudflare плохо доступен из России, они тоже будут работать плохо. На своём сервере их можно оставить пустыми в `.env`.

@@ -1,0 +1,14 @@
+# В образ попадает только то, что нужно для запуска сайта. Данные и ключи — никогда
+.git
+.wrangler
+node_modules
+data
+data-*
+backups
+test-results
+playwright-report
+.env
+.env.*
+.dev.vars
+resend.txt
+*.key

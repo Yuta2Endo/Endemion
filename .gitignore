@@ -3,6 +3,11 @@ node_modules/
 .dev.vars
 # Выгрузки рабочей базы (npm run db:backup): в них почты и хеши паролей
 backups/
+# Данные своего сервера (npm start, Docker): база, картинки и резервные копии
+data/
+data-*/
+# Настройки сервера с ключами (образец — .env.example)
+.env
 # Результаты браузерных тестов (npm run test:e2e)
 test-results/
 playwright-report/

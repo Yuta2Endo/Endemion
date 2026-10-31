@@ -58,11 +58,12 @@ r = await call("GET", "/api/me");
 check("isAdmin: false", r.data?.user?.isAdmin === false);
 
 // Почта сгенерирована тестом выше, в ней только буквы, цифры, дефис, @ и точки.
-// wrangler запускается через node без оболочки: так SQL-команда передаётся одним аргументом на любой системе
-execFileSync(process.execPath, [
-  "node_modules/wrangler/bin/wrangler.js", "d1", "execute", "endemion", "--local",
-  "--command", `UPDATE users SET is_admin = 1 WHERE email = '${email}'`
-], { stdio: "ignore" });
+// Команды запускаются через node без оболочки: так SQL передаётся одним аргументом на любой системе.
+// TEST_TARGET=node — сайт запущен своим сервером (npm start), иначе это wrangler dev
+execFileSync(process.execPath, process.env.TEST_TARGET === "node"
+  ? ["server/grant-admin.mjs", email]
+  : ["node_modules/wrangler/bin/wrangler.js", "d1", "execute", "endemion", "--local",
+    "--command", `UPDATE users SET is_admin = 1 WHERE email = '${email}'`], { stdio: "ignore" });
 
 r = await call("GET", "/api/me");
 check("права выданы", r.data?.user?.isAdmin === true);

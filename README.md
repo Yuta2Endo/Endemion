@@ -41,6 +41,12 @@ npm run test:e2e            # читалка в Chromium, Firefox, WebKit, Andro
 
 Браузеры для `test:e2e` ставятся один раз: `npx playwright install chromium firefox webkit`. Если dev-сервер не запущен, Playwright запустит его сам. Тесты создают свои тайтлы с демо-страницами и в конце удаляют их.
 
+## Свой сервер (Docker + VPS)
+
+Тот же код запускается без Cloudflare: `npm start` (Node.js 22.16 или новее) или в Docker. Код сервера — в `server/`: SQLite вместо D1, диск или S3 вместо R2, раздача `public/` с заголовками из `_headers`. Пошаговая инструкция — [DEPLOY.md](DEPLOY.md).
+
+Тесты против своего сервера: запустить `npm start` с `PUBLIC_URL=http://127.0.0.1:8788 PORT=8788 MAIL_DEV_MODE=1 DATA_DIR=data-test`, затем те же `npm run test:api`, `test:admin` и `test:e2e` с `BASE_URL=http://127.0.0.1:8788 TEST_TARGET=node DATA_DIR=data-test`.
+
 ## Деплой
 
 База D1 `endemion` уже создана, её id записан в `wrangler.toml`.

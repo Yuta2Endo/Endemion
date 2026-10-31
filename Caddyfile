@@ -1,0 +1,21 @@
+# Caddy принимает запросы на 80 и 443, сам получает и продлевает сертификат Let's Encrypt
+# и передаёт запросы приложению. Домен берётся из SITE_DOMAIN в .env
+
+{$SITE_DOMAIN} {
+	encode zstd gzip
+
+	# Страница главы до 15 МБ
+	request_body {
+		max_size 20MB
+	}
+
+	reverse_proxy app:3000 {
+		# Caddy заменяет X-Forwarded-For своим значением: подставить чужой IP посетитель не сможет
+		header_up X-Forwarded-For {remote_host}
+	}
+}
+
+# Адрес с www ведёт на основной
+www.{$SITE_DOMAIN} {
+	redir https://{$SITE_DOMAIN}{uri} permanent
+}

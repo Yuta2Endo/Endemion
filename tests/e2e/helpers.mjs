@@ -2,7 +2,7 @@
 
 import { execFileSync } from "node:child_process";
 
-export const BASE = "http://127.0.0.1:8787";
+export const BASE = process.env.BASE_URL || "http://127.0.0.1:8787";
 
 /** Клиент API с cookie сессии. Изменяющие запросы требуют Origin своего сайта */
 export function apiClient(cookie = "") {
@@ -24,12 +24,16 @@ export function apiClient(cookie = "") {
   };
 }
 
-/** Права администратора в локальной базе. Почту генерирует тест: в ней только буквы, цифры, дефис, @ и точки */
+/**
+ * Права администратора в локальной базе. Почту генерирует тест: в ней только буквы, цифры, дефис, @ и точки.
+ * TEST_TARGET=node — сайт запущен своим сервером (npm start), база в DATA_DIR; иначе это wrangler dev
+ */
 export function grantAdmin(email) {
-  execFileSync(process.execPath, [
-    "node_modules/wrangler/bin/wrangler.js", "d1", "execute", "endemion", "--local",
-    "--command", `UPDATE users SET is_admin = 1 WHERE email = '${email}'`
-  ], { stdio: "ignore" });
+  const args = process.env.TEST_TARGET === "node"
+    ? ["server/grant-admin.mjs", email]
+    : ["node_modules/wrangler/bin/wrangler.js", "d1", "execute", "endemion", "--local",
+      "--command", `UPDATE users SET is_admin = 1 WHERE email = '${email}'`];
+  execFileSync(process.execPath, args, { stdio: "ignore" });
 }
 
 /** Данные, которые global-setup передаёт тестам через переменную окружения */

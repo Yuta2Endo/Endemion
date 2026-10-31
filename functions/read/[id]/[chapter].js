@@ -60,6 +60,9 @@ export async function onRequestGet({ params, env, request }) {
   <meta name="description" content="${e(`${type.label} «${title.title}», глава ${chapter}. Перевод: ${title.translator}.`)}">
   <link rel="canonical" href="${e(new URL(request.url).origin + `${base}/${chapter}`)}">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-title" content="Endemion">
   <link rel="stylesheet" href="/assets/base.css">
   <link rel="stylesheet" href="/assets/reader.css">
   <noscript><link rel="stylesheet" href="/assets/reader-noscript.css"></noscript>

@@ -66,6 +66,9 @@ export async function onRequestGet({ params, env, request }) {
   <meta name="twitter:card" content="${cover ? "summary" : "summary_large_image"}">
   <script type="application/ld+json">${structuredData(title, url, cover)}</script>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-title" content="Endemion">
   <link rel="stylesheet" href="/assets/base.css">
   <link rel="stylesheet" href="/assets/catalog.css">
   <script type="module" src="/assets/title.js"></script>

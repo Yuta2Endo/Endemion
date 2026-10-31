@@ -1,0 +1,48 @@
+# Сайт на своём сервере: приложение и Caddy (HTTPS с сертификатом Let's Encrypt).
+# Запуск: заполнить .env по образцу .env.example, затем `docker compose up -d --build`. Инструкция — DEPLOY.md
+
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      NODE_ENV: production
+      # Запросы приходят только через Caddy: адрес посетителя берётся из X-Forwarded-For
+      TRUST_PROXY: "1"
+    volumes:
+      - ./data:/app/data
+    # Порт приложения наружу не открыт: в интернет смотрит только Caddy
+    expose:
+      - "3000"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    depends_on:
+      - app
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      SITE_DOMAIN: ${SITE_DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+volumes:
+  # Сертификаты Caddy: при пересоздании контейнера заново их получать не нужно
+  caddy_data:
+  caddy_config:

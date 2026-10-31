@@ -13,7 +13,10 @@
     "test": "node --test tests/crypto.test.mjs tests/pages.test.mjs",
     "test:api": "node tests/api.smoke.mjs",
     "test:admin": "node tests/admin.smoke.mjs",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "start": "node server/index.mjs",
+    "backup": "node server/backup.mjs",
+    "grant-admin": "node server/grant-admin.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.64.1",
@@ -22,5 +25,8 @@
   "allowScripts": {
     "esbuild@0.28.2": true,
     "workerd@1.20261023.1": true
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.1161.0"
   }
 }

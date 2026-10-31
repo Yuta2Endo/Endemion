@@ -43,6 +43,16 @@ async function initAnalytics() {
 
 initAnalytics();
 
+// Service worker: установка сайта как приложения и страница «Нет связи» без интернета (public/sw.js)
+function registerServiceWorker() {
+  navigator.serviceWorker.register("/sw.js").catch((err) => console.warn("Service worker не зарегистрирован:", err.message));
+}
+
+if ("serviceWorker" in navigator) {
+  if (document.readyState === "complete") registerServiceWorker();
+  else window.addEventListener("load", registerServiceWorker, { once: true });
+}
+
 let mePromise = null;
 
 /** Текущий пользователь или null. Запрос делается один раз на страницу */
