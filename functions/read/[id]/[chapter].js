@@ -2,7 +2,7 @@
 // а /assets/reader.js включает листание, настройки, клавиши и сохранение прогресса
 
 import { escapeHtml as e, html, notFound } from "../../_lib/html.js";
-import { PAGE_SIZES, pageCount, pageKind } from "../../_lib/pages.js";
+import { chapterLayout, pageKind } from "../../_lib/pages.js";
 import { getChapter, getTitle, parseId, TYPES } from "../../_lib/titles.js";
 
 function radios(name, options) {
@@ -21,8 +21,9 @@ export async function onRequestGet({ params, env, request }) {
 
   const type = TYPES[title.type];
   const kind = pageKind(title);
-  const size = PAGE_SIZES[kind];
-  const total = pageCount(title, chapter);
+  // Загруженные страницы из R2 или демо-рисунки, если файлов у главы нет
+  const size = chapterLayout(title, chapter, info);
+  const total = size.total;
   const base = `/read/${title.id}`;
   const hasPrev = chapter > 1;
   const hasNext = chapter < title.chapters;

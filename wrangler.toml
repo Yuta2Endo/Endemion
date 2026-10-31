@@ -21,6 +21,11 @@ database_name = "endemion"
 database_id = "d823a847-a9d6-40a1-95fa-c71d1de67566"
 migrations_dir = "migrations"
 
+# Картинки страниц глав. Ключ: <id тайтла>/<номер главы>/<номер страницы>, тип файла — в Content-Type объекта
+[[r2_buckets]]
+binding = "PAGES"
+bucket_name = "endemion-pages"
+
 [vars]
 # Ключи Turnstile (защита формы от ботов) необязательны: без них форма работает без капчи.
 # Публичный ключ можно указать здесь, секретный — только через `npx wrangler secret put TURNSTILE_SECRET_KEY`

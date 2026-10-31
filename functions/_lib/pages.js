@@ -34,6 +34,28 @@ export function pageCount(title, chapter) {
   return pageKind(title) === "page" ? 14 + Math.floor(rnd() * 7) : 8 + Math.floor(rnd() * 5);
 }
 
+/**
+ * Страницы главы: загруженные в R2, если они есть, иначе демо-рисунки.
+ * info — строка главы из D1 (getChapter), у загруженной главы в ней число страниц и их размер
+ */
+export function chapterLayout(title, chapter, info) {
+  const size = PAGE_SIZES[pageKind(title)];
+  if (info?.pages) {
+    return {
+      uploaded: true,
+      total: info.pages,
+      width: info.pageWidth || size.width,
+      height: info.pageHeight || size.height
+    };
+  }
+  return { uploaded: false, total: pageCount(title, chapter), ...size };
+}
+
+/** Ключ картинки страницы в R2 */
+export function pageKey(titleId, chapter, page) {
+  return `${titleId}/${chapter}/${page}`;
+}
+
 export function renderPage(title, chapter, page) {
   return pageKind(title) === "page" ? mangaPage(title, chapter, page) : stripPage(title, chapter, page);
 }

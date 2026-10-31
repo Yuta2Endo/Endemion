@@ -51,7 +51,7 @@ export async function getTitle(env, id) {
   return row ? toTitle(row) : null;
 }
 
-const CHAPTER_COLUMNS = "number, name, volume, side_story, released_at";
+const CHAPTER_COLUMNS = "number, name, volume, side_story, released_at, pages, page_width, page_height";
 
 export function toChapter(row) {
   return {
@@ -59,7 +59,11 @@ export function toChapter(row) {
     name: row.name,
     volume: row.volume,
     sideStory: row.side_story === 1,
-    releasedAt: row.released_at
+    releasedAt: row.released_at,
+    // null — страницы не загружены, показываются демо-рисунки
+    pages: row.pages,
+    pageWidth: row.page_width,
+    pageHeight: row.page_height
   };
 }
 
