@@ -186,6 +186,28 @@
   text-decoration: underline;
 }
 
+.forgot-link {
+  display: inline-block;
+  margin-top: 8px;
+  color: var(--cyan);
+  font-size: 13px;
+}
+
+.forgot-link[hidden] {
+  display: none;
+}
+
+/* Восстановление пароля: одна панель по центру */
+.reset-layout {
+  max-width: 520px;
+  margin: 0 auto;
+}
+
+.form-message a {
+  color: var(--cyan);
+  text-decoration: underline;
+}
+
 .turnstile:empty {
   display: none;
 }

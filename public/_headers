@@ -21,3 +21,6 @@
 
 /admin
   X-Robots-Tag: noindex
+
+/reset
+  X-Robots-Tag: noindex

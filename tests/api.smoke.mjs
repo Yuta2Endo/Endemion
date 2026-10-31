@@ -153,11 +153,54 @@ let last;
 for (let i = 0; i < 6; i++) last = await call("POST", "/api/auth/login", { email: other, password: "nope-nope-1" }, { withCookie: false });
 check("перебор пароля ограничен", last.status === 429, `status=${last.status}`);
 
+// Восстановление пароля проверяется только на локальном сервере с MAIL_DEV_MODE=1: ссылка из письма приходит в ответе.
+// На сайте тест не запрашивает письма, чтобы не слать их на несуществующие адреса
+let finalPassword = "new-password-2";
+r = await call("GET", "/api/config");
+const isLocal = /^http:\/\/(127\.0\.0\.1|localhost)(:\d+)?$/.test(BASE);
+if (isLocal && r.data?.passwordReset) {
+  r = await call("POST", "/api/auth/forgot", { email: `nobody-${Date.now()}@example.com` });
+  check("неизвестная почта: тот же ответ без ссылки", r.status === 200 && Boolean(r.data.message) && !r.data.devLink);
+  r = await call("POST", "/api/auth/forgot", { email: email.toUpperCase() });
+  const token = r.data?.devLink ? new URL(r.data.devLink).searchParams.get("token") : null;
+
+  if (!token) {
+    console.log("  --  ссылки в ответе нет (письма уходят через Resend): проверка по ссылке пропущена");
+  } else {
+    check("ссылка для нового пароля", /^[0-9a-f]{64}$/.test(token));
+    r = await call("POST", "/api/auth/reset", { token, password: "short" });
+    check("короткий пароль по ссылке отклонён", r.status === 400);
+    r = await call("POST", "/api/auth/reset", { token: "0".repeat(64), password: "reset-password-3" });
+    check("чужая ссылка не подходит", r.status === 400);
+
+    const oldCookie = cookie;
+    r = await call("POST", "/api/auth/reset", { token, password: "reset-password-3" });
+    check("новый пароль по ссылке", r.status === 200);
+    finalPassword = "reset-password-3";
+    const newCookie = cookie;
+    cookie = oldCookie;
+    r = await call("GET", "/api/me");
+    check("после сброса прежние сессии завершены", r.data?.user === null);
+    cookie = newCookie;
+    r = await call("GET", "/api/me");
+    check("после сброса вход на этом устройстве", r.data?.user?.email === email);
+    r = await call("POST", "/api/auth/reset", { token, password: "reset-password-4" });
+    check("ссылка одноразовая", r.status === 400);
+  }
+
+  // Писем на одну почту не больше трёх за 15 минут: одно уже запрошено выше
+  let last;
+  for (let i = 0; i < 3; i++) last = await call("POST", "/api/auth/forgot", { email });
+  check("частота писем ограничена", last.status === 429, `status=${last.status}`);
+} else {
+  console.log("  --  восстановление пароля не проверяется (нужен локальный сервер с MAIL_DEV_MODE=1)");
+}
+
 r = await call("DELETE", "/api/me", { password: "wrong" });
 check("удаление требует пароль", r.status === 403);
-r = await call("DELETE", "/api/me", { password: "new-password-2" });
+r = await call("DELETE", "/api/me", { password: finalPassword });
 check("удаление аккаунта", r.status === 200);
-r = await call("POST", "/api/auth/login", { email, password: "new-password-2" });
+r = await call("POST", "/api/auth/login", { email, password: finalPassword });
 check("удалённый аккаунт не входит", r.status === 401);
 
 console.log(failures ? `\n${failures} проверок не прошло` : "\nВсе проверки прошли");

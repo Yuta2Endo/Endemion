@@ -5,8 +5,10 @@ const WINDOW_MS = 15 * 60 * 1000;
 export const LIMITS = {
   // Неудачных входов в один аккаунт за 15 минут
   email: 5,
-  // Попыток с одного IP за 15 минут: и входы, и регистрации
-  ip: 30
+  // Попыток с одного IP за 15 минут: входы, регистрации и запросы на восстановление пароля
+  ip: 30,
+  // Писем для восстановления пароля на одну почту за 15 минут: чужой ящик нельзя завалить письмами
+  reset: 3
 };
 
 async function count(env, key) {
@@ -23,13 +25,26 @@ export async function isLimited(env, ip, email) {
   return false;
 }
 
-export async function recordAttempt(env, ip, email) {
+async function record(env, keys) {
   const now = Date.now();
-  const statements = [env.DB.prepare("INSERT INTO auth_attempts (key, created_at) VALUES (?, ?)").bind(`ip:${ip}`, now)];
-  if (email) statements.push(env.DB.prepare("INSERT INTO auth_attempts (key, created_at) VALUES (?, ?)").bind(`email:${email}`, now));
+  const statements = keys.map((key) => env.DB.prepare("INSERT INTO auth_attempts (key, created_at) VALUES (?, ?)").bind(key, now));
   // Старые записи больше не нужны
   statements.push(env.DB.prepare("DELETE FROM auth_attempts WHERE created_at < ?").bind(now - WINDOW_MS));
   await env.DB.batch(statements);
+}
+
+export async function recordAttempt(env, ip, email) {
+  await record(env, email ? [`ip:${ip}`, `email:${email}`] : [`ip:${ip}`]);
+}
+
+/** true, если с этого IP или на эту почту уже запросили слишком много писем для восстановления пароля */
+export async function isResetLimited(env, ip, email) {
+  if ((await count(env, `ip:${ip}`)) >= LIMITS.ip) return true;
+  return (await count(env, `reset:${email}`)) >= LIMITS.reset;
+}
+
+export async function recordReset(env, ip, email) {
+  await record(env, [`ip:${ip}`, `reset:${email}`]);
 }
 
 /** После успешного входа счётчик для почты сбрасывается */

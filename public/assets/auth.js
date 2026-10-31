@@ -18,12 +18,15 @@ const submitButton = document.querySelector("#submitButton");
 const formTitle = document.querySelector("#formTitle");
 const formDescription = document.querySelector("#formDescription");
 const formMessage = document.querySelector("#formMessage");
+const forgotLink = document.querySelector("#forgotLink");
 
 const params = new URLSearchParams(location.search);
 const next = safeNext(params.get("next"));
 
 let mode = "login";
 let turnstileWidget = null;
+// Восстановление пароля работает, только если на сайте настроена отправка писем
+let resetAvailable = false;
 
 // Старая версия сайта хранила пароли и сессию в браузере. Эти данные больше не нужны и небезопасны
 localStorage.removeItem("endemion-users");
@@ -40,6 +43,7 @@ function setMode(nextMode) {
   confirmField.hidden = !isRegister;
   consentField.hidden = !isRegister;
   passwordHint.hidden = !isRegister;
+  forgotLink.hidden = isRegister || !resetAvailable;
 
   nameInput.required = isRegister;
   confirmInput.required = isRegister;
@@ -73,8 +77,11 @@ function validate() {
 
 // ==================== TURNSTILE ====================
 
-async function initTurnstile() {
+async function loadConfig() {
   const config = await api("/api/config");
+  resetAvailable = config.ok && config.data.passwordReset === true;
+  forgotLink.hidden = mode === "register" || !resetAvailable;
+
   const siteKey = config.ok ? config.data.turnstileSiteKey : "";
   if (!siteKey) return;
 
@@ -139,4 +146,4 @@ getMe().then(({ user }) => {
 });
 
 if (params.get("mode") === "register") setMode("register");
-initTurnstile();
+loadConfig();

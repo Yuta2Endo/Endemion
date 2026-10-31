@@ -5,6 +5,8 @@ import { onRequest as apiMiddleware } from "../functions/api/_middleware.js";
 import * as login from "../functions/api/auth/login.js";
 import * as register from "../functions/api/auth/register.js";
 import * as logout from "../functions/api/auth/logout.js";
+import * as forgot from "../functions/api/auth/forgot.js";
+import * as reset from "../functions/api/auth/reset.js";
 import * as me from "../functions/api/me/index.js";
 import * as mePassword from "../functions/api/me/password.js";
 import * as titleList from "../functions/api/titles/index.js";
@@ -35,6 +37,8 @@ const ROUTES = [
   ["/api/auth/login", login],
   ["/api/auth/register", register],
   ["/api/auth/logout", logout],
+  ["/api/auth/forgot", forgot],
+  ["/api/auth/reset", reset],
   ["/api/me", me],
   ["/api/me/password", mePassword],
   ["/api/titles", titleList],

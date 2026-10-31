@@ -31,6 +31,9 @@ bucket_name = "endemion-pages"
 # Ключи Turnstile (защита формы от ботов) необязательны: без них форма работает без капчи.
 # Публичный ключ можно указать здесь, секретный — только через `npx wrangler secret put TURNSTILE_SECRET_KEY`
 TURNSTILE_SITE_KEY = ""
+# Отправитель писем восстановления пароля, например "Endemion <noreply@ваш-домен>". Домен должен быть подтверждён в Resend,
+# ключ API задаётся секретом: `npx wrangler secret put RESEND_API_KEY`. Пока они не заданы, восстановление пароля выключено
+MAIL_FROM = ""
 
 [observability]
 enabled = true

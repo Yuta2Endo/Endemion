@@ -20,7 +20,11 @@ export async function onRequestPost({ request, env }) {
   const problem = validatePassword(body.newPassword);
   if (problem) return error(problem);
 
-  await env.DB.prepare("UPDATE users SET password_hash = ? WHERE id = ?").bind(await hashPassword(body.newPassword), user.id).run();
+  await env.DB.batch([
+    env.DB.prepare("UPDATE users SET password_hash = ? WHERE id = ?").bind(await hashPassword(body.newPassword), user.id),
+    // Ссылка из письма, запрошенная раньше, больше не должна менять пароль
+    env.DB.prepare("DELETE FROM password_resets WHERE user_id = ?").bind(user.id)
+  ]);
   // Если пароль меняют из-за утечки, чужие сессии тоже должны закончиться. Текущее устройство остаётся в профиле
   await destroyAllSessions(env, user.id);
   const setCookie = await createSession(env, request, user.id);

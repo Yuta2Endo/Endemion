@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#080b18">
+  <meta name="robots" content="noindex">
+  <title>Новый пароль — Endemion</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/assets/base.css">
+  <link rel="stylesheet" href="/assets/account.css">
+  <script type="module" src="/assets/reset.js"></script>
+</head>
+<body>
+  <main class="account-shell">
+    <nav class="account-nav">
+      <a class="logo" href="/"><span class="logo-mark" aria-hidden="true">E</span>ENDEMION</a>
+      <a class="back-link" href="/auth">← Ко входу</a>
+    </nav>
+
+    <section class="reset-layout">
+      <div class="account-panel">
+        <h1 class="form-title" id="resetTitle">Забыли пароль?</h1>
+        <p class="form-description" id="resetDescription">Укажите почту аккаунта, и мы пришлём ссылку для нового пароля.</p>
+
+        <form id="forgotForm" novalidate hidden>
+          <div class="field">
+            <label for="forgotEmail">Электронная почта</label>
+            <input id="forgotEmail" type="email" autocomplete="email" maxlength="254" required>
+          </div>
+          <!-- Turnstile появляется, только если на сайте указан ключ TURNSTILE_SITE_KEY -->
+          <div class="turnstile" id="turnstile"></div>
+          <button class="main-button" type="submit">Отправить ссылку</button>
+        </form>
+
+        <form id="resetForm" novalidate hidden>
+          <div class="field">
+            <label for="newPassword">Новый пароль</label>
+            <input id="newPassword" type="password" autocomplete="new-password" minlength="8" maxlength="128" required aria-describedby="newPasswordHint">
+            <small class="field-hint" id="newPasswordHint">Минимум 8 символов.</small>
+          </div>
+          <div class="field">
+            <label for="confirmPassword">Повторите пароль</label>
+            <input id="confirmPassword" type="password" autocomplete="new-password" maxlength="128" required>
+          </div>
+          <button class="main-button" type="submit">Сохранить пароль</button>
+        </form>
+
+        <div class="form-message" id="resetMessage" role="alert" aria-live="assertive"></div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
