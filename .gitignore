@@ -6,3 +6,8 @@ backups/
 # Результаты браузерных тестов (npm run test:e2e)
 test-results/
 playwright-report/
+# Локальные заметки с ключами: в репозиторий не попадают
+resend.txt
+*.key
+.env
+.env.*
