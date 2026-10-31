@@ -1,0 +1,451 @@
+/* Читалка: режим «Страницы» (по одной странице на экран) и «Лента» (вертикальная прокрутка) */
+
+.reader-body {
+  --reader-bg: #05070f;
+  --reader-text: var(--text);
+  --strip-width: 760px;
+  color: var(--reader-text);
+  background: var(--reader-bg);
+}
+
+.reader-body::before {
+  display: none;
+}
+
+.reader-body[data-background="black"] {
+  --reader-bg: #000;
+}
+
+.reader-body[data-background="light"] {
+  --reader-bg: #e7e8ee;
+  --reader-text: #141826;
+}
+
+.reader-body[data-width="narrow"] {
+  --strip-width: 560px;
+}
+
+.reader-body[data-width="wide"] {
+  --strip-width: 1100px;
+}
+
+/* ==================== ПАНЕЛИ ==================== */
+
+.reader-bar {
+  position: fixed;
+  right: 0;
+  left: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px max(14px, env(safe-area-inset-right)) 10px max(14px, env(safe-area-inset-left));
+  color: var(--text);
+  background: rgba(8, 11, 24, 0.86);
+  backdrop-filter: blur(18px);
+  transition: transform 0.25s ease, opacity 0.25s ease;
+}
+
+.reader-top {
+  top: 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.reader-bottom {
+  bottom: 0;
+  justify-content: space-between;
+  padding-bottom: max(10px, env(safe-area-inset-bottom));
+  border-top: 1px solid var(--border);
+}
+
+.ui-hidden .reader-top {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-100%);
+}
+
+.ui-hidden .reader-bottom {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(100%);
+}
+
+.reader-icon {
+  display: inline-grid;
+  flex: none;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  color: var(--text);
+  background: var(--panel-light);
+  font-size: 19px;
+  transition: 0.2s ease;
+}
+
+.reader-icon:hover,
+.reader-icon[aria-expanded="true"] {
+  border-color: rgba(116, 227, 255, 0.55);
+  background: rgba(116, 227, 255, 0.12);
+}
+
+.reader-icon[hidden] {
+  display: none;
+}
+
+.reader-heading {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+}
+
+.reader-heading strong,
+.reader-heading span {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.reader-heading span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.reader-select {
+  min-height: 42px;
+  max-width: 140px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  color: var(--text);
+  background: var(--bg-soft);
+}
+
+.reader-chapter {
+  flex: 1 1 0;
+  min-width: 0;
+  color: var(--muted);
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.reader-chapter:last-child {
+  text-align: right;
+}
+
+a.reader-chapter:hover {
+  color: var(--cyan);
+}
+
+.reader-position {
+  display: grid;
+  flex: 2 1 0;
+  justify-items: center;
+  gap: 4px;
+  max-width: 420px;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.reader-slider {
+  width: 100%;
+  accent-color: var(--cyan);
+}
+
+/* Манга справа налево: ползунок заполняется справа */
+[data-direction="rtl"] .reader-slider {
+  direction: rtl;
+}
+
+/* Тонкая полоска прочитанного над всем экраном */
+.read-progress {
+  position: fixed;
+  top: 0;
+  right: 0;
+  left: 0;
+  z-index: 30;
+  height: 3px;
+  pointer-events: none;
+}
+
+.read-progress span {
+  display: block;
+  width: 0;
+  height: 100%;
+  background: linear-gradient(90deg, var(--cyan), var(--pink));
+  box-shadow: 0 0 10px rgba(116, 227, 255, 0.6);
+  transition: width 0.2s ease;
+}
+
+[data-mode="paged"][data-direction="rtl"] .read-progress span {
+  margin-left: auto;
+  background: linear-gradient(270deg, var(--cyan), var(--pink));
+}
+
+/* ==================== НАСТРОЙКИ ==================== */
+
+.reader-settings {
+  position: fixed;
+  top: 70px;
+  right: 14px;
+  z-index: 25;
+  display: grid;
+  gap: 14px;
+  width: min(360px, calc(100% - 28px));
+  max-height: calc(100dvh - 160px);
+  padding: 18px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  color: var(--text);
+  background: rgba(16, 22, 42, 0.97);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+}
+
+.reader-settings[hidden] {
+  display: none;
+}
+
+.reader-settings fieldset {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  border: 0;
+}
+
+.reader-settings legend {
+  margin-bottom: 8px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.segment {
+  position: relative;
+}
+
+.segment input {
+  position: absolute;
+  opacity: 0;
+}
+
+.segment span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 38px;
+  padding: 0 13px;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  background: var(--panel-light);
+  font-size: 14px;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.segment input:checked + span {
+  border-color: transparent;
+  color: #07101b;
+  background: linear-gradient(135deg, var(--cyan), #c4f5ff);
+  font-weight: 800;
+}
+
+.segment input:focus-visible + span {
+  outline: 2px solid var(--cyan);
+  outline-offset: 2px;
+}
+
+.reader-keys {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+[data-mode="paged"] .only-strip,
+[data-mode="strip"] .only-paged {
+  display: none;
+}
+
+/* ==================== СТРАНИЦЫ ==================== */
+
+.reader {
+  min-height: 100dvh;
+}
+
+.reader-stage {
+  outline: none;
+}
+
+/* Пока reader.js не перешёл на сохранённую страницу, страницы скрыты, чтобы не мелькала первая.
+   Если скрипт не загрузился, через 2 секунды они всё равно появятся */
+.reader-pending .reader-stage {
+  visibility: hidden;
+  animation: reader-reveal 0s 2s forwards;
+}
+
+@keyframes reader-reveal {
+  to {
+    visibility: visible;
+  }
+}
+
+.reader-page {
+  display: block;
+  height: auto;
+  background: #1a1e2e;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+/* Лента: страницы подряд без зазоров, как в вебтун-приложениях */
+[data-mode="strip"] .reader-stage {
+  padding: 64px 0 76px;
+}
+
+[data-mode="strip"] .reader-page {
+  width: min(100%, var(--strip-width));
+  margin: 0 auto;
+}
+
+/* Манга в ленте читается постранично, поэтому между страницами есть зазор */
+[data-mode="strip"][data-kind="page"] .reader-page {
+  margin-bottom: 12px;
+}
+
+/* Страницы: на экране только текущая страница, клики по краям листают */
+[data-mode="paged"] .reader-stage {
+  display: grid;
+  min-height: 100dvh;
+  place-items: center;
+  padding: 12px;
+  cursor: pointer;
+  touch-action: pan-y pinch-zoom;
+}
+
+[data-mode="paged"] .reader-page,
+[data-mode="paged"] .reader-end {
+  display: none;
+}
+
+[data-mode="paged"] .reader-page.is-current {
+  display: block;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
+  animation: page-in 0.18s ease;
+}
+
+[data-mode="paged"][data-fit="height"] .reader-page {
+  width: auto;
+  max-width: 100%;
+  max-height: calc(100dvh - 24px);
+}
+
+/* Пока панели видны, страница помещается между ними и края не прячутся под панелями */
+[data-mode="paged"][data-fit="height"]:not(.ui-hidden) .reader-stage {
+  padding-top: 64px;
+  padding-bottom: 76px;
+}
+
+[data-mode="paged"][data-fit="height"]:not(.ui-hidden) .reader-page {
+  max-height: calc(100dvh - 140px);
+}
+
+/* Увеличенную страницу можно двигать пальцем во все стороны */
+.is-zoomed[data-mode="paged"] .reader-stage {
+  touch-action: auto;
+}
+
+[data-mode="paged"][data-fit="width"] .reader-stage {
+  padding: 64px 0 76px;
+}
+
+[data-mode="paged"][data-fit="width"] .reader-page {
+  width: min(100%, 900px);
+}
+
+[data-mode="paged"] .reader-end.is-current {
+  display: grid;
+  cursor: auto;
+}
+
+@keyframes page-in {
+  from {
+    opacity: 0.4;
+  }
+}
+
+/* ==================== КОНЕЦ ГЛАВЫ ==================== */
+
+.reader-end {
+  display: grid;
+  justify-items: center;
+  gap: 14px;
+  width: min(100% - 28px, 520px);
+  margin: 40px auto;
+  padding: 34px 26px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  background: var(--panel);
+  text-align: center;
+}
+
+.reader-end-symbol {
+  display: grid;
+  width: 84px;
+  height: 84px;
+  place-items: center;
+  border-radius: 24px;
+  background: linear-gradient(135deg, rgba(116, 227, 255, 0.25), rgba(255, 121, 173, 0.25));
+  font-size: 42px;
+}
+
+.reader-end h1 {
+  font-size: clamp(26px, 5vw, 34px);
+  letter-spacing: -0.03em;
+}
+
+.reader-end p {
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.reader-end-status:empty {
+  display: none;
+}
+
+.reader-end-status a {
+  color: var(--cyan);
+  font-weight: 800;
+}
+
+.reader-end-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+@media (max-width: 680px) {
+  .reader-select {
+    max-width: 112px;
+  }
+
+  .reader-heading strong {
+    font-size: 14px;
+  }
+
+  .reader-chapter {
+    font-size: 12px;
+  }
+
+  [data-mode="paged"] .reader-stage {
+    padding: 0;
+  }
+
+  [data-mode="paged"][data-fit="height"] .reader-page {
+    max-height: 100dvh;
+  }
+}

@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#080b18">
+  <title>Endemion — манга, манхва и маньхуа на русском</title>
+  <meta name="description" content="Endemion — каталог манги, манхвы и маньхуа на русском: поиск по типу и жанру, избранное, отметки «читаю» и «прочитано», прогресс по главам.">
+  <link rel="canonical" href="https://endemion.sasha-guseynov2005tm.workers.dev/">
+
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Endemion">
+  <meta property="og:title" content="Endemion — манга, манхва и маньхуа на русском">
+  <meta property="og:description" content="Находи тайтлы, сохраняй избранное и отмечай, на какой главе остановился.">
+  <meta property="og:url" content="https://endemion.sasha-guseynov2005tm.workers.dev/">
+  <meta property="og:image" content="https://endemion.sasha-guseynov2005tm.workers.dev/assets/og-image.png">
+  <meta property="og:locale" content="ru_RU">
+  <meta name="twitter:card" content="summary_large_image">
+
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/assets/base.css">
+  <link rel="stylesheet" href="/assets/catalog.css">
+  <script type="module" src="/assets/catalog.js"></script>
+</head>
+
+<body>
+  <a class="skip-link" href="#catalog">Перейти к каталогу</a>
+
+  <header class="header">
+    <div class="container nav">
+      <a class="logo" href="/">
+        <span class="logo-mark" aria-hidden="true">E</span>
+        ENDEMION
+      </a>
+
+      <nav class="nav-links" id="navLinks" aria-label="Разделы">
+        <a href="#catalog">Каталог</a>
+        <a href="#popular">Популярное</a>
+        <a href="#updates">Новые главы</a>
+      </nav>
+
+      <div class="nav-actions">
+        <button class="profile-btn" id="favoritesTop" type="button">♡ Избранное</button>
+        <a class="profile-btn" id="accountButton" href="/auth">Войти</a>
+        <button class="menu-toggle" type="button" aria-controls="navLinks" aria-expanded="false" aria-label="Меню">☰</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="container hero">
+      <div>
+        <div class="eyebrow">Твоя новая книжная орбита</div>
+
+        <h1>
+          Читай.<br>
+          Чувствуй.<br>
+          <span>Повторяй.</span>
+        </h1>
+
+        <p class="hero-text">
+          Endemion — каталог манги, манхвы и маньхуа на русском. Находи новые истории,
+          собирай свою полку и отмечай, на какой главе остановился.
+        </p>
+
+        <form class="search-box" id="searchForm" role="search">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <circle cx="11" cy="11" r="7"></circle>
+            <path d="m20 20-4-4"></path>
+          </svg>
+
+          <label class="visually-hidden" for="searchInput">Поиск по каталогу</label>
+          <input id="searchInput" type="search" placeholder="Название, автор, жанр или команда перевода..." autocomplete="off">
+
+          <button class="primary-btn" type="submit">Найти</button>
+        </form>
+      </div>
+
+      <div class="hero-art" aria-hidden="true">
+        <div class="moon"></div>
+        <div class="orbit"></div>
+
+        <a class="poster-feature" href="#catalog" tabindex="-1">
+          <div class="poster-feature-content">
+            <small>Каталог Endemion</small>
+            <strong>Скоро<br>новые тайтлы</strong>
+          </div>
+        </a>
+
+        <div class="floating-note">
+          <span>Endemion pick</span>
+          <strong>Истории, от которых не оторваться до последней главы.</strong>
+        </div>
+      </div>
+    </section>
+
+    <!-- Три формата: карточки работают как фильтр каталога -->
+    <section class="container types-section" aria-label="Форматы">
+      <button class="type-card type-manga" type="button" data-type-card="manga">
+        <span class="type-card-symbol" aria-hidden="true">漫</span>
+        <strong>Манга</strong>
+        <span>Япония · чёрно-белая, читается справа налево</span>
+        <small id="countManga"></small>
+      </button>
+      <button class="type-card type-manhwa" type="button" data-type-card="manhwa">
+        <span class="type-card-symbol" aria-hidden="true">만</span>
+        <strong>Манхва</strong>
+        <span>Корея · цветной вебтун, вертикальная лента</span>
+        <small id="countManhwa"></small>
+      </button>
+      <button class="type-card type-manhua" type="button" data-type-card="manhua">
+        <span class="type-card-symbol" aria-hidden="true">画</span>
+        <strong>Маньхуа</strong>
+        <span>Китай · цветная, культивация и уся</span>
+        <small id="countManhua"></small>
+      </button>
+    </section>
+
+    <section class="container section" id="catalog" aria-labelledby="catalogTitle">
+      <div class="section-heading">
+        <div>
+          <div class="eyebrow">Коллекция</div>
+          <h2 id="catalogTitle">Выбери свою историю</h2>
+        </div>
+
+        <p>Фильтруй по типу, жанру и статусу выпуска, чтобы собрать собственную полку.</p>
+      </div>
+
+      <div class="tabs" id="types" role="group" aria-label="Тип">
+        <button class="tab" type="button" data-type="all" aria-pressed="true">Все типы</button>
+        <button class="tab" type="button" data-type="manga" aria-pressed="false">Манга</button>
+        <button class="tab" type="button" data-type="manhwa" aria-pressed="false">Манхва</button>
+        <button class="tab" type="button" data-type="manhua" aria-pressed="false">Маньхуа</button>
+      </div>
+
+      <div class="tabs" id="tabs" role="group" aria-label="Подборка">
+        <button class="tab tab-small" type="button" data-tab="all" aria-pressed="true">Все тайтлы</button>
+        <button class="tab tab-small" type="button" data-tab="popular" aria-pressed="false">Популярное</button>
+        <button class="tab tab-small" type="button" data-tab="ongoing" aria-pressed="false">Выходят</button>
+        <button class="tab tab-small" type="button" data-tab="completed" aria-pressed="false">Завершённые</button>
+        <button class="tab tab-small" type="button" data-tab="reading" aria-pressed="false">Читаю</button>
+        <button class="tab tab-small" type="button" data-tab="favorites" aria-pressed="false">Избранное</button>
+      </div>
+
+      <div class="genres" id="genres" role="group" aria-label="Жанр"></div>
+
+      <p class="visually-hidden" id="resultsStatus" role="status" aria-live="polite"></p>
+      <div class="title-grid" id="titleGrid"></div>
+      <div class="empty" id="emptyState" hidden></div>
+    </section>
+
+    <section class="container section" id="popular" aria-labelledby="popularTitle">
+      <div class="section-heading">
+        <div>
+          <div class="eyebrow">В центре внимания</div>
+          <h2 id="popularTitle">Что читают сейчас</h2>
+        </div>
+      </div>
+
+      <div class="title-grid" id="popularGrid"></div>
+    </section>
+
+    <section class="container section" id="updates" aria-labelledby="updatesTitle">
+      <div class="section-heading">
+        <div>
+          <div class="eyebrow">Свежий выпуск</div>
+          <h2 id="updatesTitle">Новые главы</h2>
+        </div>
+
+        <p>Тайтлы, у которых недавно вышли новые главы.</p>
+      </div>
+
+      <div class="updates-list" id="updatesList"></div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="container footer-inner">
+      <div>
+        <strong>ENDEMION</strong>
+        <small> — демо-каталог. Тайтлы, авторы и команды перевода вымышленные.</small>
+      </div>
+      <nav class="footer-links" aria-label="Документы">
+        <a href="/privacy">Политика конфиденциальности</a>
+      </nav>
+    </div>
+  </footer>
+</body>
+</html>

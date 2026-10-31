@@ -1,0 +1,26 @@
+// Общие правила для всех /api/*: защита от CSRF, проверка базы и ответ при ошибке сервера
+
+import { error } from "../_lib/http.js";
+
+const SAFE_METHODS = ["GET", "HEAD", "OPTIONS"];
+
+export async function onRequest(context) {
+  const { request, env } = context;
+
+  // Изменяющие запросы принимаем только со своего сайта. Браузер всегда отправляет Origin для POST, PUT и DELETE
+  if (!SAFE_METHODS.includes(request.method)) {
+    const origin = request.headers.get("Origin");
+    if (!origin || origin !== new URL(request.url).origin) {
+      return error("Запрос отклонён.", 403);
+    }
+  }
+
+  if (!env.DB) return error("База данных не подключена. Проверьте привязку D1 с именем DB.", 500);
+
+  try {
+    return await context.next();
+  } catch (err) {
+    console.error(err);
+    return error("Ошибка сервера. Попробуйте позже.", 500);
+  }
+}

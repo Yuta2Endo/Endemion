@@ -1,0 +1,30 @@
+# Cloudflare Worker со статическими файлами. Деплой: `npm run deploy`
+name = "endemion"
+main = "src/worker.js"
+compatibility_date = "2026-10-01"
+# Превью-ссылки на каждую версию были выключены до переноса на этот конфиг: оставляем так же
+preview_urls = false
+
+[assets]
+directory = "public"
+binding = "ASSETS"
+# /auth отдаёт auth.html, /auth.html перенаправляет на /auth
+html_handling = "auto-trailing-slash"
+# Неизвестный адрес получает public/404.html с кодом 404
+not_found_handling = "404-page"
+# Эти пути сначала обрабатывает Worker (src/worker.js), а не поиск статического файла
+run_worker_first = ["/api/*", "/title/*", "/read/*", "/pages/*", "/robots.txt", "/sitemap.xml"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "endemion"
+database_id = "d823a847-a9d6-40a1-95fa-c71d1de67566"
+migrations_dir = "migrations"
+
+[vars]
+# Ключи Turnstile (защита формы от ботов) необязательны: без них форма работает без капчи.
+# Публичный ключ можно указать здесь, секретный — только через `npx wrangler secret put TURNSTILE_SECRET_KEY`
+TURNSTILE_SITE_KEY = ""
+
+[observability]
+enabled = true

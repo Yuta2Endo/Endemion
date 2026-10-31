@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#080b18">
+  <meta name="robots" content="noindex">
+  <title>Вход — Endemion</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/assets/base.css">
+  <link rel="stylesheet" href="/assets/account.css">
+  <script type="module" src="/assets/auth.js"></script>
+</head>
+<body>
+  <main class="account-shell">
+    <nav class="account-nav">
+      <a class="logo" href="/"><span class="logo-mark" aria-hidden="true">E</span>ENDEMION</a>
+      <a class="back-link" href="/">← Вернуться на главную</a>
+    </nav>
+
+    <section class="account-layout">
+      <div class="account-intro">
+        <div class="eyebrow">Личная книжная полка</div>
+        <h1>Твои<br>истории.<br><span>Твоё место.</span></h1>
+        <p>
+          Создай профиль Endemion, чтобы сохранять любимые тайтлы,
+          отмечать прочитанные главы и продолжать с того же места на любом устройстве.
+        </p>
+      </div>
+
+      <div class="account-panel">
+        <div class="mode-switch" role="tablist" aria-label="Вход или регистрация">
+          <button id="loginMode" type="button" role="tab" aria-selected="true">Войти</button>
+          <button id="registerMode" type="button" role="tab" aria-selected="false">Регистрация</button>
+        </div>
+
+        <h2 class="form-title" id="formTitle">С возвращением</h2>
+        <p class="form-description" id="formDescription">Войди в свой профиль Endemion.</p>
+
+        <form id="authForm" novalidate>
+          <div class="field" id="nameField" hidden>
+            <label for="name">Имя пользователя</label>
+            <input id="name" name="name" type="text" autocomplete="nickname" minlength="2" maxlength="40">
+          </div>
+
+          <div class="field">
+            <label for="email">Электронная почта</label>
+            <input id="email" name="email" type="email" autocomplete="email" maxlength="254" required>
+          </div>
+
+          <div class="field">
+            <label for="password">Пароль</label>
+            <input id="password" name="password" type="password" autocomplete="current-password" minlength="8" maxlength="128" required aria-describedby="passwordHint">
+            <small class="field-hint" id="passwordHint" hidden>Минимум 8 символов.</small>
+          </div>
+
+          <div class="field" id="confirmField" hidden>
+            <label for="confirmPassword">Повторите пароль</label>
+            <input id="confirmPassword" name="confirmPassword" type="password" autocomplete="new-password" maxlength="128">
+          </div>
+
+          <label class="consent" id="consentField" hidden>
+            <input id="consent" type="checkbox">
+            <span>Я согласен(на) с <a href="/privacy" target="_blank" rel="noopener">политикой конфиденциальности</a> и обработкой моих данных.</span>
+          </label>
+
+          <!-- Turnstile появляется, только если на сайте указан ключ TURNSTILE_SITE_KEY -->
+          <div class="turnstile" id="turnstile"></div>
+
+          <button class="main-button" id="submitButton" type="submit">Войти в профиль</button>
+
+          <div class="form-message" id="formMessage" role="alert" aria-live="assertive"></div>
+        </form>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
