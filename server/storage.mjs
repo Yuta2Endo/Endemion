@@ -77,19 +77,33 @@ function diskStorage(dir) {
 
 // ==================== S3 ====================
 
-async function s3Storage(env) {
-  const { S3Client, GetObjectCommand, HeadObjectCommand, PutObjectCommand, DeleteObjectCommand, ListObjectsV2Command } =
-    await import("@aws-sdk/client-s3");
-  const client = new S3Client({
-    region: env.S3_REGION || "auto",
-    endpoint: env.S3_ENDPOINT || undefined,
-    forcePathStyle: env.S3_FORCE_PATH_STYLE === "1",
-    credentials: { accessKeyId: env.S3_ACCESS_KEY_ID, secretAccessKey: env.S3_SECRET_ACCESS_KEY },
+/**
+ * Клиент S3 по переменным с приставкой prefix: S3_ (картинки) или BACKUP_S3_ (резервные копии базы).
+ * Возвращает null, если бакет не задан, и бросает ошибку, если бакет задан без ключей
+ */
+export async function createS3Client(env, prefix) {
+  const bucket = env[`${prefix}BUCKET`];
+  if (!bucket) return null;
+  for (const name of ["ACCESS_KEY_ID", "SECRET_ACCESS_KEY"]) {
+    if (!env[`${prefix}${name}`]) throw new Error(`Задан ${prefix}BUCKET, но не задан ${prefix}${name}.`);
+  }
+  const sdk = await import("@aws-sdk/client-s3");
+  const client = new sdk.S3Client({
+    region: env[`${prefix}REGION`] || "auto",
+    endpoint: env[`${prefix}ENDPOINT`] || undefined,
+    forcePathStyle: env[`${prefix}FORCE_PATH_STYLE`] === "1",
+    credentials: { accessKeyId: env[`${prefix}ACCESS_KEY_ID`], secretAccessKey: env[`${prefix}SECRET_ACCESS_KEY`] },
     // Новые контрольные суммы SDK поддерживают не все S3-совместимые хранилища
     requestChecksumCalculation: "WHEN_REQUIRED",
     responseChecksumValidation: "WHEN_REQUIRED"
   });
-  const Bucket = env.S3_BUCKET;
+  return { client, bucket, sdk };
+}
+
+async function s3Storage(env) {
+  const { client, bucket, sdk } = await createS3Client(env, "S3_");
+  const { GetObjectCommand, HeadObjectCommand, PutObjectCommand, DeleteObjectCommand, ListObjectsV2Command } = sdk;
+  const Bucket = bucket;
   const missing = (err) => err?.name === "NoSuchKey" || err?.name === "NotFound" || err?.$metadata?.httpStatusCode === 404;
 
   return {
@@ -140,9 +154,5 @@ async function s3Storage(env) {
 }
 
 export async function createStorage(env, filesDir) {
-  if (!env.S3_BUCKET) return diskStorage(filesDir);
-  for (const name of ["S3_ACCESS_KEY_ID", "S3_SECRET_ACCESS_KEY"]) {
-    if (!env[name]) throw new Error(`Задан S3_BUCKET, но не задан ${name}.`);
-  }
-  return s3Storage(env);
+  return env.S3_BUCKET ? s3Storage(env) : diskStorage(filesDir);
 }

@@ -83,7 +83,8 @@ docker compose logs -f app       # Ctrl+C — выйти из логов, сай
 - **Обновить сайт:** `git pull && docker compose up -d --build`.
 - **Логи:** `docker compose logs --tail 200 app`.
 - **Права администратора:** `docker compose exec app node server/grant-admin.mjs почта@example.ru` (снять — добавить `--revoke`).
-- **Резервные копии:** сервер раз в сутки кладёт копию базы в `data/backups` и хранит последние 14 (`BACKUP_HOURS`, `BACKUP_KEEP` в `.env`). Вручную: `docker compose exec app node server/backup.mjs`. Копии на том же диске не спасут при поломке сервера: регулярно забирайте `data/backups` к себе, например `scp -r пользователь@сервер:~/endemion/data/backups .` или через снапшоты диска у хостинга.
+- **Резервные копии:** сервер раз в сутки кладёт копию базы в `data/backups` и хранит последние 14 (`BACKUP_HOURS`, `BACKUP_KEEP` в `.env`). Срок считается от последней копии, поэтому обновления сайта расписание не сбивают. Вручную: `docker compose exec app node server/backup.mjs`.
+- **Копии вне сервера:** копии на том же диске не спасут при поломке сервера. Создайте приватный бакет в S3-хранилище (Selectel, Yandex Object Storage, VK Cloud) и ключ с доступом только к нему, заполните строки `BACKUP_S3_*` в `.env` и выполните `docker compose up -d app`. После этого каждая копия уходит в бакет в папку `backups/`, там хранятся последние `BACKUP_S3_KEEP` (по умолчанию 30). Если отправка не удалась, копия остаётся на диске, а ошибка видна в логах.
 - **Восстановить базу:** `docker compose stop app`, заменить `data/endemion.sqlite` копией из `data/backups` (файлы `endemion.sqlite-wal` и `endemion.sqlite-shm` удалить), `docker compose start app`.
 - **Картинки в S3:** заполнить строки `S3_*` в `.env` и перезапустить. Файлы из `data/files` при этом нужно скопировать в хранилище отдельно.
 
