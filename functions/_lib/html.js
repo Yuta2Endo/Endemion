@@ -8,9 +8,12 @@ export const SECURITY_HEADERS = {
   "Strict-Transport-Security": "max-age=31536000",
   // Тот же CSP, что в public/_headers
   "Content-Security-Policy":
-    "default-src 'self'; script-src 'self' https://challenges.cloudflare.com https://static.cloudflareinsights.com; " +
-    "style-src 'self'; img-src 'self' data:; connect-src 'self' https://cloudflareinsights.com; " +
-    "frame-src https://challenges.cloudflare.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'"
+    // Яндекс Метрика (mc.yandex.ru) загружается только после согласия посетителя, см. public/assets/app.js
+    "default-src 'self'; script-src 'self' https://challenges.cloudflare.com https://static.cloudflareinsights.com https://mc.yandex.ru https://yastatic.net; " +
+    "style-src 'self'; img-src 'self' data: https://mc.yandex.ru; connect-src 'self' https://cloudflareinsights.com https://mc.yandex.ru; " +
+    // worker-src задан явно: иначе браузер берёт его из child-src, и service worker (/sw.js) с этого сайта блокируется
+    "frame-src https://challenges.cloudflare.com blob: https://mc.yandex.ru; child-src blob: https://mc.yandex.ru; worker-src 'self' blob:; " +
+    "frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'"
 };
 
 export function escapeHtml(value) {

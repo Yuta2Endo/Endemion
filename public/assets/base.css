@@ -303,6 +303,44 @@ button:disabled {
   font-weight: 800;
 }
 
+/* Вопрос про cookie Яндекс Метрики: внизу экрана, выше панелей читалки */
+.consent-banner {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 50;
+  display: grid;
+  gap: 10px;
+  width: min(440px, calc(100% - 32px));
+  padding: 18px;
+  border: 1px solid rgba(116, 227, 255, 0.35);
+  border-radius: 18px;
+  color: var(--text);
+  background: var(--bg-soft);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.5);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.consent-banner p {
+  color: var(--muted);
+}
+
+.consent-banner a {
+  color: var(--cyan);
+  text-decoration: underline;
+}
+
+.consent-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.footer-links a[hidden] {
+  display: none;
+}
+
 /* ==================== ТЕЛЕФОНЫ ==================== */
 
 @media (max-width: 680px) {

@@ -10,7 +10,7 @@
     "db:migrate:remote": "wrangler d1 migrations apply endemion --remote",
     "predeploy": "npm test",
     "deploy": "wrangler deploy",
-    "test": "node --test tests/crypto.test.mjs tests/pages.test.mjs",
+    "test": "node --test tests/crypto.test.mjs tests/pages.test.mjs tests/mail.test.mjs",
     "test:api": "node tests/api.smoke.mjs",
     "test:admin": "node tests/admin.smoke.mjs",
     "test:e2e": "playwright test",

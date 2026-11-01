@@ -169,7 +169,7 @@ if (isLocal && r.data?.passwordReset) {
   const token = r.data?.devLink ? new URL(r.data.devLink).searchParams.get("token") : null;
 
   if (!token) {
-    console.log("  --  ссылки в ответе нет (письма уходят через Resend): проверка по ссылке пропущена");
+    console.log("  --  ссылки в ответе нет (письма уходят через почтовый сервис): проверка по ссылке пропущена");
   } else {
     check("ссылка для нового пароля", /^[0-9a-f]{64}$/.test(token));
     r = await call("POST", "/api/auth/reset", { token, password: "short" });

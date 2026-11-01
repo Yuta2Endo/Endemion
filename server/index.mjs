@@ -20,7 +20,11 @@ const TRUST_PROXY = process.env.TRUST_PROXY === "1";
 // Самая большая загрузка — страница главы до 15 МБ
 const MAX_BODY_BYTES = 20 * 1024 * 1024;
 // Переменные, которые видит код сайта. Секреты хранилища S3 сюда не попадают
-const WORKER_VARS = ["TURNSTILE_SITE_KEY", "TURNSTILE_SECRET_KEY", "MAIL_FROM", "RESEND_API_KEY", "WEB_ANALYTICS_TOKEN", "MAIL_DEV_MODE"];
+const WORKER_VARS = [
+  "TURNSTILE_SITE_KEY", "TURNSTILE_SECRET_KEY",
+  "MAIL_FROM", "UNISENDER_API_KEY", "UNISENDER_API_URL", "MAIL_SKIP_UNSUBSCRIBE", "RESEND_API_KEY", "MAIL_DEV_MODE",
+  "WEB_ANALYTICS_TOKEN", "YANDEX_METRIKA_ID"
+];
 
 /**
  * Адрес сайта. Код сайта берёт его из адреса запроса: проверяет Origin, ставит Secure у cookie, строит ссылки в письмах.

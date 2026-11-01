@@ -27,19 +27,137 @@ export function getConfig() {
   return configPromise;
 }
 
-/**
- * Cloudflare Web Analytics: скрипт подключается, только если на сайте указан WEB_ANALYTICS_TOKEN.
- * Статистика без cookie, адреса скрипта и отправки уже разрешены в CSP
- */
-async function initAnalytics() {
-  const { webAnalyticsToken } = await getConfig();
-  if (!webAnalyticsToken || document.querySelector("script[data-cf-beacon]")) return;
+// ==================== СТАТИСТИКА ====================
+
+// Выбор посетителя про Яндекс Метрику: "granted" или "denied". Пока выбора нет, Метрика не загружается
+const CONSENT_KEY = "endemion:analytics";
+// Страницы без статистики: в адресе /reset бывает ссылка для нового пароля, админка — служебная
+const NO_ANALYTICS = /^\/(admin|reset)(\/|$)/;
+
+function readConsent() {
+  try {
+    return localStorage.getItem(CONSENT_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function writeConsent(value) {
+  try {
+    localStorage.setItem(CONSENT_KEY, value);
+  } catch {}
+}
+
+/** Cloudflare Web Analytics: без cookie, поэтому согласие не нужно. Только если на сайте указан WEB_ANALYTICS_TOKEN */
+function loadCloudflareAnalytics(token) {
+  if (document.querySelector("script[data-cf-beacon]")) return;
   const script = document.createElement("script");
   script.defer = true;
   script.src = "https://static.cloudflareinsights.com/beacon.min.js";
-  script.dataset.cfBeacon = JSON.stringify({ token: webAnalyticsToken });
+  script.dataset.cfBeacon = JSON.stringify({ token });
   document.head.append(script);
 }
+
+/**
+ * Яндекс Метрика: то же, что официальный код счётчика, но из файла, а не встроенным скриптом (его запрещает CSP).
+ * Вебвизор выключен: он записывает действия на странице, включая то, что вводят в формы
+ */
+function loadMetrika(id) {
+  if (window.ym) return;
+  window.ym = function () {
+    (window.ym.a = window.ym.a || []).push(arguments);
+  };
+  window.ym.l = Date.now();
+  const script = document.createElement("script");
+  script.async = true;
+  script.src = "https://mc.yandex.ru/metrika/tag.js";
+  document.head.append(script);
+  window.ym(Number(id), "init", { clickmap: true, trackLinks: true, accurateTrackBounce: true, webvisor: false });
+}
+
+/** Cookie Метрики (_ym_uid и другие) на этом сайте. Удаляются, если посетитель передумал */
+function removeMetrikaCookies() {
+  const names = document.cookie.split(";").map((part) => part.split("=")[0].trim()).filter((name) => name.startsWith("_ym"));
+  const domain = location.hostname.split(".").slice(-2).join(".");
+  for (const name of names) {
+    for (const suffix of ["", `; domain=${location.hostname}`, `; domain=.${domain}`]) {
+      document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/${suffix}`;
+    }
+  }
+}
+
+/** Плашка с вопросом про cookie. Показывается, пока посетитель не выбрал, и по ссылке «Настройки cookie» */
+function showConsent(id) {
+  document.querySelector(".consent-banner")?.remove();
+  const banner = document.createElement("section");
+  banner.className = "consent-banner";
+  banner.setAttribute("role", "dialog");
+  banner.setAttribute("aria-labelledby", "consentTitle");
+
+  const title = document.createElement("strong");
+  title.id = "consentTitle";
+  title.textContent = "Cookie и статистика";
+  const text = document.createElement("p");
+  const link = document.createElement("a");
+  link.href = "/privacy#cookie";
+  link.textContent = "политике конфиденциальности";
+  text.append(
+    "Мы хотим считать посещения через Яндекс Метрику, чтобы понимать, что читают и что работает плохо. Метрика ставит cookie. ",
+    "Подробнее — в ",
+    link,
+    "."
+  );
+
+  const actions = document.createElement("div");
+  actions.className = "consent-actions";
+  const accept = document.createElement("button");
+  accept.type = "button";
+  accept.className = "primary-btn";
+  accept.textContent = "Разрешить";
+  const decline = document.createElement("button");
+  decline.type = "button";
+  decline.className = "ghost-btn";
+  decline.textContent = "Отказаться";
+  actions.append(accept, decline);
+
+  accept.addEventListener("click", () => {
+    writeConsent("granted");
+    banner.remove();
+    loadMetrika(id);
+  });
+  decline.addEventListener("click", () => {
+    const wasLoaded = Boolean(window.ym);
+    writeConsent("denied");
+    banner.remove();
+    removeMetrikaCookies();
+    // Загруженный счётчик сам не остановится: страница открывается заново уже без него
+    if (wasLoaded) location.reload();
+  });
+
+  banner.append(title, text, actions);
+  document.body.append(banner);
+}
+
+async function initAnalytics() {
+  const { webAnalyticsToken, yandexMetrikaId } = await getConfig();
+  // Ссылка «Настройки cookie» в подвале видна, только если Метрика включена
+  document.querySelectorAll("[data-cookie-settings]").forEach((node) => (node.hidden = !yandexMetrikaId));
+  if (NO_ANALYTICS.test(location.pathname)) return;
+
+  if (webAnalyticsToken) loadCloudflareAnalytics(webAnalyticsToken);
+  if (!yandexMetrikaId) return;
+  const consent = readConsent();
+  if (consent === "granted") loadMetrika(yandexMetrikaId);
+  else if (consent !== "denied") showConsent(yandexMetrikaId);
+}
+
+document.addEventListener("click", async (event) => {
+  const link = event.target.closest("[data-cookie-settings]");
+  if (!link) return;
+  event.preventDefault();
+  const { yandexMetrikaId } = await getConfig();
+  if (yandexMetrikaId) showConsent(yandexMetrikaId);
+});
 
 initAnalytics();
 

@@ -157,7 +157,7 @@ export async function onRequestGet({ params, env, request }) {
   <footer class="footer">
     <div class="container footer-inner">
       <div><strong>ENDEMION</strong><small> — каталог манги, манхвы и маньхуа на русском.</small></div>
-      <nav class="footer-links" aria-label="Документы"><a href="/privacy">Политика конфиденциальности</a><a href="/copyright">Правообладателям</a></nav>
+      <nav class="footer-links" aria-label="Документы"><a href="/privacy">Политика конфиденциальности</a><a href="/copyright">Правообладателям</a><a href="/privacy#cookie" data-cookie-settings hidden>Настройки cookie</a></nav>
     </div>
   </footer>
 </body>
