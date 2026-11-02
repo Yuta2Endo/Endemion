@@ -38,4 +38,38 @@ export function validatePassword(password) {
   return null;
 }
 
-export const STATUSES = ["planned", "reading", "completed", "dropped"];
+export const STATUSES = ["reading", "planned", "completed", "on_hold", "dropped"];
+
+/**
+ * Многострочный текст от пользователя: без управляющих символов (кроме переноса строки), не больше двух пустых строк подряд.
+ * HTML не вырезается: при выводе текст всегда экранируется (textContent или escapeHtml)
+ */
+export function cleanText(value) {
+  if (typeof value !== "string") return "";
+  return value
+    .replace(/\r\n?/g, "\n")
+    .replace(/[\u0000-\u0009\u000b-\u001f\u007f\u200b-\u200f\u202a-\u202e\u2066-\u2069]/g, "")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+/** Однострочный текст: без управляющих символов и лишних пробелов */
+export function cleanLine(value) {
+  return typeof value === "string" ? value.replace(/[\u0000-\u001f\u007f\u200b-\u200f\u202a-\u202e\u2066-\u2069]/g, " ").replace(/\s+/g, " ").trim() : "";
+}
+
+/** Строка в пределах длины или текст ошибки */
+export function lengthProblem(value, label, min, max) {
+  const length = [...value].length;
+  if (length < min || length > max) return min > 0 ? `${label}: от ${min} до ${max} символов.` : `${label}: не длиннее ${max} символов.`;
+  return null;
+}
+
+/** Целое число из адреса в пределах [min, max]; пусто — значение по умолчанию; иначе null */
+export function intParam(value, fallback, min, max) {
+  if (value === null || value === undefined || value === "") return fallback;
+  const number = Number(value);
+  return Number.isInteger(number) && number >= min && number <= max ? number : null;
+}
+
+export const USERNAME = /^[a-zA-Z0-9_]{3,24}$/;

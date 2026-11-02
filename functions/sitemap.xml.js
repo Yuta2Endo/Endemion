@@ -1,4 +1,4 @@
-// GET /sitemap.xml — главная, политика и страницы всех тайтлов из D1
+// GET /sitemap.xml — главная, открытые разделы, политика и страницы всех тайтлов из D1
 
 import { escapeHtml } from "./_lib/html.js";
 import { listTitles } from "./_lib/titles.js";
@@ -9,6 +9,8 @@ export async function onRequestGet({ request, env }) {
 
   const urls = [
     { loc: `${origin}/`, lastmod: titles.map((t) => t.updatedAt).sort().at(-1) },
+    // Разделы платформы, открытые без входа. Pulse и профиль — личные, их в карте нет
+    ...["catalog", "nexus", "oracle", "community", "arena"].map((path) => ({ loc: `${origin}/${path}` })),
     { loc: `${origin}/privacy` },
     { loc: `${origin}/copyright` },
     ...titles.map((t) => ({ loc: `${origin}/title/${t.id}`, lastmod: t.updatedAt }))

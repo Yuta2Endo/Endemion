@@ -88,9 +88,13 @@ const pick = (rnd, list) => list[Math.floor(rnd() * list.length)];
 const between = (rnd, min, max) => min + rnd() * (max - min);
 const n1 = (value) => Math.round(value * 10) / 10;
 
+/** Три цвета обложки из градиента или цвета по умолчанию */
 function colors(title) {
   const found = title.poster.match(/#[0-9a-f]{6}/gi) || [];
-  return [...found, ...DEFAULT_COLORS].slice(0, 3);
+  const [c0, c1, c2] = [...found, ...DEFAULT_COLORS];
+  /** @type {[string, string, string]} */
+  const palette = [c0, c1, c2];
+  return palette;
 }
 
 function svg(width, height, background, defs, body) {

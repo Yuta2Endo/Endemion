@@ -12,6 +12,7 @@
   <meta name="apple-mobile-web-app-title" content="Endemion">
   <link rel="stylesheet" href="/assets/base.css">
   <link rel="stylesheet" href="/assets/account.css">
+  <link rel="stylesheet" href="/assets/ui.css">
   <link rel="stylesheet" href="/assets/admin.css">
   <script type="module" src="/assets/admin.js"></script>
 </head>
@@ -22,16 +23,21 @@
       <a class="back-link" href="/profile">← В профиль</a>
     </nav>
 
-    <p class="admin-denied" id="denied" hidden>Эта страница доступна только администраторам.</p>
+    <p class="admin-denied" id="denied" hidden>Эта страница доступна только администраторам и модераторам.</p>
 
     <div class="admin-layout" id="admin" hidden>
+      <!-- Пункты с data-admin-only модератор не видит: сервер всё равно отказал бы ему в этих запросах -->
       <nav class="admin-panel admin-menu" aria-labelledby="adminHeading">
         <h1 id="adminHeading">Админка</h1>
-        <a href="#dashboard" data-section="dashboard">Сводка</a>
-        <a href="#titles" data-section="titles">Тайтлы</a>
-        <a href="#complaints" data-section="complaints">Жалобы <span class="admin-badge" id="complaintsBadge" hidden></span></a>
-        <a href="#users" data-section="users">Пользователи</a>
-        <a href="#audit" data-section="audit">Журнал</a>
+        <a href="#dashboard" data-section="dashboard" data-admin-only>Сводка</a>
+        <a href="#titles" data-section="titles" data-admin-only>Тайтлы</a>
+        <a href="#taxonomy" data-section="taxonomy" data-admin-only>Жанры и авторы</a>
+        <a href="#moderation" data-section="moderation">Модерация <span class="admin-badge" id="reportsBadge" hidden></span></a>
+        <a href="#polls" data-section="polls">Голосования</a>
+        <a href="#collections" data-section="collections" data-admin-only>Подборки</a>
+        <a href="#complaints" data-section="complaints" data-admin-only>Жалобы <span class="admin-badge" id="complaintsBadge" hidden></span></a>
+        <a href="#users" data-section="users" data-admin-only>Пользователи</a>
+        <a href="#audit" data-section="audit" data-admin-only>Журнал</a>
       </nav>
 
       <div class="admin-main">
@@ -40,6 +46,9 @@
           <h2 id="dashboardHeading">Сводка</h2>
           <div class="admin-stats" id="stats"></div>
           <p class="form-message" id="statsMessage" role="status" aria-live="polite"></p>
+          <h3>Сообщество и чтение</h3>
+          <div class="admin-stats" id="platformStats"></div>
+          <div id="topTitles"></div>
           <h3>Последние действия</h3>
           <ol class="admin-audit-list" id="recentAudit"></ol>
           <a class="secondary-button admin-more-link" href="#audit">Весь журнал</a>
@@ -140,6 +149,34 @@
                     <label for="fieldDescription">Описание</label>
                     <textarea id="fieldDescription" name="description" rows="4" maxlength="2000" required></textarea>
                   </div>
+                  <div class="field">
+                    <label for="fieldOriginalTitle">Оригинальное название (необязательно)</label>
+                    <input id="fieldOriginalTitle" name="originalTitle" type="text" maxlength="160">
+                  </div>
+                  <div class="field">
+                    <label for="fieldReleaseDay">День выхода глав (для календаря)</label>
+                    <select id="fieldReleaseDay" name="releaseDay">
+                      <option value="">Не указан</option>
+                      <option value="1">Понедельник</option>
+                      <option value="2">Вторник</option>
+                      <option value="3">Среда</option>
+                      <option value="4">Четверг</option>
+                      <option value="5">Пятница</option>
+                      <option value="6">Суббота</option>
+                      <option value="0">Воскресенье</option>
+                    </select>
+                  </div>
+                  <fieldset class="field admin-wide admin-fieldset">
+                    <legend>Теги для Nexus и Oracle</legend>
+                    <p class="admin-hint">Нажатие меняет вес тега: 1 — слабо, 2 — заметно, 3 — главное в истории. Ещё нажатие убирает тег.</p>
+                    <div class="admin-tag-picker" id="tagPicker"></div>
+                  </fieldset>
+                  <fieldset class="field admin-wide admin-fieldset">
+                    <legend>Легальные источники</legend>
+                    <p class="admin-hint">Только официальные сайты, издатели, магазины и лицензионные площадки. Ссылки начинаются с https://.</p>
+                    <div class="admin-source-list" id="sourceList"></div>
+                    <button class="secondary-button" id="addSource" type="button">+ Источник</button>
+                  </fieldset>
                 </div>
 
                 <div class="admin-actions">
@@ -188,8 +225,194 @@
               <p class="form-message" id="chapterMessage" role="status" aria-live="polite"></p>
               <ol class="admin-chapter-list" id="chapterList" reversed></ol>
             </section>
+
+            <section class="admin-panel" id="charactersSection" aria-labelledby="charactersHeading" hidden>
+              <h2 id="charactersHeading">Персонажи</h2>
+              <p class="panel-description">Персонажи участвуют в голосованиях и турнирах Арены и показываются на странице тайтла.</p>
+              <ul class="admin-plain-list" id="characterList"></ul>
+              <form class="admin-chapter-form" id="characterForm" novalidate>
+                <h3 id="characterFormHeading">Новый персонаж</h3>
+                <div class="admin-grid">
+                  <div class="field">
+                    <label for="characterName">Имя</label>
+                    <input id="characterName" name="name" type="text" maxlength="80" required>
+                  </div>
+                  <div class="field">
+                    <label for="characterRole">Роль</label>
+                    <select id="characterRole" name="role">
+                      <option value="main">Главный герой</option>
+                      <option value="supporting">Второстепенный</option>
+                      <option value="antagonist">Антагонист</option>
+                    </select>
+                  </div>
+                  <div class="field">
+                    <label for="characterSymbol">Символ</label>
+                    <input id="characterSymbol" name="symbol" type="text" maxlength="6" placeholder="✦">
+                  </div>
+                  <div class="field admin-wide">
+                    <label for="characterDescription">Описание (необязательно)</label>
+                    <textarea id="characterDescription" name="description" rows="2" maxlength="500"></textarea>
+                  </div>
+                </div>
+                <div class="admin-actions">
+                  <button class="main-button" type="submit">Добавить персонажа</button>
+                  <button class="secondary-button" id="characterCancel" type="button" hidden>Отмена</button>
+                </div>
+              </form>
+              <p class="form-message" id="characterMessage" role="status" aria-live="polite"></p>
+            </section>
+
+            <section class="admin-panel" id="relationsSection" aria-labelledby="relationsHeading" hidden>
+              <h2 id="relationsHeading">Связи с другими тайтлами</h2>
+              <p class="panel-description">
+                Связи видны в Nexus и на странице тайтла. Продолжение у одного тайтла автоматически становится предысторией у другого.
+              </p>
+              <ul class="admin-plain-list" id="relationList"></ul>
+              <div class="admin-filters">
+                <div class="field" id="relationPicker"></div>
+                <div class="field">
+                  <label for="relationKind">Вид связи</label>
+                  <select id="relationKind">
+                    <option value="similar">Похожее</option>
+                    <option value="sequel">Продолжение</option>
+                    <option value="prequel">Предыстория</option>
+                    <option value="spin_off">Спин-офф</option>
+                    <option value="same_universe">Тот же мир</option>
+                  </select>
+                </div>
+              </div>
+              <div class="admin-actions">
+                <button class="main-button" id="relationsSave" type="button">Сохранить связи</button>
+              </div>
+              <p class="form-message" id="relationMessage" role="status" aria-live="polite"></p>
+            </section>
           </div>
         </div>
+
+        <!-- ==================== ЖАНРЫ И АВТОРЫ ==================== -->
+        <div class="admin-main" data-panel="taxonomy" hidden>
+          <section class="admin-panel" aria-labelledby="genresHeading">
+            <h2 id="genresHeading">Жанры</h2>
+            <p class="panel-description">
+              Переименование обновляет карточки всех тайтлов с этим жанром. Удалить можно только жанр, который не указан ни у одного тайтла.
+            </p>
+            <form class="admin-inline-form" id="genreForm" novalidate>
+              <div class="field">
+                <label for="genreName">Новый жанр</label>
+                <input id="genreName" name="name" type="text" maxlength="30" required>
+              </div>
+              <button class="main-button" type="submit">Добавить</button>
+            </form>
+            <p class="form-message" id="genreMessage" role="status" aria-live="polite"></p>
+            <ul class="admin-plain-list" id="genreList"></ul>
+          </section>
+          <section class="admin-panel" aria-labelledby="authorsHeading">
+            <h2 id="authorsHeading">Авторы</h2>
+            <p class="panel-description">Авторы связываются с тайтлами по имени из поля «Автор» в карточке тайтла.</p>
+            <form class="admin-inline-form" id="authorForm" novalidate>
+              <div class="field">
+                <label for="authorName">Новый автор</label>
+                <input id="authorName" name="name" type="text" maxlength="120" required>
+              </div>
+              <button class="main-button" type="submit">Добавить</button>
+            </form>
+            <p class="form-message" id="authorMessage" role="status" aria-live="polite"></p>
+            <ul class="admin-plain-list" id="authorList"></ul>
+          </section>
+        </div>
+
+        <!-- ==================== МОДЕРАЦИЯ ==================== -->
+        <div class="admin-main" data-panel="moderation" hidden>
+          <section class="admin-panel" aria-labelledby="reportsHeading">
+            <h2 id="reportsHeading">Жалобы пользователей</h2>
+            <p class="panel-description">
+              Жалобы на комментарии, рецензии, обсуждения, подборки, турниры и профили. Решение закрывает все жалобы на этот контент
+              и попадает в журнал модерации. Автор скрытого контента получает уведомление.
+            </p>
+            <div class="admin-filters">
+              <div class="field">
+                <label for="reportStatus">Показать</label>
+                <select id="reportStatus">
+                  <option value="open">Открытые</option>
+                  <option value="resolved">Решённые</option>
+                  <option value="rejected">Отклонённые</option>
+                </select>
+              </div>
+            </div>
+            <p class="form-message" id="reportsMessage" role="status" aria-live="polite"></p>
+            <ul class="admin-complaint-list" id="reportList"></ul>
+          </section>
+          <section class="admin-panel" aria-labelledby="recentCommentsHeading">
+            <h2 id="recentCommentsHeading">Свежие комментарии</h2>
+            <p class="form-message" id="recentCommentsMessage" role="status" aria-live="polite"></p>
+            <ul class="admin-plain-list" id="recentComments"></ul>
+          </section>
+          <section class="admin-panel" aria-labelledby="modLogHeading">
+            <h2 id="modLogHeading">Журнал модерации</h2>
+            <p class="form-message" id="modLogMessage" role="status" aria-live="polite"></p>
+            <ol class="admin-audit-list" id="modLog"></ol>
+            <button class="secondary-button admin-more" id="modLogMore" type="button" hidden>Показать ещё</button>
+          </section>
+        </div>
+
+        <!-- ==================== ГОЛОСОВАНИЯ ==================== -->
+        <div class="admin-main" data-panel="polls" hidden>
+          <section class="admin-panel" aria-labelledby="pollFormHeading">
+            <h2 id="pollFormHeading">Новое голосование</h2>
+            <p class="panel-description">
+              Голосование появляется на Арене. Результаты считаются только по настоящим голосам: подставить числа нельзя.
+            </p>
+            <form id="pollForm" novalidate>
+              <div class="admin-grid">
+                <div class="field admin-wide">
+                  <label for="pollQuestion">Вопрос</label>
+                  <input id="pollQuestion" name="question" type="text" maxlength="200" required>
+                </div>
+                <div class="field">
+                  <label for="pollKind">Вид</label>
+                  <select id="pollKind" name="kind">
+                    <option value="title">Тайтлы</option>
+                    <option value="character">Персонажи</option>
+                    <option value="genre">Жанры</option>
+                    <option value="versus">Кто кого (два варианта)</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label for="pollDays">Срок в днях (пусто — без срока)</label>
+                  <input id="pollDays" name="days" type="number" min="1" max="90" step="1" inputmode="numeric">
+                </div>
+                <div class="field admin-wide">
+                  <label for="pollDescription">Описание (необязательно)</label>
+                  <textarea id="pollDescription" name="description" rows="2" maxlength="1000"></textarea>
+                </div>
+                <div class="field admin-wide">
+                  <span class="admin-cover-label">Варианты (от 2 до 16)</span>
+                  <div id="pollOptionPicker"></div>
+                  <ul class="admin-option-list" id="pollOptions"></ul>
+                </div>
+              </div>
+              <div class="admin-actions">
+                <button class="main-button" type="submit">Создать голосование</button>
+              </div>
+              <p class="form-message" id="pollMessage" role="status" aria-live="polite"></p>
+            </form>
+          </section>
+          <section class="admin-panel" aria-labelledby="pollsHeading">
+            <h2 id="pollsHeading">Все голосования</h2>
+            <p class="form-message" id="pollsMessage" role="status" aria-live="polite"></p>
+            <ul class="admin-plain-list" id="pollList"></ul>
+          </section>
+        </div>
+
+        <!-- ==================== ПОДБОРКИ ==================== -->
+        <section class="admin-panel" data-panel="collections" aria-labelledby="collectionsHeading" hidden>
+          <h2 id="collectionsHeading">Подборки пользователей</h2>
+          <p class="panel-description">
+            Открытую подборку можно вынести на главную страницу. Скрытая подборка не видна никому, кроме автора.
+          </p>
+          <p class="form-message" id="collectionsMessage" role="status" aria-live="polite"></p>
+          <ul class="admin-plain-list" id="collectionList"></ul>
+        </section>
 
         <!-- ==================== ЖАЛОБЫ ==================== -->
         <section class="admin-panel" data-panel="complaints" aria-labelledby="complaintsHeading" hidden>
@@ -206,8 +429,9 @@
         <section class="admin-panel" data-panel="users" aria-labelledby="usersHeading" hidden>
           <h2 id="usersHeading">Пользователи</h2>
           <p class="panel-description">
-            Заблокированный не может войти, его сеансы завершаются сразу. Выдать или снять права администратора и удалить
-            аккаунт можно только после ввода своего пароля. Свой аккаунт меняйте в профиле.
+            Заблокированный не может войти, его сеансы завершаются сразу. Модератор разбирает жалобы пользователей и ведёт голосования,
+            администратор управляет всем. Изменить роль и удалить аккаунт можно только после ввода своего пароля.
+            Свой аккаунт меняйте в профиле.
           </p>
           <div class="admin-filters">
             <div class="field">
@@ -219,6 +443,7 @@
               <select id="userFilter">
                 <option value="all">Всех</option>
                 <option value="admins">Администраторов</option>
+                <option value="moderators">Модераторов</option>
                 <option value="blocked">Заблокированных</option>
               </select>
             </div>

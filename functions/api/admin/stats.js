@@ -29,7 +29,7 @@ export async function onRequestGet({ request, env }) {
 
   const [users, content, complaints] = await env.DB.batch([
     env.DB.prepare(
-      `SELECT COUNT(*) AS total, COALESCE(SUM(is_admin), 0) AS admins, COUNT(blocked_at) AS blocked,
+      `SELECT COUNT(*) AS total, COALESCE(SUM(role = 'admin'), 0) AS admins, COALESCE(SUM(role = 'moderator'), 0) AS moderators, COUNT(blocked_at) AS blocked,
          COALESCE(SUM(created_at >= datetime('now', '-7 days')), 0) AS week,
          COALESCE(SUM(created_at >= datetime('now', '-30 days')), 0) AS month
        FROM users`

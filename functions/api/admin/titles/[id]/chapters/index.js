@@ -3,6 +3,7 @@
 import { deletePages, findTitle, parseChapter, requireAdmin } from "../../../../../_lib/admin.js";
 import { audit, titleLabel } from "../../../../../_lib/audit.js";
 import { error, json, readJson } from "../../../../../_lib/http.js";
+import { chapterNotificationStatement } from "../../../../../_lib/notifications.js";
 import { chapterPrefix } from "../../../../../_lib/pages.js";
 import { getChapter, listChapters } from "../../../../../_lib/titles.js";
 
@@ -38,6 +39,12 @@ export async function onRequestPost({ request, env, params }) {
     return error("Глава уже добавлена. Обновите страницу.", 409);
   }
 
+  // Читатели с этим тайтлом на полке получают уведомление. Ошибка уведомлений не отменяет добавленную главу
+  try {
+    await chapterNotificationStatement(env, found.title, number).run();
+  } catch (err) {
+    console.error("Уведомления о главе не созданы:", err.message);
+  }
   await audit(env, user, "chapter.create", `${titleLabel(found.title)}, глава ${number}`);
   return json({ chapter: await getChapter(env, found.title.id, number) }, 201);
 }

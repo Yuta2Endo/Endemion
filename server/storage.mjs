@@ -57,6 +57,7 @@ function diskStorage(dir) {
     async delete(keys) {
       for (const key of Array.isArray(keys) ? keys : [keys]) remove(key);
     },
+    /** @param {{ prefix?: string, cursor?: string, limit?: number }} [options] */
     async list({ prefix = "", cursor, limit = 1000 } = {}) {
       const keys = readdirSync(dir)
         .filter((name) => !name.includes(".tmp-"))
@@ -142,6 +143,7 @@ async function s3Storage(env) {
         await Promise.all(list.slice(i, i + 10).map((Key) => client.send(new DeleteObjectCommand({ Bucket, Key }))));
       }
     },
+    /** @param {{ prefix?: string, cursor?: string, limit?: number }} [options] */
     async list({ prefix = "", cursor, limit = 1000 } = {}) {
       const page = await client.send(new ListObjectsV2Command({ Bucket, Prefix: prefix, ContinuationToken: cursor, MaxKeys: limit }));
       return {

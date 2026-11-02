@@ -22,7 +22,13 @@ function check(name, condition, details = "") {
   }
 }
 
-async function call(method, path, body, { raw = false, type } = {}) {
+/**
+ * @param {string} method
+ * @param {string} path
+ * @param {any} [body]
+ * @param {{ raw?: boolean, type?: string }} [options]
+ */
+async function call(method, path, body, { raw = false, type = undefined } = {}) {
   const headers = { Origin: new URL(BASE).origin };
   if (cookie) headers.Cookie = cookie;
   if (body !== undefined) headers["Content-Type"] = type || "application/json";
@@ -63,7 +69,7 @@ check("isAdmin: false", r.data?.user?.isAdmin === false);
 execFileSync(process.execPath, process.env.TEST_TARGET === "node"
   ? ["server/grant-admin.mjs", email]
   : ["node_modules/wrangler/bin/wrangler.js", "d1", "execute", "endemion", "--local",
-    "--command", `UPDATE users SET is_admin = 1 WHERE email = '${email}'`], { stdio: "ignore" });
+    "--command", `UPDATE users SET role = 'admin' WHERE email = '${email}'`], { stdio: "ignore" });
 
 r = await call("GET", "/api/me");
 check("права выданы", r.data?.user?.isAdmin === true);
@@ -127,8 +133,10 @@ check("поиск: неизвестная подборка отклонена", 
 
 r = await call("PUT", `/api/admin/titles/${id}`, { ...TITLE, status: "completed" });
 check("тайтл изменён", r.status === 200 && r.data.title.status === "completed");
-s = await search({ tab: "completed", q: "проверка" });
+s = await search({ status: "completed", q: "проверка" });
 check("поиск: после правки тайтл в «Завершённых»", s.ids.includes(id));
+s = await search({ tab: "completed", q: "проверка" });
+check("поиск: полка «Прочитано» не путается со статусом выпуска", s.status === 200 && !s.ids.includes(id));
 
 // ---------- обложка ----------
 r = await call("PUT", `/api/admin/titles/${id}/cover`, Buffer.from("<svg onload=alert(1)>"), { raw: true, type: "image/png" });
@@ -181,6 +189,7 @@ check("черновик читателям не виден", (page.headers.get("
 r = await call("POST", `${pages}/publish`, { version: 1, pages: 2, width: 800, height: 1200 });
 check("без всех страниц публикации нет", r.status === 409 && r.data.error.includes("Страница 2"));
 r = await call("PUT", `${pages}/pages/2`, PNG, { raw: true, type: "image/png" });
+check("вторая страница загружена", r.status === 200);
 r = await call("POST", `${pages}/publish`, { version: 5, pages: 2 });
 check("чужая версия отклонена", r.status === 409);
 r = await call("POST", `${pages}/publish`, { version: 1, pages: 2, width: 800, height: 1200 });
@@ -189,7 +198,7 @@ check("страницы опубликованы", r.status === 200 && r.data.ch
 page = await fetch(`${BASE}/pages/${id}/1/2`);
 let bytes = Buffer.from(await page.arrayBuffer());
 check("страница из R2", page.status === 200 && page.headers.get("content-type") === "image/png" && bytes.equals(PNG));
-let html = await (await fetch(`${BASE}/read/${id}/1`)).text();
+const html = await (await fetch(`${BASE}/read/${id}/1`)).text();
 check("читалка: адрес с версией и размер", html.includes(`/pages/${id}/1/1?v=1`) && html.includes('width="800" height="1200"'));
 
 // Замена: одна страница вместо двух, старая версия и лишняя страница пропадают

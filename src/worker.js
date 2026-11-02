@@ -37,10 +37,19 @@ import * as adminAudit from "../functions/api/admin/audit.js";
 import * as coverImage from "../functions/covers/[id].js";
 import * as robots from "../functions/robots.txt.js";
 import * as sitemap from "../functions/sitemap.xml.js";
+import * as profile from "../functions/api/profile.js";
+import * as pulse from "../functions/api/pulse.js";
+import * as discover from "../functions/api/discover.js";
+import * as community from "../functions/api/community.js";
+import * as arena from "../functions/api/arena.js";
+import * as moderation from "../functions/api/moderation.js";
+import * as adminPlatform from "../functions/api/adminPlatform.js";
+import * as site from "../functions/site.js";
 import { error } from "../functions/_lib/http.js";
 
 // Эти же пути перечислены в run_worker_first в wrangler.toml
-const ROUTES = [
+/** @type {Array<[string, any]>} */
+const ROUTE_LIST = [
   ["/api/auth/login", login],
   ["/api/auth/register", register],
   ["/api/auth/logout", logout],
@@ -70,13 +79,94 @@ const ROUTES = [
   ["/api/admin/titles/:id/chapters/:number/publish", adminPublish],
   ["/api/admin/titles/:id/chapters/:number/pages", adminPages],
   ["/api/admin/titles/:id/chapters/:number/pages/:page", adminPage],
+  // ENDEMION ID
+  ["/api/me/profile", profile.meProfile],
+  ["/api/me/genres", profile.meGenres],
+  ["/api/me/avatar", profile.meAvatar],
+  ["/api/me/history", profile.meHistory],
+  ["/api/me/achievements", profile.meAchievements],
+  ["/api/users", profile.userSearch],
+  ["/api/users/:username", profile.userProfile],
+  ["/api/users/:username/library", profile.userLibrary],
+  ["/api/users/:username/follows", profile.userFollows],
+  ["/api/users/:username/follow", profile.userFollow],
+  // ENDEMION PULSE
+  ["/api/notifications", pulse.notifications],
+  ["/api/notifications/count", pulse.notificationCount],
+  ["/api/calendar", pulse.calendar],
+  ["/api/continue", pulse.continueReading],
+  ["/api/titles/:id/view", pulse.titleView],
+  // NEXUS, ORACLE, главная
+  ["/api/home", discover.home],
+  ["/api/random", discover.randomTitle],
+  ["/api/taxonomy", discover.taxonomy],
+  ["/api/nexus/:id", discover.nexusGraph],
+  ["/api/titles/:id/related", discover.titleRelated],
+  ["/api/titles/:id/details", discover.titleDetails],
+  ["/api/oracle", discover.oracleMoods],
+  ["/api/oracle/:mood", discover.oracleRecommend],
+  // COMMUNITY
+  ["/api/titles/:id/reviews", community.titleReviews],
+  ["/api/reviews/:id", community.review],
+  ["/api/comments", community.comments],
+  ["/api/comments/:id", community.comment],
+  ["/api/comments/:id/reactions", community.commentReactions],
+  ["/api/threads", community.threads],
+  ["/api/threads/:id", community.thread],
+  ["/api/collections", community.collections],
+  ["/api/collections/:id", community.collection],
+  ["/api/collections/:id/items", community.collectionItems],
+  ["/api/reports", community.reports],
+  // ARENA
+  ["/api/polls", arena.polls],
+  ["/api/polls/:id", arena.poll],
+  ["/api/polls/:id/vote", arena.pollVote],
+  ["/api/tournaments", arena.tournaments],
+  ["/api/tournaments/:id", arena.tournament],
+  ["/api/tournaments/:id/matches/:match/vote", arena.tournamentVote],
+  ["/api/arena/leaderboards", arena.arenaLeaderboards],
+  ["/api/characters", arena.characters],
+  // Модерация (модератор и администратор)
+  ["/api/moderation/reports", moderation.moderationReports],
+  ["/api/moderation/actions", moderation.moderationActions],
+  ["/api/moderation/users/:id/unmute", moderation.moderationUnmute],
+  ["/api/moderation/log", moderation.moderationLog],
+  ["/api/moderation/comments", moderation.moderationComments],
+  // Админка платформы
+  ["/api/admin/genres", adminPlatform.adminGenres],
+  ["/api/admin/genres/:id", adminPlatform.adminGenre],
+  ["/api/admin/authors", adminPlatform.adminAuthors],
+  ["/api/admin/authors/:id", adminPlatform.adminAuthor],
+  ["/api/admin/tags", adminPlatform.adminTags],
+  ["/api/admin/titles/:id/characters", adminPlatform.adminCharacters],
+  ["/api/admin/characters/:id", adminPlatform.adminCharacter],
+  ["/api/admin/titles/:id/relations", adminPlatform.adminRelations],
+  ["/api/admin/users/:id/role", adminPlatform.adminUserRole],
+  ["/api/admin/collections", adminPlatform.adminCollections],
+  ["/api/admin/collections/:id", adminPlatform.adminCollection],
+  ["/api/admin/platform-stats", adminPlatform.adminPlatformStats],
   ["/title/:id", titlePage],
   ["/read/:id/:chapter", readerPage],
   ["/pages/:id/:chapter/:page", pageImage],
   ["/covers/:id", coverImage],
+  ["/avatars/:id", profile.avatarImage],
+  // Страницы разделов: каркас с сервера, данные подгружает скрипт раздела
+  ["/", site.home],
+  ["/catalog", site.catalog],
+  ["/nexus", site.nexus],
+  ["/oracle", site.oracle],
+  ["/pulse", site.pulse],
+  ["/profile", site.profile],
+  ["/community", site.community],
+  ["/community/thread/:id", site.threadPage],
+  ["/collection/:id", site.collectionPage],
+  ["/arena", site.arena],
+  ["/u/:username", site.userPage],
   ["/robots.txt", robots],
   ["/sitemap.xml", sitemap]
-].map(([pattern, module]) => ({ parts: pattern.split("/").filter(Boolean), module }));
+];
+
+const ROUTES = ROUTE_LIST.map(([pattern, module]) => ({ parts: pattern.split("/").filter(Boolean), module }));
 
 const METHODS = ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE"];
 

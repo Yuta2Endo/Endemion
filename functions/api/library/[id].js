@@ -1,6 +1,7 @@
 // PUT /api/library/:id — изменить запись библиотеки: избранное, статус, прочитанные главы.
 // Передаются только изменяемые поля, остальные остаются прежними
 
+import { checkAchievements } from "../../_lib/achievements.js";
 import { error, json, readJson } from "../../_lib/http.js";
 import { currentUser } from "../../_lib/session.js";
 import { getTitle, parseId } from "../../_lib/titles.js";
@@ -38,9 +39,10 @@ export async function onRequestPut({ request, env, params }) {
       return error(`Глава должна быть от 0 до ${title.chapters}.`);
     }
     chapter = body.chapter;
-    // Отметил главу — значит читает; дочитал завершённый тайтл до конца — прочитано
-    if (chapter > 0 && status === null) status = "reading";
-    if (chapter === title.chapters && title.status === "completed") status = "completed";
+    // Отметил главу — значит читает (если не выбрал другой статус в этом же запросе);
+    // дочитал завершённый тайтл до конца — прочитано
+    if (chapter > 0 && (status === null || status === "planned") && !("status" in body)) status = "reading";
+    if (chapter === title.chapters && chapter > 0 && title.status === "completed") status = "completed";
   }
 
   if (!favorite && status === null && chapter === 0) {
@@ -55,5 +57,6 @@ export async function onRequestPut({ request, env, params }) {
     ).bind(user.id, id, favorite, status, chapter).run();
   }
 
-  return json({ item: { titleId: id, favorite: favorite === 1, status, chapter } });
+  const achievements = await checkAchievements(env, user.id, "library");
+  return json({ item: { titleId: id, favorite: favorite === 1, status, chapter }, achievements });
 }

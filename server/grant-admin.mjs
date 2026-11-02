@@ -14,7 +14,7 @@ if (!email) {
 
 const db = new DatabaseSync(DB_FILE);
 db.exec("PRAGMA busy_timeout = 5000");
-const result = db.prepare("UPDATE users SET is_admin = ? WHERE email = ?").run(revoke ? 0 : 1, email);
+const result = db.prepare("UPDATE users SET role = ? WHERE email = ?").run(revoke ? "user" : "admin", email);
 db.close();
 
 if (!result.changes) {

@@ -32,7 +32,7 @@ export function grantAdmin(email) {
   const args = process.env.TEST_TARGET === "node"
     ? ["server/grant-admin.mjs", email]
     : ["node_modules/wrangler/bin/wrangler.js", "d1", "execute", "endemion", "--local",
-      "--command", `UPDATE users SET is_admin = 1 WHERE email = '${email}'`];
+      "--command", `UPDATE users SET role = 'admin' WHERE email = '${email}'`];
   execFileSync(process.execPath, args, { stdio: "ignore" });
 }
 

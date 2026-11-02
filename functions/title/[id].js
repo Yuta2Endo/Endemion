@@ -1,7 +1,8 @@
 // GET /title/:id — страница тайтла. HTML собирается на сервере, чтобы поисковики и превью ссылок видели содержимое.
-// Избранное, статус и прочитанные главы дорисовывает /assets/title.js
+// Полку, прогресс, теги, персонажей, легальные источники, отзывы, комментарии и похожие тайтлы дорисовывает /assets/title.js
 
-import { escapeHtml as e, html, notFound } from "../_lib/html.js";
+import { escapeHtml as e, notFound } from "../_lib/html.js";
+import { renderPage } from "../_lib/layout.js";
 import { formatDate, getTitle, listChapters, parseId, plural, posterBackground, TYPES } from "../_lib/titles.js";
 
 /** Разметка schema.org для поисковиков. «<» экранируется: строка из базы не сможет закрыть тег </script> */
@@ -10,12 +11,17 @@ function structuredData(title, url, image) {
     "@context": "https://schema.org",
     "@type": "ComicSeries",
     name: title.title,
+    ...(title.originalTitle ? { alternateName: title.originalTitle } : {}),
     description: title.description,
     url,
     inLanguage: "ru",
     genre: title.genres,
     author: { "@type": "Person", name: title.author },
-    ...(image ? { image } : {})
+    ...(image ? { image } : {}),
+    // Только реальные оценки читателей: без оценок блока нет
+    ...(title.readerVotes ? {
+      aggregateRating: { "@type": "AggregateRating", ratingValue: title.readerRating, ratingCount: title.readerVotes, bestRating: 10, worstRating: 1 }
+    } : {})
   };
   return JSON.stringify(data).replaceAll("<", "\\u003c");
 }
@@ -38,64 +44,33 @@ export async function onRequestGet({ params, env, request }) {
 
   const type = TYPES[title.type];
   const origin = new URL(request.url).origin;
-  const url = `${origin}/title/${title.id}`;
+  const path = `/title/${title.id}`;
+  const url = `${origin}${path}`;
   const chapters = `${title.chapters} ${plural(title.chapters, "глава", "главы", "глав")}`;
   const statusText = title.status === "ongoing" ? "Выходит" : "Завершён";
-  const description = `${type.label}, ${title.year}. ${title.description} ${chapters}, перевод: ${title.translator}.`;
+  const description = `${type.label}, ${title.year}. ${title.description} ${chapters}.`;
   // Превью ссылки: загруженная обложка или общая картинка сайта
   const cover = title.cover ? `${origin}${title.cover}` : null;
   const image = cover || `${origin}/assets/og-image.png`;
+  const readers = title.readerVotes
+    ? `<div><strong>★ ${title.readerRating.toFixed(1)}</strong><span>читатели · ${title.readerVotes} ${plural(title.readerVotes, "оценка", "оценки", "оценок")}</span></div>`
+    : `<div><strong>—</strong><span>оценок читателей пока нет</span></div>`;
 
-  const page = `<!doctype html>
-<html lang="ru">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#080b18">
-  <title>${e(title.title)} — ${e(type.label.toLowerCase())} читать на русском | Endemion</title>
-  <meta name="description" content="${e(description)}">
-  <link rel="canonical" href="${e(url)}">
-  <meta property="og:type" content="book">
-  <meta property="og:site_name" content="Endemion">
+  const head = `<meta property="og:type" content="book">
   <meta property="og:title" content="${e(title.title)} — ${e(type.label)}">
   <meta property="og:description" content="${e(description)}">
   <meta property="og:url" content="${e(url)}">
   <meta property="og:image" content="${e(image)}">
   ${cover ? `<meta property="og:image:alt" content="${e(`Обложка «${title.title}»`)}">` : ""}
-  <meta property="og:locale" content="ru_RU">
   <meta name="twitter:card" content="${cover ? "summary" : "summary_large_image"}">
-  <script type="application/ld+json">${structuredData(title, url, cover)}</script>
-  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-  <link rel="manifest" href="/manifest.webmanifest">
-  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
-  <meta name="apple-mobile-web-app-title" content="Endemion">
-  <link rel="stylesheet" href="/assets/base.css">
-  <link rel="stylesheet" href="/assets/catalog.css">
-  <script type="module" src="/assets/title.js"></script>
-</head>
-<body>
-  <a class="skip-link" href="#main">Перейти к содержимому</a>
+  <script type="application/ld+json">${structuredData(title, url, cover)}</script>`;
 
-  <header class="header">
-    <div class="container nav">
-      <a class="logo" href="/"><span class="logo-mark" aria-hidden="true">E</span>ENDEMION</a>
-      <nav class="nav-links" id="navLinks" aria-label="Разделы">
-        <a href="/#catalog">Каталог</a>
-        <a href="/#popular">Популярное</a>
-        <a href="/#updates">Новые главы</a>
-      </nav>
-      <div class="nav-actions">
-        <a class="profile-btn" id="accountButton" href="/auth">Войти</a>
-        <button class="menu-toggle" type="button" aria-controls="navLinks" aria-expanded="false" aria-label="Меню">☰</button>
-      </div>
-    </div>
-  </header>
-
-  <main class="container title-page" id="main" data-title-id="${title.id}" data-chapters="${title.chapters}" data-status="${e(title.status)}">
-    <nav class="breadcrumbs" aria-label="Навигация"><a href="/#catalog">Каталог</a> <span aria-hidden="true">/</span> <span>${e(title.title)}</span></nav>
+  const body = `
+    <div class="container title-page" data-title-id="${title.id}" data-chapters="${title.chapters}" data-status="${e(title.status)}" id="titleRoot">
+    <nav class="breadcrumbs" aria-label="Навигация"><a href="/catalog">Каталог</a> <span aria-hidden="true">/</span> <a href="/catalog?type=${e(title.type)}">${e(type.label)}</a> <span aria-hidden="true">/</span> <span>${e(title.title)}</span></nav>
 
     <section class="title-hero">
-      <div class="card-poster title-poster" data-poster="${e(posterBackground(title))}"${cover ? ` role="img" aria-label="${e(`Обложка «${title.title}»`)}"` : ""}>
+      <div class="title-poster" data-poster="${e(posterBackground(title))}"${cover ? ` role="img" aria-label="${e(`Обложка «${title.title}»`)}"` : ""}>
         <span class="type-badge type-${e(title.type)}">${e(type.label)}</span>
         ${cover ? "" : `<span class="poster-symbol" aria-hidden="true">${e(title.symbol)}</span>`}
       </div>
@@ -103,65 +78,89 @@ export async function onRequestGet({ params, env, request }) {
       <div class="title-info">
         <div class="eyebrow">${e(title.genres.join(" · "))}</div>
         <h1 class="title-name">${e(title.title)}</h1>
-        <div class="card-meta title-meta">
-          <span>${e(type.label)} · ${e(type.country)}</span><span>•</span>
-          <span>${title.year}</span><span>•</span>
-          <span>${e(chapters)}</span><span>•</span>
-          <span class="rating">★ ${title.rating}</span>
+        ${title.originalTitle ? `<p class="title-original">${e(title.originalTitle)}</p>` : ""}
+        <div class="title-scores">
+          ${readers}
+          <div><strong>★ ${title.rating.toFixed(1)}</strong><span>оценка редакции</span></div>
+          <div><strong>${title.readers}</strong><span>на полках читателей</span></div>
         </div>
         <p class="title-description">${e(title.description)}</p>
 
         <dl class="title-facts">
           <div><dt>Автор</dt><dd>${e(title.author)}</dd></div>
-          <div><dt>Перевод</dt><dd>${e(title.translator)}</dd></div>
-          <div><dt>Выпуск</dt><dd class="status-${e(title.status)}">${statusText}</dd></div>
-          <div><dt>Формат</dt><dd>${e(type.format)}</dd></div>
+          <div><dt>Год</dt><dd>${title.year}</dd></div>
+          <div><dt>Выпуск</dt><dd class="status-${e(title.status)}">${statusText}${title.chapters ? ` · ${e(chapters)}` : ""}</dd></div>
+          <div><dt>Формат</dt><dd>${e(type.country)} · ${e(type.format)}</dd></div>
         </dl>
 
         ${hasChapters ? `<div class="read-actions">
           <a class="primary-btn read-btn" id="readButton" href="/read/${title.id}/1">Читать с 1 главы</a>
           <a class="ghost-btn" href="/read/${title.id}/${title.chapters}">Последняя глава ${title.chapters}</a>
-        </div>` : `<p class="read-actions-empty">Главы пока не добавлены.</p>`}
+        </div>` : `<p class="read-actions-empty">Главы пока не добавлены. Где читать официально — в разделе «Легальные источники».</p>`}
 
         <div class="library-controls" id="libraryControls" aria-live="polite"></div>
       </div>
     </section>
 
-    ${hasChapters ? `<section class="section" aria-labelledby="chaptersTitle">
-      <div class="section-heading">
-        <div>
-          <div class="eyebrow">Главы</div>
-          <h2 id="chaptersTitle">${title.status === "ongoing" ? `Вышло ${e(chapters)}` : `Всего ${e(chapters)}`}</h2>
-        </div>
-        <p>Отмечай, сколько глав прочитано: Endemion запомнит место, и в профиле будет видно, с какой главы продолжить.</p>
-      </div>
-      <div class="chapter-panel" id="chapterPanel"></div>
-    </section>` : ""}
+    <div class="split">
+      <div class="title-sections">
+        ${hasChapters ? `<section aria-labelledby="chaptersTitle">
+          <h2 id="chaptersTitle">Прогресс</h2>
+          <div class="chapter-panel" id="chapterPanel"></div>
+        </section>` : ""}
 
-    <section class="section" aria-labelledby="listTitle">
-      <div class="section-heading">
-        <div>
-          <div class="eyebrow">Читать</div>
+        <section aria-labelledby="tagsTitle" id="tagsSection" hidden>
+          <h2 id="tagsTitle">Атмосфера, герой и сюжет</h2>
+          <div class="tag-groups" id="tagGroups"></div>
+        </section>
+
+        <section aria-labelledby="charactersTitle" id="charactersSection" hidden>
+          <h2 id="charactersTitle">Персонажи</h2>
+          <div class="character-list" id="characterList"></div>
+        </section>
+
+        <section aria-labelledby="reviewsTitle" id="reviews">
+          <h2 id="reviewsTitle">Оценки и отзывы</h2>
+          <div class="panel" id="reviewsBox"><div class="skeleton skeleton-row"></div></div>
+        </section>
+
+        <section aria-labelledby="commentsTitle" id="comments">
+          <h2 id="commentsTitle">Обсуждение</h2>
+          <div class="panel" id="commentsBox"><div class="skeleton skeleton-row"></div></div>
+        </section>
+
+        <section aria-labelledby="listTitle">
           <h2 id="listTitle">Список глав</h2>
-        </div>
-        <p>Экстры (побочные истории) отмечены розовой полоской слева.</p>
+          ${hasChapters
+            ? `<p class="muted small">Экстры (побочные истории) отмечены розовой полоской слева.</p>
+          <ol class="chapter-list" id="chapterList" reversed>
+          ${chapterList.map((chapter) => chapterItem(title.id, chapter)).join("\n          ")}
+          </ol>`
+            : `<p class="state">Глав пока нет.</p>`}
+        </section>
       </div>
-      ${hasChapters
-        ? `<ol class="chapter-list" id="chapterList" reversed>
-        ${chapterList.map((chapter) => chapterItem(title.id, chapter)).join("\n        ")}
-      </ol>`
-        : `<p class="empty">Глав пока нет.</p>`}
-    </section>
-  </main>
 
-  <footer class="footer">
-    <div class="container footer-inner">
-      <div><strong>ENDEMION</strong><small> — каталог манги, манхвы и маньхуа на русском.</small></div>
-      <nav class="footer-links" aria-label="Документы"><a href="/privacy">Политика конфиденциальности</a><a href="/copyright">Правообладателям</a><a href="/privacy#cookie" data-cookie-settings hidden>Настройки cookie</a></nav>
+      <aside class="stack">
+        <section class="panel" aria-labelledby="sourcesTitle">
+          <h2 id="sourcesTitle">Легальные источники</h2>
+          <div class="source-list" id="sourceList"><p class="muted small">Загрузка…</p></div>
+          <p class="muted small section">Нашли нарушение авторских прав? <a class="link-btn" href="/copyright">Сообщите правообладателям</a>.</p>
+        </section>
+        <section class="panel" aria-labelledby="relatedTitle">
+          <h2 id="relatedTitle">Похожие истории</h2>
+          <div class="related-list" id="relatedList"></div>
+          <a class="ghost-btn small-btn section" href="/nexus?title=${title.id}">Открыть в Nexus →</a>
+        </section>
+        <section class="panel" aria-labelledby="collectionsTitle" id="titleCollections" hidden>
+          <h2 id="collectionsTitle">В подборках читателей</h2>
+          <div class="stack" id="titleCollectionList"></div>
+        </section>
+      </aside>
     </div>
-  </footer>
-</body>
-</html>`;
+    </div>`;
 
-  return html(page, 200, { "Cache-Control": "public, max-age=300" });
+  return renderPage(request, {
+    title: `${title.title} — ${type.label.toLowerCase()}`, description, path, active: "catalog", head, body,
+    styles: ["title.css"], scripts: ["title.js"], cache: "public, max-age=120"
+  });
 }

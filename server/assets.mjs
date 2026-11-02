@@ -97,7 +97,8 @@ export function createAssets(publicDir) {
     headers.set("ETag", etag);
     if (status === 200 && request.headers.get("If-None-Match") === etag) return new Response(null, { status: 304, headers });
     headers.set("Content-Length", String(stat.size));
-    const body = request.method === "HEAD" ? null : Readable.toWeb(createReadStream(full));
+    // Поток node:stream/web и глобальный ReadableStream — один и тот же класс, но типы у них описаны отдельно
+    const body = request.method === "HEAD" ? null : /** @type {any} */ (Readable.toWeb(createReadStream(full)));
     return new Response(body, { status, headers });
   }
 

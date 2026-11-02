@@ -27,7 +27,7 @@ export function applyMigrations(db, dir, names) {
       db.exec("COMMIT");
     } catch (err) {
       db.exec("ROLLBACK");
-      throw new Error(`Миграция ${name} не применилась: ${err.message}`);
+      throw new Error(`Миграция ${name} не применилась: ${err.message}`, { cause: err });
     }
     console.log(`Миграция применена: ${name}`);
   }

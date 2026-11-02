@@ -72,7 +72,7 @@
 
 .admin-menu a[aria-current="page"] {
   color: var(--text);
-  background: rgba(116, 227, 255, 0.12);
+  background: rgba(139, 92, 255, 0.12);
   font-weight: 800;
 }
 
@@ -350,12 +350,12 @@
 }
 
 .admin-title-item:hover {
-  border-color: rgba(116, 227, 255, 0.55);
+  border-color: rgba(139, 92, 255, 0.55);
 }
 
 .admin-title-item[aria-current="true"] {
   border-color: var(--cyan);
-  background: rgba(116, 227, 255, 0.1);
+  background: rgba(139, 92, 255, 0.1);
 }
 
 .admin-title-item strong {
@@ -420,7 +420,7 @@
 .field select:focus,
 .field textarea:focus {
   border-color: var(--cyan);
-  box-shadow: 0 0 0 3px rgba(116, 227, 255, 0.15);
+  box-shadow: 0 0 0 3px rgba(139, 92, 255, 0.15);
 }
 
 .admin-colors {
@@ -633,6 +633,209 @@ a.secondary-button[hidden] {
 
 .admin-complaint .admin-chapter-actions {
   justify-content: flex-start;
+}
+
+.admin-report-reasons {
+  display: grid;
+  gap: 4px;
+  padding-left: 18px;
+  font-size: 13px;
+}
+
+.admin-report-reasons q {
+  display: block;
+  color: var(--muted);
+}
+
+/* ==================== ТЕГИ, ИСТОЧНИКИ, СПРАВОЧНИКИ ==================== */
+
+.admin-tag.is-moderator {
+  color: #07101b;
+  background: var(--accent-light);
+}
+
+.admin-fieldset {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+}
+
+.admin-fieldset legend {
+  padding: 0 6px;
+  font-weight: 800;
+}
+
+.admin-hint {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.admin-tag-picker {
+  display: grid;
+  gap: 10px;
+}
+
+.admin-tag-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.admin-tag-group-label {
+  width: 100%;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.admin-tag-chip {
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text);
+  background: var(--panel-soft);
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.admin-tag-chip:hover {
+  border-color: var(--border-strong);
+}
+
+.admin-tag-chip:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 2px;
+}
+
+.admin-tag-chip.is-w1 {
+  border-color: rgba(var(--accent-rgb), 0.45);
+  background: rgba(var(--accent-rgb), 0.14);
+}
+
+.admin-tag-chip.is-w2 {
+  border-color: rgba(var(--accent-rgb), 0.7);
+  background: rgba(var(--accent-rgb), 0.3);
+}
+
+.admin-tag-chip.is-w3 {
+  border-color: var(--accent);
+  color: #fff;
+  background: var(--accent);
+  font-weight: 800;
+}
+
+.admin-source-list {
+  display: grid;
+  gap: 8px;
+}
+
+.admin-source-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr) auto auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.admin-plain-list,
+.admin-option-list {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 14px;
+  list-style: none;
+}
+
+.admin-plain-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px 14px;
+  align-items: center;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--panel-soft);
+}
+
+.admin-plain-item.is-muted {
+  opacity: 0.65;
+}
+
+.admin-plain-info {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.admin-plain-info small {
+  color: var(--muted);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.admin-plain-info a {
+  color: var(--text);
+}
+
+.admin-plain-info a:hover {
+  color: var(--accent-light);
+}
+
+.admin-inline-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: end;
+  margin-bottom: 10px;
+}
+
+.admin-inline-form .field,
+.admin-inline-form .input {
+  flex: 1 1 200px;
+}
+
+.admin-inline-edit {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
+.admin-option-list li {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--panel-soft);
+  font-size: 14px;
+}
+
+.admin-subheading {
+  margin: 18px 0 8px;
+  font-size: 15px;
+}
+
+.admin-top-list {
+  display: grid;
+  gap: 4px;
+  padding-left: 22px;
+  font-size: 14px;
+}
+
+.admin-top-list small {
+  color: var(--muted);
+}
+
+@media (max-width: 600px) {
+  .admin-source-row,
+  .admin-plain-item {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* Меню и список тайтлов вместе занимают слишком много места: список тайтлов уходит наверх раздела */

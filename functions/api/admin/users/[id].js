@@ -33,10 +33,10 @@ function plan(env, action, user) {
     case "grantAdmin":
       if (user.blockedAt) return { problem: "Сначала разблокируйте пользователя." };
       if (user.isAdmin) return { problem: "Пользователь уже администратор." };
-      return { statements: [env.DB.prepare("UPDATE users SET is_admin = 1 WHERE id = ?").bind(user.id)] };
+      return { statements: [env.DB.prepare("UPDATE users SET role = 'admin' WHERE id = ?").bind(user.id)] };
     case "revokeAdmin":
       if (!user.isAdmin) return { problem: "Пользователь не администратор." };
-      return { statements: [env.DB.prepare("UPDATE users SET is_admin = 0 WHERE id = ?").bind(user.id)] };
+      return { statements: [env.DB.prepare("UPDATE users SET role = 'user' WHERE id = ?").bind(user.id)] };
     default:
       return { problem: "Неизвестное действие." };
   }

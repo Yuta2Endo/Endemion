@@ -1,7 +1,9 @@
 // Админка: сводка, тайтлы с главами и страницами, жалобы, пользователи и журнал действий.
-// Права проверяет сервер в каждом запросе /api/admin/*, эта страница только показывает формы
+// Права проверяет сервер в каждом запросе /api/admin/*, эта страница только показывает формы.
+// Модератор видит только модерацию и голосования (разделы сообщества — в admin-community.js)
 
-import { api, chaptersText, getMe, loginUrl, posterBackground, toast, TYPE_LABELS } from "./app.js";
+import { api, chaptersText, getMe, loginUrl, posterBackground, titlePicker, toast, TYPE_LABELS } from "./app.js";
+import { loadCollections, loadModeration, loadPlatformStats, loadPolls, loadReports, loadTaxonomy } from "./admin-community.js";
 
 const $ = (selector) => document.querySelector(selector);
 
@@ -98,7 +100,11 @@ function busy() {
 
 // ==================== РАЗДЕЛЫ ====================
 
-const SECTIONS = ["dashboard", "titles", "complaints", "users", "audit"];
+const SECTIONS = ["dashboard", "titles", "taxonomy", "moderation", "polls", "collections", "complaints", "users", "audit"];
+const MODERATOR_SECTIONS = ["moderation", "polls"];
+
+/** Разделы, доступные вошедшему: модератору — только модерация и голосования */
+const allowedSections = () => (me?.isAdmin ? SECTIONS : MODERATOR_SECTIONS);
 
 function showSection(name) {
   document.querySelectorAll("[data-panel]").forEach((panel) => (panel.hidden = panel.dataset.panel !== name));
@@ -116,10 +122,15 @@ async function route() {
   const hash = location.hash.slice(1);
   const oldTitle = /^\d+$/.test(hash) ? hash : null;
   const [name, id] = oldTitle ? ["titles", oldTitle] : hash.split("/");
-  const section = SECTIONS.includes(name) ? name : "dashboard";
+  const allowed = allowedSections();
+  const section = allowed.includes(name) ? name : allowed[0];
   showSection(section);
 
   if (section === "dashboard") loadDashboard();
+  if (section === "taxonomy") loadTaxonomy();
+  if (section === "moderation") loadModeration();
+  if (section === "polls") loadPolls();
+  if (section === "collections") loadCollections();
   if (section === "complaints") loadComplaints();
   if (section === "users") loadUsers();
   if (section === "audit") loadAudit();
@@ -150,6 +161,7 @@ function statCard(label, value, note, alert = false) {
 }
 
 async function loadDashboard() {
+  loadPlatformStats();
   const [stats, recent] = await Promise.all([api("/api/admin/stats"), api("/api/admin/audit?limit=8")]);
   if (!stats.ok) {
     setMessage($("#statsMessage"), stats.data?.error || "Не удалось загрузить сводку.");
@@ -274,6 +286,8 @@ function fillTitleForm(title) {
   titleField("symbol").value = title?.symbol ?? "✦";
   posterColors(title?.poster).forEach((color, i) => (titleField(`color${i}`).value = color.toLowerCase()));
   titleField("description").value = title?.description ?? "";
+  titleField("originalTitle").value = title?.originalTitle ?? "";
+  titleField("releaseDay").value = title?.releaseDay === null || title?.releaseDay === undefined ? "" : String(title.releaseDay);
   updatePreview();
 
   titleHeading.textContent = title ? title.title : "Новый тайтл";
@@ -293,9 +307,263 @@ async function selectTitle(id) {
   setMessage(titleMessage, "");
   setMessage(chapterMessage, "");
   chaptersSection.hidden = !current;
+  charactersSection.hidden = !current;
+  relationsSection.hidden = !current;
   resetChapterForm();
-  if (current) await loadChapters();
+  resetCharacterForm();
+  setMessage(characterMessage, "");
+  setMessage(relationMessage, "");
+  if (current) await Promise.all([loadChapters(), loadTitleDetails()]);
+  else applyDetails({ tags: [], sources: [], characters: [], relations: [] });
 }
+
+// ==================== ТЕГИ, ИСТОЧНИКИ, ПЕРСОНАЖИ И СВЯЗИ ====================
+
+const tagPicker = $("#tagPicker");
+const sourceList = $("#sourceList");
+const charactersSection = $("#charactersSection");
+const characterList = $("#characterList");
+const characterForm = $("#characterForm");
+const characterCancel = $("#characterCancel");
+const characterMessage = $("#characterMessage");
+const relationsSection = $("#relationsSection");
+const relationList = $("#relationList");
+const relationKind = $("#relationKind");
+const relationMessage = $("#relationMessage");
+const TAG_CATEGORIES = { mood: "Атмосфера", hero: "Главный герой", plot: "Сюжет", theme: "Темы", setting: "Мир" };
+const SOURCE_KINDS = { official: "Официально", publisher: "Издатель", store: "Магазин", licensed: "Лицензия" };
+const ROLE_LABELS = { main: "Главный герой", supporting: "Второстепенный", antagonist: "Антагонист" };
+const RELATION_LABELS = { similar: "Похожее", sequel: "Продолжение", prequel: "Предыстория", spin_off: "Спин-офф", same_universe: "Тот же мир" };
+const MAX_SOURCES = 10;
+
+// Все теги платформы; вес выбранных у текущего тайтла: code → 1..3
+let allTags = [];
+let tagWeights = new Map();
+let characters = [];
+// Персонаж в форме; null — новый
+let editingCharacter = null;
+// Связи текущего тайтла: [{ id, title, kind }]
+let relations = [];
+
+async function loadTags() {
+  const result = await api("/api/admin/tags");
+  allTags = result.ok ? result.data.tags : [];
+  renderTagPicker();
+}
+
+function renderTagPicker() {
+  if (!allTags.length) {
+    tagPicker.replaceChildren(element("p", "admin-hint", "Теги не загрузились. Обновите страницу."));
+    return;
+  }
+  const groups = Object.entries(TAG_CATEGORIES).map(([category, label]) => {
+    const group = element("div", "admin-tag-group");
+    group.append(element("span", "admin-tag-group-label", label));
+    for (const item of allTags.filter((tagItem) => tagItem.category === category)) {
+      const weight = tagWeights.get(item.code) || 0;
+      const chip = button(weight ? `${item.name} · ${weight}` : item.name, `admin-tag-chip${weight ? ` is-w${weight}` : ""}`, () => {
+        const next = ((tagWeights.get(item.code) || 0) + 1) % 4;
+        if (next) tagWeights.set(item.code, next);
+        else tagWeights.delete(item.code);
+        renderTagPicker();
+        tagPicker.querySelector(`[data-code="${item.code}"]`)?.focus();
+      });
+      chip.dataset.code = item.code;
+      chip.setAttribute("aria-pressed", String(weight > 0));
+      chip.setAttribute("aria-label", `${item.name}: ${weight ? `вес ${weight}` : "не выбран"}`);
+      group.append(chip);
+    }
+    return group;
+  });
+  tagPicker.replaceChildren(...groups);
+}
+
+function sourceRow(source = { name: "", url: "", kind: "official" }) {
+  const row = element("div", "admin-source-row");
+  const name = element("input", "input");
+  name.value = source.name;
+  name.maxLength = 80;
+  name.placeholder = "Название площадки";
+  name.setAttribute("aria-label", "Название источника");
+  name.dataset.part = "name";
+  const url = element("input", "input");
+  url.type = "url";
+  url.value = source.url;
+  url.maxLength = 500;
+  url.placeholder = "https://…";
+  url.setAttribute("aria-label", "Ссылка на источник");
+  url.dataset.part = "url";
+  const kind = element("select", "select");
+  kind.setAttribute("aria-label", "Вид источника");
+  kind.dataset.part = "kind";
+  kind.append(...Object.entries(SOURCE_KINDS).map(([value, label]) => {
+    const option = element("option", null, label);
+    option.value = value;
+    return option;
+  }));
+  kind.value = source.kind;
+  const remove = button("Убрать", "secondary-button", () => {
+    row.remove();
+    updateSourceButton();
+  });
+  remove.setAttribute("aria-label", "Убрать источник");
+  row.append(name, url, kind, remove);
+  return row;
+}
+
+function updateSourceButton() {
+  $("#addSource").disabled = sourceList.children.length >= MAX_SOURCES;
+}
+
+$("#addSource").addEventListener("click", () => {
+  if (sourceList.children.length >= MAX_SOURCES) return;
+  const row = sourceRow();
+  sourceList.append(row);
+  updateSourceButton();
+  row.querySelector("input").focus();
+});
+
+/** Источники из формы; пустые строки пропускаются */
+function formSources() {
+  return [...sourceList.children].map((row) => ({
+    name: row.querySelector("[data-part=name]").value.trim(),
+    url: row.querySelector("[data-part=url]").value.trim(),
+    kind: row.querySelector("[data-part=kind]").value
+  })).filter((source) => source.name || source.url);
+}
+
+function applyDetails({ tags, sources, characters: list, relations: links }) {
+  tagWeights = new Map(tags.map((item) => [item.code, item.weight]));
+  renderTagPicker();
+  sourceList.replaceChildren(...sources.map(sourceRow));
+  updateSourceButton();
+  characters = list;
+  renderCharacters();
+  relations = links.map((link) => ({ id: link.id, kind: link.kind, title: titles.find((title) => title.id === link.id)?.title || `#${link.id}` }));
+  renderRelations();
+}
+
+async function loadTitleDetails() {
+  const id = current.id;
+  const result = await api(titleUrl(id));
+  if (current?.id !== id) return;
+  if (!result.ok) {
+    setMessage(titleMessage, result.data?.error || "Не удалось загрузить теги и источники.");
+    applyDetails({ tags: [], sources: [], characters: [], relations: [] });
+    return;
+  }
+  applyDetails(result.data);
+}
+
+// Персонажи
+
+function renderCharacters() {
+  characterList.replaceChildren(...(characters.length ? characters.map((character) => {
+    const item = element("li", "admin-plain-item");
+    const info = element("div", "admin-plain-info");
+    info.append(
+      element("strong", null, `${character.symbol} ${character.name}`),
+      element("small", null, `${ROLE_LABELS[character.role]}${character.description ? ` · ${character.description}` : ""}`)
+    );
+    const actions = element("div", "admin-chapter-actions");
+    actions.append(
+      button("Изменить", "secondary-button", () => editCharacter(character)),
+      button("Удалить", "danger-button", () => deleteCharacter(character))
+    );
+    item.append(info, actions);
+    return item;
+  }) : [element("li", "admin-empty", "Персонажей пока нет.")]));
+}
+
+function resetCharacterForm() {
+  editingCharacter = null;
+  characterForm.reset();
+  $("#characterFormHeading").textContent = "Новый персонаж";
+  characterForm.querySelector("[type=submit]").textContent = "Добавить персонажа";
+  characterCancel.hidden = true;
+}
+
+function editCharacter(character) {
+  editingCharacter = character.id;
+  const field = (name) => characterForm.elements.namedItem(name);
+  field("name").value = character.name;
+  field("role").value = character.role;
+  field("symbol").value = character.symbol;
+  field("description").value = character.description || "";
+  $("#characterFormHeading").textContent = character.name;
+  characterForm.querySelector("[type=submit]").textContent = "Сохранить персонажа";
+  characterCancel.hidden = false;
+  field("name").focus();
+}
+
+characterCancel.addEventListener("click", resetCharacterForm);
+
+characterForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (!current) return;
+  const field = (name) => characterForm.elements.namedItem(name).value;
+  const body = { name: field("name"), role: field("role"), symbol: field("symbol").trim() || "✦", description: field("description") };
+  const isNew = editingCharacter === null;
+  const result = isNew
+    ? await api(`${titleUrl(current.id)}/characters`, { method: "POST", body })
+    : await api(`/api/admin/characters/${editingCharacter}`, { method: "PUT", body });
+  if (!result.ok) return setMessage(characterMessage, result.data?.error || "Не удалось сохранить персонажа.");
+  if (isNew) characters = result.data.characters;
+  else characters = characters.map((character) => (character.id === result.data.character.id ? result.data.character : character));
+  resetCharacterForm();
+  renderCharacters();
+  setMessage(characterMessage, isNew ? "Персонаж добавлен." : "Персонаж сохранён.", true);
+});
+
+async function deleteCharacter(character) {
+  if (!confirm(`Удалить персонажа «${character.name}»? Варианты в прошедших голосованиях сохранят его имя.`)) return;
+  const result = await api(`/api/admin/characters/${character.id}`, { method: "DELETE" });
+  if (!result.ok) return setMessage(characterMessage, result.data?.error || "Не удалось удалить персонажа.");
+  characters = characters.filter((item) => item.id !== character.id);
+  if (editingCharacter === character.id) resetCharacterForm();
+  renderCharacters();
+  setMessage(characterMessage, `Персонаж «${character.name}» удалён.`, true);
+}
+
+// Связи
+
+function renderRelations() {
+  relationList.replaceChildren(...(relations.length ? relations.map((relation, index) => {
+    const item = element("li", "admin-plain-item");
+    const info = element("div", "admin-plain-info");
+    info.append(element("strong", null, relation.title), element("small", null, RELATION_LABELS[relation.kind]));
+    item.append(info, button("Убрать", "secondary-button", () => {
+      relations.splice(index, 1);
+      renderRelations();
+      setMessage(relationMessage, "Связь убрана. Нажмите «Сохранить связи».");
+    }));
+    return item;
+  }) : [element("li", "admin-empty", "Связей пока нет. Nexus всё равно найдёт похожие тайтлы по тегам и жанрам.")]));
+}
+
+$("#relationPicker").append(titlePicker({
+  placeholder: "Найти тайтл для связи…",
+  label: "Найти тайтл для связи",
+  id: "relationSearch",
+  onPick: (title) => {
+    if (!current) return;
+    if (title.id === current.id) return setMessage(relationMessage, "Тайтл не может ссылаться сам на себя.");
+    const existing = relations.find((relation) => relation.id === title.id);
+    if (existing) existing.kind = relationKind.value;
+    else relations.push({ id: title.id, title: title.title, kind: relationKind.value });
+    renderRelations();
+    setMessage(relationMessage, "Связь добавлена. Нажмите «Сохранить связи».");
+  }
+}).root);
+
+$("#relationsSave").addEventListener("click", async () => {
+  if (!current) return;
+  const result = await api(`${titleUrl(current.id)}/relations`, {
+    method: "PUT", body: { relations: relations.map((relation) => ({ titleId: relation.id, kind: relation.kind })) }
+  });
+  if (!result.ok) return setMessage(relationMessage, result.data?.error || "Не удалось сохранить связи.");
+  setMessage(relationMessage, "Связи сохранены.", true);
+});
 
 titleForm.addEventListener("input", (event) => {
   if (event.target.name === "symbol" || event.target.type === "color") updatePreview();
@@ -314,8 +582,13 @@ titleForm.addEventListener("submit", async (event) => {
     translator: titleField("translator").value,
     symbol: titleField("symbol").value,
     colors: [0, 1, 2].map((i) => titleField(`color${i}`).value),
-    description: titleField("description").value
+    description: titleField("description").value,
+    originalTitle: titleField("originalTitle").value,
+    releaseDay: titleField("releaseDay").value === "" ? null : Number(titleField("releaseDay").value),
+    sources: formSources()
   };
+  // Если теги не загрузились, они не отправляются и на сервере остаются прежними
+  if (allTags.length) body.tags = [...tagWeights].map(([code, weight]) => ({ code, weight }));
   const isNew = !current;
   const result = isNew
     ? await api("/api/admin/titles", { method: "POST", body })
@@ -721,7 +994,11 @@ function userRow(user) {
   const tags = element("span", "admin-tags");
   if (user.id === me.id) tags.append(tag("Это вы", "is-self"));
   if (user.isAdmin) tags.append(tag("Администратор", "is-admin"));
+  if (user.role === "moderator") tags.append(tag("Модератор", "is-moderator"));
   if (user.blockedAt) tags.append(tag(`Заблокирован ${formatDate(user.blockedAt)}`, "is-blocked"));
+  if (user.mutedUntil && new Date(`${user.mutedUntil.replace(" ", "T")}Z`) > new Date()) {
+    tags.append(tag(`Без публикаций до ${formatDate(user.mutedUntil)}`, "is-blocked"));
+  }
   info.append(
     name,
     tags,
@@ -740,6 +1017,11 @@ function userRow(user) {
     if (user.sessions > 0) actions.append(button("Завершить сеансы", "secondary-button", () => userAction(user, "logout")));
     if (user.isAdmin) actions.append(button("Снять права администратора", "secondary-button", () => userAction(user, "revokeAdmin")));
     else if (!user.blockedAt) actions.append(button("Сделать администратором", "secondary-button", () => userAction(user, "grantAdmin")));
+    if (user.role === "moderator") actions.append(button("Снять права модератора", "secondary-button", () => setRole(user, "user")));
+    else if (user.role === "user" && !user.blockedAt) actions.append(button("Сделать модератором", "secondary-button", () => setRole(user, "moderator")));
+    if (user.mutedUntil && new Date(`${user.mutedUntil.replace(" ", "T")}Z`) > new Date()) {
+      actions.append(button("Снять ограничение", "secondary-button", () => unmute(user)));
+    }
     if (!user.isAdmin) actions.append(button("Удалить аккаунт", "danger-button", () => deleteUser(user)));
   }
 
@@ -811,6 +1093,28 @@ async function userAction(user, action) {
   setMessage(usersMessage, `${user.email}: ${config.done}.`, true);
 }
 
+const ROLE_TEXTS = {
+  moderator: { ask: (user) => `Сделать ${user.email} модератором? Он сможет скрывать контент, разбирать жалобы и вести голосования.`, done: "теперь модератор" },
+  user: { ask: (user) => `Снять с ${user.email} права модератора?`, done: "больше не модератор" }
+};
+
+async function setRole(user, role) {
+  const text = ROLE_TEXTS[role];
+  const password = await askPassword(text.ask(user));
+  if (!password) return;
+  const result = await api(`/api/admin/users/${user.id}/role`, { method: "PUT", body: { role, password } });
+  if (!result.ok) return setMessage(usersMessage, result.data?.error || "Не удалось изменить роль.");
+  replaceUser(result.data.user);
+  setMessage(usersMessage, `${user.email}: ${text.done}.`, true);
+}
+
+async function unmute(user) {
+  const result = await api(`/api/moderation/users/${user.id}/unmute`, { method: "POST" });
+  if (!result.ok) return setMessage(usersMessage, result.data?.error || "Не удалось снять ограничение.");
+  replaceUser({ ...user, mutedUntil: null });
+  setMessage(usersMessage, `${user.email}: публиковать снова можно.`, true);
+}
+
 async function deleteUser(user) {
   if (!confirm(`Удалить аккаунт ${user.email} вместе с полкой и прогрессом? Это нельзя отменить.`)) return;
   const password = await askPassword(`Удаление аккаунта ${user.email}.`);
@@ -855,7 +1159,21 @@ const ACTION_LABELS = {
   "user.logout": "завершение сеансов",
   "user.grantAdmin": "выдача прав администратора",
   "user.revokeAdmin": "снятие прав администратора",
-  "user.delete": "удаление аккаунта"
+  "user.role.user": "роль: читатель",
+  "user.role.moderator": "роль: модератор",
+  "user.role.admin": "роль: администратор",
+  "user.delete": "удаление аккаунта",
+  "title.relations": "связи тайтла",
+  "genre.create": "новый жанр",
+  "genre.update": "изменение жанра",
+  "genre.delete": "удаление жанра",
+  "author.create": "новый автор",
+  "author.update": "изменение автора",
+  "author.delete": "удаление автора",
+  "character.create": "новый персонаж",
+  "character.update": "изменение персонажа",
+  "character.delete": "удаление персонажа",
+  "collection.update": "изменение подборки"
 };
 
 function auditRow(entry) {
@@ -914,11 +1232,20 @@ async function init() {
     location.replace(loginUrl());
     return;
   }
-  if (!user.isAdmin) {
+  if (!user.isAdmin && !user.isModerator) {
     denied.hidden = false;
     return;
   }
   me = user;
+
+  if (!user.isAdmin) {
+    // Модератору не нужны тайтлы и жалобы правообладателей: эти запросы сервер ему всё равно отклонит
+    document.querySelectorAll("[data-admin-only]").forEach((node) => node.remove());
+    adminLayout.hidden = false;
+    loadReports();
+    await route();
+    return;
+  }
 
   const result = await api("/api/admin/titles");
   if (!result.ok) {
@@ -927,9 +1254,11 @@ async function init() {
     return;
   }
   titles = result.data.titles;
+  await loadTags();
   adminLayout.hidden = false;
-  // Значок новых жалоб в меню виден в любом разделе
+  // Значки новых жалоб в меню видны в любом разделе
   loadComplaints();
+  loadReports();
   await route();
 }
 

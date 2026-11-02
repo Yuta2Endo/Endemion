@@ -2,6 +2,7 @@
 
 import { hashPassword } from "../../_lib/crypto.js";
 import { clientIp, error, json, readJson } from "../../_lib/http.js";
+import { createProfile } from "../../_lib/profiles.js";
 import { isLimited, recordAttempt, RETRY_AFTER_SECONDS } from "../../_lib/rateLimit.js";
 import { createSession } from "../../_lib/session.js";
 import { verifyTurnstile } from "../../_lib/turnstile.js";
@@ -43,6 +44,8 @@ export async function onRequestPost({ request, env }) {
     if (String(err).includes("UNIQUE")) return error("Пользователь с такой почтой уже существует.", 409);
     throw err;
   }
+  // Профиль ENDEMION ID с адресом /u/<имя>. Имя можно сменить в настройках профиля
+  await createProfile(env, userId, email, name);
 
   const setCookie = await createSession(env, request, userId);
   return json({ user: { id: userId, name, email } }, 201, { "Set-Cookie": setCookie });

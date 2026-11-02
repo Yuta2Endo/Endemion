@@ -124,6 +124,7 @@ if (first) {
   r = await call("GET", `/api/positions/${id}`);
   check("место в главе читается", r.data?.position?.chapter === 1 && r.data.position.page === 2);
   r = await call("DELETE", `/api/positions/${id}`, { chapter: 1 });
+  check("место в главе удалено", r.status === 200);
   r = await call("GET", `/api/positions/${id}`);
   check("после дочитывания места нет", r.status === 200 && r.data.position === null);
 } else {

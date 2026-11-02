@@ -38,12 +38,26 @@ export async function currentUser(env, request) {
   const token = readCookie(request, SESSION_COOKIE);
   if (!token || !/^[0-9a-f]{64}$/.test(token)) return null;
   const row = await env.DB.prepare(
-    `SELECT users.id, users.name, users.email, users.created_at, users.is_admin, sessions.expires_at
+    `SELECT users.id, users.name, users.email, users.created_at, users.role, users.muted_until, sessions.expires_at,
+       p.username, p.avatar_version, p.avatar_color
      FROM sessions JOIN users ON users.id = sessions.user_id
+     LEFT JOIN user_profiles p ON p.user_id = users.id
      WHERE sessions.token_hash = ? AND users.blocked_at IS NULL`
   ).bind(await sha256(token)).first();
   if (!row || row.expires_at < Date.now()) return null;
-  return { id: row.id, name: row.name, email: row.email, createdAt: row.created_at, isAdmin: row.is_admin === 1 };
+  return {
+    id: row.id,
+    name: row.name,
+    email: row.email,
+    createdAt: row.created_at,
+    role: row.role,
+    isAdmin: row.role === "admin",
+    isModerator: row.role === "admin" || row.role === "moderator",
+    mutedUntil: row.muted_until,
+    username: row.username,
+    avatar: row.avatar_version ? `/avatars/${row.id}?v=${row.avatar_version}` : null,
+    avatarColor: row.avatar_color || "violet"
+  };
 }
 
 /** Удалить текущую сессию и вернуть заголовок, который стирает cookie */

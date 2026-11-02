@@ -5,8 +5,9 @@ import { verifyPassword } from "./crypto.js";
 import { clientIp, error } from "./http.js";
 import { chapterPrefix, pageKey } from "./pages.js";
 import { isLimited, recordAttempt, RETRY_AFTER_SECONDS } from "./rateLimit.js";
+import { hasRole } from "./roles.js";
 import { currentUser } from "./session.js";
-import { getChapter, getTitle, parseId, searchText, TYPES } from "./titles.js";
+import { getChapter, getTitle, parseId, searchColumns, TYPES } from "./titles.js";
 import { PASSWORD_MAX } from "./validate.js";
 
 export const MAX_PAGES = 500;
@@ -20,7 +21,7 @@ const COLOR = /^#[0-9a-f]{6}$/i;
 export async function requireAdmin(env, request) {
   const user = await currentUser(env, request);
   if (!user) return { response: error("Войдите в профиль.", 401) };
-  if (!user.isAdmin) return { response: error("Нужны права администратора.", 403) };
+  if (!hasRole(user, "admin")) return { response: error("Нужны права администратора.", 403) };
   return { user };
 }
 
@@ -98,9 +99,20 @@ export function parseTitle(body) {
   const description = clean(body.description);
   if (!description || description.length > 2000) return { problem: "Описание: от 1 до 2000 символов." };
 
+  const originalTitle = clean(body.originalTitle);
+  if (originalTitle.length > 160) return { problem: "Оригинальное название не длиннее 160 символов." };
+
+  let releaseDay = null;
+  if (body.releaseDay !== null && body.releaseDay !== undefined && body.releaseDay !== "") {
+    if (!Number.isInteger(body.releaseDay) || body.releaseDay < 0 || body.releaseDay > 6) return { problem: "День выхода: от 0 (вс) до 6 (сб)." };
+    releaseDay = body.releaseDay;
+  }
+
   return {
     title: {
       title,
+      originalTitle,
+      releaseDay: body.status === "ongoing" ? releaseDay : null,
       type: body.type,
       year: body.year,
       status: body.status,
@@ -115,12 +127,43 @@ export function parseTitle(body) {
   };
 }
 
-/** Значения для INSERT и UPDATE в порядке столбцов TITLE_COLUMNS. search_text пересчитывается при каждом сохранении */
-export const TITLE_COLUMNS = ["title", "type", "year", "status", "rating", "genres", "author", "translator", "symbol", "poster", "description", "search_text"];
+/** Значения для INSERT и UPDATE в порядке столбцов TITLE_COLUMNS. Строки поиска пересчитываются при каждом сохранении */
+export const TITLE_COLUMNS = [
+  "title", "original_title", "type", "year", "status", "rating", "genres", "author", "translator", "symbol", "poster", "description",
+  "release_day", "search_text", "search_title", "search_author", "search_genres"
+];
 
 export function titleValues(title) {
-  return TITLE_COLUMNS.map((name) =>
-    name === "genres" ? JSON.stringify(title.genres) : name === "search_text" ? searchText(title) : title[name]);
+  const search = searchColumns(title);
+  const values = {
+    ...title,
+    original_title: title.originalTitle,
+    release_day: title.releaseDay,
+    genres: JSON.stringify(title.genres),
+    ...search
+  };
+  return TITLE_COLUMNS.map((name) => values[name]);
+}
+
+/** Https-ссылки на легальные источники: [{ name, url, kind }] */
+export function parseSources(value) {
+  if (value === undefined) return { sources: null };
+  if (!Array.isArray(value) || value.length > 10) return { problem: "Источники: не больше 10." };
+  const sources = [];
+  for (const item of value) {
+    const name = clean(item?.name);
+    const url = clean(item?.url);
+    const kind = item?.kind || "official";
+    if (!name || name.length > 80) return { problem: "Название источника: от 1 до 80 символов." };
+    let parsed = null;
+    try {
+      parsed = new URL(url);
+    } catch {}
+    if (!parsed || parsed.protocol !== "https:" || url.length > 500) return { problem: `Ссылка источника «${name}» должна начинаться с https://.` };
+    if (!["official", "publisher", "store", "licensed"].includes(kind)) return { problem: "Неизвестный вид источника." };
+    sources.push({ name, url: parsed.href, kind });
+  }
+  return { sources };
 }
 
 /** Данные главы из формы. releasedAt: null — сейчас (новая глава) или без изменений (правка) */
@@ -174,6 +217,9 @@ export async function missingPage(bucket, titleId, chapter, version, count) {
 /**
  * Удалить файлы страниц в R2 по префиксу. keep(key) — какие ключи оставить.
  * Без keep удаляется всё под префиксом
+ * @param {any} bucket
+ * @param {string} prefix
+ * @param {(key: string) => boolean} [keep]
  */
 export async function deletePages(bucket, prefix, keep = () => false) {
   if (!bucket) return;

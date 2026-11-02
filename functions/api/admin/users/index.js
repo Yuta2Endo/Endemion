@@ -7,7 +7,8 @@ import { toAdminUser, USER_SELECT } from "../../../_lib/users.js";
 
 const FILTERS = {
   all: null,
-  admins: "u.is_admin = 1",
+  admins: "u.role = 'admin'",
+  moderators: "u.role = 'moderator'",
   blocked: "u.blocked_at IS NOT NULL"
 };
 

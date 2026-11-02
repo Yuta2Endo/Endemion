@@ -1,0 +1,19 @@
+{
+  // Проверка типов JavaScript без сборки: `npm run typecheck`. Код остаётся .js, TypeScript только проверяет
+  "compilerOptions": {
+    "target": "es2024",
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "lib": ["es2024", "dom", "dom.iterable"],
+    "types": ["node"],
+    "allowJs": true,
+    "checkJs": true,
+    "noEmit": true,
+    "strict": false,
+    "noImplicitAny": false,
+    "skipLibCheck": true,
+    "resolveJsonModule": true
+  },
+  "include": ["functions/**/*.js", "src/**/*.js", "server/**/*.mjs", "tests/**/*.mjs"],
+  "exclude": ["node_modules", "tests/e2e"]
+}

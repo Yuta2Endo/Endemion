@@ -6,6 +6,7 @@ import { mkdirSync } from "node:fs";
 import { createServer } from "node:http";
 import { Readable, Transform } from "node:stream";
 import worker from "../src/worker.js";
+import { backfillSearch } from "../functions/_lib/titles.js";
 import { createAssets } from "./assets.mjs";
 import { backupDatabase, startScheduledBackups } from "./backup.mjs";
 import { DATA_DIR, DB_FILE, FILES_DIR, MIGRATIONS_DIR, PUBLIC_DIR } from "./config.mjs";
@@ -47,11 +48,13 @@ const db = openDatabase(DB_FILE);
 
 const pending = pendingMigrations(db.raw, MIGRATIONS_DIR);
 if (pending.length) {
-  const applied = db.raw.prepare("SELECT COUNT(*) AS n FROM d1_migrations").get().n;
+  const applied = Number(db.raw.prepare("SELECT COUNT(*) AS n FROM d1_migrations").get().n);
   // Перед миграциями рабочей базы — резервная копия. Пустой новой базе копия не нужна
   if (applied > 0) console.log(`Резервная копия перед миграциями: ${await backupDatabase(db.raw)}`);
   applyMigrations(db.raw, MIGRATIONS_DIR, pending);
 }
+// Строки поиска по названию, автору и жанру у тайтлов, добавленных до миграции 0016
+await backfillSearch({ DB: db });
 
 const env = {
   DB: db,
@@ -106,12 +109,15 @@ function toRequest(req) {
   headers.set("cf-connecting-ip", clientIp(req));
 
   const hasBody = req.method !== "GET" && req.method !== "HEAD";
-  return new Request(new URL(req.url, PUBLIC_URL.origin), {
+  // duplex нужен Node для потокового тела, но его нет в типах RequestInit из lib.dom
+  /** @type {any} */
+  const init = {
     method: req.method,
     headers,
     body: hasBody ? limitedBody(req) : undefined,
     duplex: hasBody ? "half" : undefined
-  });
+  };
+  return new Request(new URL(req.url, PUBLIC_URL.origin), init);
 }
 
 async function send(res, response, method) {
@@ -125,16 +131,16 @@ async function send(res, response, method) {
     res.end();
     return;
   }
-  await new Promise((resolve) => {
-    const body = Readable.fromWeb(response.body);
+  await /** @type {Promise<void>} */ (new Promise((resolve) => {
+    const body = Readable.fromWeb(/** @type {any} */ (response.body));
     body.on("error", (err) => {
       console.error("Ответ прерван:", err.message);
       res.destroy(err);
       resolve();
     });
-    res.on("close", resolve);
+    res.on("close", () => resolve());
     body.pipe(res);
-  });
+  }));
 }
 
 function plain(res, status, text) {

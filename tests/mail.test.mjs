@@ -76,7 +76,7 @@ test("Unisender Go: ошибка API — исключение с кодом, б�
   mockFetch(400, { status: "error", code: 204, message: "All recipients are unavailable" });
   await assert.rejects(
     sendMail({ UNISENDER_API_KEY: "secret-key", MAIL_FROM: "noreply@endemion.online" }, LETTER),
-    (err) => err.message.includes("400") && err.message.includes("204") && !err.message.includes("secret-key")
+    (/** @type {any} */ err) => err.message.includes("400") && err.message.includes("204") && !err.message.includes("secret-key")
   );
   // Ответ 200 без status: success тоже считается ошибкой
   mockFetch(200, { status: "error", code: 150, message: "internal" });
