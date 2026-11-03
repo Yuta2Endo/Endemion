@@ -54,7 +54,7 @@ export function createApp(config, { mailer = createMailer(config.mail), log = cr
 
   // Сайты экосистемы и внутренний клиент страниц аккаунта
   const platformByClient = new Map(config.clients.map((client) => [client.client_id, client["urn:endemion:platform"]]));
-  const clients = config.clients.map(({ "urn:endemion:platform": _platform, "urn:endemion:profile_update_uri": _update, ...client }) => client);
+  const clients = config.clients.map(({ "urn:endemion:platform": _platform, ...client }) => client);
   clients.push({
     client_id: ACCOUNT_CLIENT,
     token_endpoint_auth_method: "none",

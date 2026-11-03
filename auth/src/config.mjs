@@ -32,8 +32,7 @@ export function generateJwks() {
 
 /**
  * Сайты, которые входят через Endemion ID. JSON-массив в OIDC_CLIENTS:
- * client_id, client_secret, platform (endemion | endemion_life), redirect_uris, post_logout_redirect_uris,
- * backchannel_logout_uri и profile_update_uri (необязательные)
+ * client_id, client_secret, platform (endemion | endemion_life), redirect_uris, post_logout_redirect_uris
  */
 function loadClients(env, production) {
   let list;
@@ -47,8 +46,7 @@ function loadClients(env, production) {
     if (!client.client_id || !client.client_secret) fail("у клиента нет client_id или client_secret");
     if (production && client.client_secret.length < 32) fail(`секрет клиента ${client.client_id} короче 32 символов`);
     if (!["endemion", "endemion_life"].includes(client.platform)) fail(`у клиента ${client.client_id} неизвестный platform`);
-    const uris = [...(client.redirect_uris || []), ...(client.post_logout_redirect_uris || []),
-      ...[client.backchannel_logout_uri, client.profile_update_uri].filter(Boolean)];
+    const uris = [...(client.redirect_uris || []), ...(client.post_logout_redirect_uris || [])];
     if (!client.redirect_uris?.length) fail(`у клиента ${client.client_id} нет redirect_uris`);
     for (const uri of uris) {
       const url = new URL(uri);
@@ -65,12 +63,8 @@ function loadClients(env, production) {
       token_endpoint_auth_method: "client_secret_basic",
       // auth_time всегда в ID token: по нему сайт решает, вводил ли пользователь пароль недавно (удаление аккаунта, роли)
       require_auth_time: true,
-      ...(client.backchannel_logout_uri
-        ? { backchannel_logout_uri: client.backchannel_logout_uri, backchannel_logout_session_required: true }
-        : {}),
-      // Не стандартные поля OIDC: читает только наш код (claims и рассылка изменений профиля)
-      "urn:endemion:platform": client.platform,
-      "urn:endemion:profile_update_uri": client.profile_update_uri || null
+      // Не стандартное поле OIDC: по нему claims знают, какой сайт спрашивает (legacy_user_id)
+      "urn:endemion:platform": client.platform
     };
   });
 }
