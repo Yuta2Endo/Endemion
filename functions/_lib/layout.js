@@ -25,6 +25,9 @@ export const NAV = [
 // Внешняя ссылка на Life в меню «Ещё» больше не нужна: остались только разделы энциклопедии
 export const NAV_MORE = [];
 
+// Версия assets добавляется к URL, чтобы браузеры обновляли кеш при выкладке. Время сборки в base36
+const ASSET_VERSION = "mprtb4p";
+
 // Контуры иконок 24×24. Такие же есть в public/assets/app.js для иконок, которые рисует скрипт
 const ICONS = {
   search: '<circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/>',
@@ -124,10 +127,10 @@ export function renderPage(request, {
   <meta name="apple-mobile-web-app-title" content="ENDEMION">
   <link rel="preload" href="/assets/fonts/manrope-cyrillic-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/assets/fonts/unbounded-cyrillic-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="/assets/base.css">
-  <link rel="stylesheet" href="/assets/ui.css">
-  ${styles.map((file) => `<link rel="stylesheet" href="/assets/${file}">`).join("\n  ")}
-  ${scripts.map((file) => `<script type="module" src="/assets/${file}"></script>`).join("\n  ")}
+  <link rel="stylesheet" href="/assets/base.css?v=${ASSET_VERSION}">
+  <link rel="stylesheet" href="/assets/ui.css?v=${ASSET_VERSION}">
+  ${styles.map((file) => `<link rel="stylesheet" href="/assets/${file}?v=${ASSET_VERSION}">`).join("\n  ")}
+  ${scripts.map((file) => `<script type="module" src="/assets/${file}?v=${ASSET_VERSION}"></script>`).join("\n  ")}
 </head>
 <body>
   <a class="skip-link" href="#main">Перейти к содержимому</a>

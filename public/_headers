@@ -9,8 +9,11 @@
   Strict-Transport-Security: max-age=31536000
   Content-Security-Policy: default-src 'self'; script-src 'self' https://challenges.cloudflare.com https://static.cloudflareinsights.com https://mc.yandex.ru https://yastatic.net; style-src 'self'; img-src 'self' data: https://shikimori.io https://mc.yandex.ru; connect-src 'self' https://cloudflareinsights.com https://mc.yandex.ru; frame-src https://challenges.cloudflare.com blob: https://mc.yandex.ru; child-src blob: https://mc.yandex.ru; worker-src 'self' blob:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'
 
-/assets/*
-  Cache-Control: public, max-age=3600
+/assets/*.js
+  Cache-Control: public, max-age=31536000, immutable
+
+/assets/*.css
+  Cache-Control: public, max-age=31536000, immutable
 
 # Service worker браузер должен проверять при каждом открытии сайта, иначе обновление сайта дойдёт с опозданием
 /sw.js
