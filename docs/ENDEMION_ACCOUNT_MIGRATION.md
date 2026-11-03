@@ -46,12 +46,14 @@ ssh -i ~/.ssh/endemion_vps root@185.175.156.196 \
    ```bash
    cd /opt/endemion
    cp "$(ls -t data/backups/endemion-*.sqlite | head -1)" data/auth/site-import.sqlite
-   docker compose run --rm -v ./data/files:/site-files:ro auth \
-     node scripts/import-endemion-users.mjs --source /app/data/site-import.sqlite --files /site-files --dry-run
+   docker compose run --rm --no-deps -T -v /opt/endemion/data/files:/site-files:ro auth \
+     node scripts/import-endemion-users.mjs --source /app/data/site-import.sqlite --files /site-files --dry-run </dev/null
    ```
+   Путь к картинкам нужен абсолютный: Docker Compose 2.29 не принимает `./data/files` в `run -v`. `-T` и `</dev/null` нужны при запуске через ssh, иначе команда ждёт ввода и не завершается.
+
    Отчёт покажет, сколько будет перенесено, конфликтов и аватаров. В базу ничего не записывается.
 3. **Перенос.** Та же команда без `--dry-run`. Перед записью скрипт делает копию `data/auth/backups/auth-before-import-*.sqlite`. Всё пишется одной транзакцией: при ошибке база Endemion ID остаётся как была.
-4. **Удалить копию базы сайта:** `rm data/auth/site-import.sqlite` (в ней почты и хеши паролей).
+4. **Удалить копию базы сайта:** `rm -f data/auth/site-import.sqlite*` (в ней почты и хеши паролей; SQLite оставляет рядом файлы `-wal` и `-shm`).
 5. **Разобрать конфликты** из `data/auth/import-conflicts.json`.
 6. Включить вход через Endemion ID на сайте, потом в Life (`ENDEMION_DEPLOYMENT.md`).
 

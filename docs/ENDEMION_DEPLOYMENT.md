@@ -1,6 +1,6 @@
 # Выкладка Endemion ID на сервер
 
-Сервер: 185.175.156.196 (1 CPU, 2 ГБ). Сайт — `/opt/endemion`, Life — `/opt/endemion-life`, HTTPS для всех доменов делает Caddy сайта. Ничего из этого ещё не выкладывалось: шаги ниже выполняет владелец или с его разрешения.
+Сервер: 185.175.156.196 (1 CPU, 2 ГБ). Сайт — `/opt/endemion`, Life — `/opt/endemion-life`, HTTPS для всех доменов делает Caddy сайта. Выложено 2026-11-03 по этим шагам. При новой установке они повторяются целиком, для обновления кода есть раздел 8.
 
 ## 0. До начала (владелец)
 
@@ -45,8 +45,10 @@ docker compose exec -T app node server/backup.mjs
 git pull --ff-only                      # после слияния feature/endemion-auth в main
 docker compose build auth app
 # ключ подписи токенов, один раз. Файл секретный: права 600, в git его нет
-docker compose run --rm auth node scripts/generate-keys.mjs /app/data/auth-jwks.json
-docker compose up -d auth app
+docker compose run --rm --no-deps -T auth node scripts/generate-keys.mjs /app/data/auth-jwks.json </dev/null
+# По одному сервису: «up -d auth app» через ssh на этом сервере зависал
+docker compose up -d --no-deps auth
+docker compose up -d --no-deps app
 docker compose ps auth                   # healthy
 ```
 
@@ -106,8 +108,23 @@ docker compose -f infrastructure/docker-compose.prod.yml -f infrastructure/docke
 - Журналы: `docker compose logs --tail 200 auth` (JSON по строке на событие). Ошибки — `"level":"error"`.
 - Доступность: `https://auth.endemion.online/healthz` — добавить в тот же монитор, что следит за Life (`MONITOR_*` в Life) или во внешний сервис.
 - События безопасности — таблица `audit_log` в `data/auth/auth.sqlite`: `login.invalid`, `login.locked`, `login.rate_limited`, `password.reset`, `session.revoke` и другие.
-- Копии базы Endemion ID — `data/auth/backups`, раз в сутки, 14 штук. В S3 они пока не отправляются: при поломке диска сервера пропадут вместе с ним (см. «Что осталось» в README).
+- Копии базы Endemion ID — `data/auth/backups`, раз в сутки, 14 штук. В S3 они пока не отправляются: при поломке диска сервера пропадут вместе с ним (см. известные ограничения в `ENDEMION_SECURITY.md`).
 
 ## 7. Откат
 
 `ENDEMION_ACCOUNT_MIGRATION.md`, раздел 6. Коротко: `ENDEMION_ID=` у сайта и `ENDEMION_ID=false` у Life возвращают старый вход без восстановления баз. Сервис `auth` можно остановить: `docker compose stop auth`.
+
+Копии `.env` до включения Endemion ID лежат в `/root/endemion.env.before-endemion-id` и `/root/endemion-life.env.before-endemion-id`, работавший до этого Caddyfile — в `/root/Caddyfile.running-before-endemion-id`.
+
+## 8. Обновление кода
+
+```bash
+cd /opt/endemion
+docker compose exec -T app node server/backup.mjs
+git pull --ff-only
+docker compose build auth app
+docker compose up -d --no-deps auth
+docker compose up -d --no-deps app
+```
+
+Если изменился Caddyfile, перезагрузка только через `docker cp` (раздел 3). Life обновляется по `docs/DEPLOYMENT.md` Life: образы собираются локально, код приходит через `git bundle`.
