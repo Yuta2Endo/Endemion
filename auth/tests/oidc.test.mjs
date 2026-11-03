@@ -233,6 +233,19 @@ test("CSRF: форма аккаунта без токена или с чужог
   assert.equal(auth.accounts.findByEmail("reader@example.com").username, "reader_two");
 });
 
+test("форма входа с Origin: null отклоняется, с адресом своей страницы в Referer принимается", async () => {
+  const start = await startLogin(site, SITE.redirect);
+  const user = browser(auth.issuer);
+  const page = await user.follow(start.url.href);
+  const uid = interactionUid(page.text);
+  const blocked = await user.request(`/interaction/${uid}/login`, { method: "POST", origin: "null", form: { login: "reader_two", password: "brand-new-pass-2" } });
+  assert.equal(blocked.status, 403, "Origin: null не доказывает, что форма с этого сайта");
+  const accepted = await user.request(`/interaction/${uid}/login`, {
+    method: "POST", origin: "", headers: { referer: `${auth.issuer}/interaction/${uid}` }, form: { login: "reader_two", password: "brand-new-pass-2" }
+  });
+  assert.notEqual(accepted.status, 403);
+});
+
 test("без входа страницы аккаунта и сессий недоступны", async () => {
   const anon = browser(auth.issuer);
   assert.equal((await anon.request("/account")).location, "/login");
@@ -322,6 +335,8 @@ test("заголовки безопасности и cookie сессии", async
   assert.doesNotMatch(csp, /unsafe-inline/);
   assert.match(csp, /frame-ancestors 'none'/);
   assert.equal(page.headers.get("x-frame-options"), "DENY");
+  // С no-referrer браузер шлёт формы с Origin: null, и вход отклонялся бы с 403 (было в рабочей среде 2026-11-03)
+  assert.equal(page.headers.get("referrer-policy"), "same-origin");
   assert.equal(page.headers.get("cache-control"), "no-store");
   assert.ok(user.jar.has("_session"));
   assert.doesNotMatch(page.text, /<script>|style=/, "нет встроенных скриптов и стилей");

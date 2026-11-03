@@ -152,7 +152,9 @@ export function createApp(config, { mailer = createMailer(config.mail), log = cr
     ].join("; "));
     ctx.set("X-Content-Type-Options", "nosniff");
     ctx.set("X-Frame-Options", "DENY");
-    ctx.set("Referrer-Policy", "no-referrer");
+    // Не no-referrer: с ним браузер отправляет формы с Origin: null, и проверка sameOrigin отклоняет их (403).
+    // same-origin отдаёт адрес страницы только своему сайту: адрес с uid входа на чужие сайты не уходит
+    ctx.set("Referrer-Policy", "same-origin");
     ctx.set("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=()");
     ctx.set("Cross-Origin-Opener-Policy", "same-origin");
     if (config.production) ctx.set("Strict-Transport-Security", "max-age=31536000");
