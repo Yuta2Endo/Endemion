@@ -1,5 +1,6 @@
 // POST /api/auth/login — вход по почте и паролю
 
+import { legacyAuthClosed } from "../../_lib/endemionId.js";
 import { verifyPassword } from "../../_lib/crypto.js";
 import { clientIp, error, json, readJson } from "../../_lib/http.js";
 import { clearAttempts, isLimited, recordAttempt, RETRY_AFTER_SECONDS } from "../../_lib/rateLimit.js";
@@ -12,6 +13,8 @@ import { normalizeEmail, PASSWORD_MAX } from "../../_lib/validate.js";
 const DUMMY_HASH = "pbkdf2$100000$AAAAAAAAAAAAAAAAAAAAAA==$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
 
 export async function onRequestPost({ request, env }) {
+  const closed = legacyAuthClosed(env);
+  if (closed) return closed;
   const body = await readJson(request);
   if (!body) return error("Некорректный запрос.");
 

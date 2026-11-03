@@ -1,6 +1,7 @@
 // GET /api/config — публичные настройки для браузера. Секреты сюда не попадают
 
 import { json } from "../_lib/http.js";
+import { accountUrl, endemionIdEnabled } from "../_lib/endemionId.js";
 import { mailConfigured } from "../_lib/mail.js";
 
 export async function onRequestGet({ env, request }) {
@@ -13,7 +14,9 @@ export async function onRequestGet({ env, request }) {
       // Номер счётчика Яндекс Метрики тоже публичный. Только цифры: он подставляется в адрес скрипта
       yandexMetrikaId: /^\d{5,12}$/.test(metrika) ? metrika : "",
       // Без отправки писем ссылка «Забыли пароль?» не показывается
-      passwordReset: mailConfigured(env, request)
+      passwordReset: mailConfigured(env, request),
+      // Вход через Endemion ID: адреса страницы аккаунта и игры для ссылок в интерфейсе
+      endemionId: endemionIdEnabled(env) ? { account: accountUrl(env), life: env.ENDEMION_LIFE_URL || "https://life.endemion.online" } : null
     },
     200,
     { "Cache-Control": "public, max-age=300" }

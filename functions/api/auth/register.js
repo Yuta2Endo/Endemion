@@ -1,5 +1,6 @@
 // POST /api/auth/register — создать аккаунт и сразу войти
 
+import { legacyAuthClosed } from "../../_lib/endemionId.js";
 import { hashPassword } from "../../_lib/crypto.js";
 import { clientIp, error, json, readJson } from "../../_lib/http.js";
 import { createProfile } from "../../_lib/profiles.js";
@@ -9,6 +10,8 @@ import { verifyTurnstile } from "../../_lib/turnstile.js";
 import { normalizeEmail, normalizeName, validateEmail, validateName, validatePassword } from "../../_lib/validate.js";
 
 export async function onRequestPost({ request, env }) {
+  const closed = legacyAuthClosed(env);
+  if (closed) return closed;
   const body = await readJson(request);
   if (!body) return error("Некорректный запрос.");
 

@@ -28,7 +28,8 @@ export default [
     }
   },
   {
-    files: ["public/**/*.js"],
+    // Скрипты страниц сайта и страниц Endemion ID (auth/public) выполняются в браузере
+    files: ["public/**/*.js", "auth/public/**/*.js"],
     languageOptions: { globals: { ...globals.browser } }
   },
   {

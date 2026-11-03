@@ -428,11 +428,11 @@ export const profile = {
           <div class="stack">
             <form class="panel stack" id="profileForm" novalidate>
               <h2>Профиль</h2>
-              <div class="form-row"><label for="newName">Имя</label><input class="input" id="newName" type="text" autocomplete="nickname" minlength="2" maxlength="40" required></div>
-              <div class="form-row"><label for="username">Адрес профиля</label><input class="input" id="username" type="text" minlength="3" maxlength="24" pattern="[A-Za-z0-9_]{3,24}" required><small class="muted small">endemion.online/u/имя — латиница, цифры и «_»</small></div>
+              <div class="form-row" data-local-identity><label for="newName">Имя</label><input class="input" id="newName" type="text" autocomplete="nickname" minlength="2" maxlength="40" required></div>
+              <div class="form-row" data-local-identity><label for="username">Адрес профиля</label><input class="input" id="username" type="text" minlength="3" maxlength="24" pattern="[A-Za-z0-9_]{3,24}" required><small class="muted small">endemion.online/u/имя — латиница, цифры и «_»</small></div>
               <div class="form-row"><label for="bio">О себе</label><textarea class="textarea" id="bio" maxlength="500" rows="4"></textarea></div>
               <div class="form-row"><span class="form-label">Цвет аватара</span><div class="color-options" id="colorOptions"></div></div>
-              <div class="form-row"><span class="form-label">Аватар</span>
+              <div class="form-row" data-local-identity><span class="form-label">Аватар</span>
                 <div class="section-actions">
                   <label class="ghost-btn">Загрузить картинку<input class="visually-hidden" id="avatarInput" type="file" accept="image/jpeg,image/png,image/webp,image/avif"></label>
                   <button class="ghost-btn" id="avatarRemove" type="button" hidden>Убрать</button>
@@ -451,6 +451,14 @@ export const profile = {
             </form>
           </div>
           <div class="stack">
+            <section class="panel stack" id="endemionIdPanel" hidden>
+              <h2>Endemion ID</h2>
+              <p class="muted small">Имя, адрес профиля, аватар, почта и пароль общие для Endemion и Endemion Life. Они меняются в Endemion ID и появляются здесь в течение нескольких минут.</p>
+              <div class="section-actions">
+                <a class="primary-btn" id="endemionIdAccount" href="/">Открыть Endemion ID</a>
+                <a class="ghost-btn" id="endemionLifeLink" href="/">Играть в Endemion Life</a>
+              </div>
+            </section>
             <form class="panel stack" id="passwordForm" novalidate>
               <h2>Пароль</h2>
               <input id="usernameHint" type="email" autocomplete="username" hidden>
@@ -461,7 +469,7 @@ export const profile = {
             <form class="panel stack" id="deleteForm" novalidate>
               <h2>Удаление аккаунта</h2>
               <p class="muted small">Полка, оценки, подборки и подписки удалятся. Комментарии останутся без текста, чтобы не пропали ответы других людей.</p>
-              <div class="form-row"><label for="deletePassword">Пароль для подтверждения</label><input class="input" id="deletePassword" type="password" autocomplete="current-password" maxlength="128" required></div>
+              <div class="form-row" id="deletePasswordRow"><label for="deletePassword">Пароль для подтверждения</label><input class="input" id="deletePassword" type="password" autocomplete="current-password" maxlength="128" required></div>
               <button class="danger-btn" type="submit">Удалить аккаунт навсегда</button>
             </form>
             <p class="form-error" id="settingsMessage" role="status" aria-live="polite"></p>

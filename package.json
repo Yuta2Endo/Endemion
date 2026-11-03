@@ -10,7 +10,8 @@
     "db:migrate:remote": "wrangler d1 migrations apply endemion --remote",
     "predeploy": "npm test",
     "deploy": "wrangler deploy",
-    "test": "node --test --test-concurrency=1 tests/crypto.test.mjs tests/pages.test.mjs tests/mail.test.mjs tests/engines.test.mjs tests/platform.test.mjs",
+    "test": "node --test --test-concurrency=1 tests/crypto.test.mjs tests/pages.test.mjs tests/mail.test.mjs tests/engines.test.mjs tests/platform.test.mjs tests/endemion-id.test.mjs",
+    "test:auth": "npm --prefix auth test",
     "test:api": "node tests/api.smoke.mjs",
     "test:admin": "node tests/admin.smoke.mjs",
     "test:e2e": "playwright test",
@@ -39,6 +40,7 @@
     "workerd@1.20261023.1": true
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.1161.0"
+    "@aws-sdk/client-s3": "^3.1161.0",
+    "openid-client": "^6.8.9"
   }
 }

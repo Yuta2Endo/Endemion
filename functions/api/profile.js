@@ -40,6 +40,8 @@ export const meProfile = {
     const sets = [];
     const binds = [];
     if ("username" in body) {
+      // Адрес профиля аккаунта Endemion ID приходит оттуда (preferred_username)
+      if (user.viaEndemionId) return error("Адрес профиля меняется в Endemion ID.", 409);
       const username = typeof body.username === "string" ? body.username.trim() : "";
       if (!USERNAME.test(username)) return error("Имя профиля: от 3 до 24 символов, латиница, цифры и «_».");
       if (RESERVED.has(username.toLowerCase()) && !user.isAdmin) return error("Это имя занято.", 409);
@@ -121,6 +123,8 @@ export const meAvatar = {
     const { user, response } = await requireUser(env, request);
     if (response) return response;
     if (!env.PAGES) return error("Хранилище картинок не подключено.", 500);
+    // Аватар аккаунта Endemion ID общий для обоих сайтов и загружается в Endemion ID
+    if (user.viaEndemionId) return error("Аватар меняется в Endemion ID.", 409);
     const limited = await takeAction(env, user.id, "avatar");
     if (limited) return limited;
 
@@ -159,8 +163,11 @@ export const meAvatar = {
 export const avatarImage = {
   async onRequestGet({ params, env, request }) {
     const id = parseId(params.id);
-    const row = id ? await env.DB.prepare("SELECT avatar_version FROM user_profiles WHERE user_id = ?").bind(id).first() : null;
-    if (!row?.avatar_version || !env.PAGES) return notFound(env, request);
+    const row = id ? await env.DB.prepare("SELECT avatar_version, avatar_url FROM user_profiles WHERE user_id = ?").bind(id).first() : null;
+    if (!row?.avatar_version) return notFound(env, request);
+    // Аватар из Endemion ID: сайт забирает картинку сам, браузер обращается только к своему адресу (CSP img-src 'self')
+    if (row.avatar_url) return endemionAvatar(env, request, row);
+    if (!env.PAGES) return notFound(env, request);
     const object = await env.PAGES.get(avatarKey(id, row.avatar_version));
     const type = object?.httpMetadata?.contentType;
     if (!object || !["image/jpeg", "image/png", "image/webp", "image/avif"].includes(type)) return notFound(env, request);
@@ -176,6 +183,35 @@ export const avatarImage = {
     });
   }
 };
+
+/**
+ * Картинка аватара из Endemion ID. Адрес в avatar_url сохраняется, только если он начинается с адреса провайдера
+ * (applyClaims в endemionId.js), поэтому чужой сервер так не запросить. Тип картинки проверяется по первым байтам
+ */
+async function endemionAvatar(env, request, row) {
+  const issuer = env.ENDEMION_ID_ISSUER ? new URL(env.ENDEMION_ID_ISSUER).origin : "";
+  if (!issuer || !row.avatar_url.startsWith(`${issuer}/avatars/`)) return notFound(env, request);
+  let response;
+  try {
+    response = await fetch(row.avatar_url, { redirect: "error", signal: AbortSignal.timeout(5000) });
+  } catch {
+    return notFound(env, request);
+  }
+  if (!response.ok) return notFound(env, request);
+  const buffer = await response.arrayBuffer();
+  const type = buffer.byteLength <= MAX_AVATAR_BYTES ? imageType(buffer) : null;
+  if (!type) return notFound(env, request);
+  const current = new URL(request.url).searchParams.get("v") === String(row.avatar_version);
+  return new Response(buffer, {
+    headers: {
+      "Content-Type": type,
+      "Content-Length": String(buffer.byteLength),
+      "Cache-Control": current ? "public, max-age=31536000, immutable" : "public, max-age=300",
+      "X-Content-Type-Options": "nosniff",
+      "Content-Security-Policy": "default-src 'none'; frame-ancestors 'none'"
+    }
+  });
+}
 
 /** /api/me/history — история просмотра страниц тайтлов: список и очистка */
 export const meHistory = {

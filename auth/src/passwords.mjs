@@ -5,8 +5,21 @@
 import { pbkdf2, randomBytes, scrypt, timingSafeEqual } from "node:crypto";
 import { promisify } from "node:util";
 
-const scryptAsync = promisify(scrypt);
 const pbkdf2Async = promisify(pbkdf2);
+
+/**
+ * scrypt с параметрами. У promisify(scrypt) в типах Node нет варианта с options, поэтому обёртка своя
+ * @param {string} password
+ * @param {Buffer} salt
+ * @param {number} length
+ * @param {import("node:crypto").ScryptOptions} options
+ * @returns {Promise<Buffer>}
+ */
+function scryptAsync(password, salt, length, options) {
+  return new Promise((resolve, reject) => {
+    scrypt(password, salt, length, options, (error, key) => (error ? reject(error) : resolve(key)));
+  });
+}
 
 const N = 2 ** 15;
 const R = 8;

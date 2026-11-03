@@ -1,6 +1,7 @@
 // /api/me — текущий пользователь: данные профиля, смена имени, удаление аккаунта
 
 import { verifyPassword } from "../../_lib/crypto.js";
+import { accountUrl, reauthUrl, recentlyAuthenticated } from "../../_lib/endemionId.js";
 import { error, json, readJson } from "../../_lib/http.js";
 import { unreadCount } from "../../_lib/notifications.js";
 import { readingStats } from "../../_lib/profiles.js";
@@ -20,6 +21,9 @@ export async function onRequestPatch({ request, env }) {
   const user = await currentUser(env, request);
   if (!user) return error("Войдите в профиль.", 401);
 
+  // Имя аккаунта Endemion ID общее с Endemion Life и меняется только там
+  if (user.viaEndemionId) return json({ error: "Имя меняется в Endemion ID.", account: accountUrl(env) }, 409);
+
   const body = await readJson(request);
   if (!body) return error("Некорректный запрос.");
 
@@ -37,9 +41,16 @@ export async function onRequestDelete({ request, env }) {
   if (!user) return error("Войдите в профиль.", 401);
 
   const body = await readJson(request);
-  const password = body && typeof body.password === "string" ? body.password : "";
-  const row = await env.DB.prepare("SELECT password_hash FROM users WHERE id = ?").bind(user.id).first();
-  if (!row || !(await verifyPassword(password, row.password_hash))) return error("Неверный пароль.", 403);
+  if (user.viaEndemionId) {
+    // Пароль хранится в Endemion ID: удалить можно только сразу после повторного входа там
+    if (!recentlyAuthenticated(user)) {
+      return json({ error: "Подтвердите удаление: войдите в Endemion ID ещё раз и сразу повторите.", reauth: reauthUrl("/profile") }, 403);
+    }
+  } else {
+    const password = body && typeof body.password === "string" ? body.password : "";
+    const row = await env.DB.prepare("SELECT password_hash FROM users WHERE id = ?").bind(user.id).first();
+    if (!row || !(await verifyPassword(password, row.password_hash))) return error("Неверный пароль.", 403);
+  }
 
   // Аватар в хранилище картинок удаляется вместе с аккаунтом
   const profile = await env.DB.prepare("SELECT avatar_version FROM user_profiles WHERE user_id = ?").bind(user.id).first();

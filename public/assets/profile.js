@@ -2,7 +2,7 @@
 // настройки профиля, аватар, приватность, смена пароля, выход и удаление аккаунта
 
 import {
-  api, avatar, button, el, errorBox, formatDate, getMe, initHeader, loginUrl, stateBox, titleCard, toggleFavorite, toast
+  api, avatar, button, el, errorBox, formatDate, getConfig, getMe, initHeader, loginUrl, stateBox, titleCard, toggleFavorite, toast
 } from "./app.js";
 
 const $ = (selector) => document.querySelector(selector);
@@ -165,13 +165,16 @@ $("#profileForm").addEventListener("submit", async (event) => {
   event.preventDefault();
   const message = $("#profileMessage");
   const name = $("#newName").value.trim();
-  if (name !== me.name) {
+  // Имя и адрес профиля аккаунта Endemion ID меняются только там
+  if (!me.viaEndemionId && name !== me.name) {
     const renamed = await api("/api/me", { method: "PATCH", body: { name } });
     if (!renamed.ok) return setMessage(message, renamed.data?.error || "Не удалось сохранить имя.");
     me.name = renamed.data.user.name;
   }
   const color = $("#profileForm").querySelector('input[name="avatarColor"]:checked')?.value || profile.avatarColor;
-  const saved = await api("/api/me/profile", { method: "PATCH", body: { username: $("#username").value.trim(), bio: $("#bio").value, avatarColor: color } });
+  const fields = { bio: $("#bio").value, avatarColor: color };
+  if (!me.viaEndemionId) fields.username = $("#username").value.trim();
+  const saved = await api("/api/me/profile", { method: "PATCH", body: fields });
   if (!saved.ok) return setMessage(message, saved.data?.error || "Не удалось сохранить профиль.");
   profile = saved.data.profile;
   settings = saved.data.settings;
@@ -238,13 +241,20 @@ $("#deleteForm").addEventListener("submit", async (event) => {
   event.preventDefault();
   if (!confirm("Удалить аккаунт, полку, оценки и подборки? Это нельзя отменить.")) return;
   const result = await api("/api/me", { method: "DELETE", body: { password: $("#deletePassword").value } });
+  // Аккаунт Endemion ID: сначала заново ввести пароль там, потом повторить удаление
+  if (result.data?.reauth && confirm(`${result.data.error} Перейти ко входу?`)) {
+    location.href = result.data.reauth;
+    return;
+  }
   if (!result.ok) return setMessage($("#settingsMessage"), result.data?.error || "Не удалось удалить аккаунт.");
   location.href = "/";
 });
 
 $("#logoutButton").addEventListener("click", async () => {
-  await api("/api/auth/logout", { method: "POST", body: {} });
-  location.href = "/";
+  const result = await api("/api/auth/logout", { method: "POST", body: {} });
+  // Вход через Endemion ID: выход подтверждается там, и можно сразу выйти из Endemion Life
+  const redirect = result.data?.redirect;
+  location.href = typeof redirect === "string" && redirect.startsWith("https://") ? redirect : "/";
 });
 
 // ==================== ВКЛАДКИ ====================
@@ -280,6 +290,23 @@ $("#libraryTabs").addEventListener("click", (event) => {
   renderLibrary();
 });
 
+/**
+ * Вход через Endemion ID: имя, адрес профиля, аватар, почта и пароль общие с Endemion Life и меняются там.
+ * Здесь вместо этих полей ссылка на Endemion ID. Описание, цвет, жанры и приватность остаются на сайте
+ */
+async function showEndemionId() {
+  if (!me.viaEndemionId) return;
+  const { endemionId } = await getConfig();
+  if (!endemionId) return;
+  document.querySelectorAll("[data-local-identity]").forEach((node) => (node.hidden = true));
+  $("#passwordForm").hidden = true;
+  $("#deletePasswordRow").hidden = true;
+  $("#deletePassword").required = false;
+  $("#endemionIdAccount").href = endemionId.account;
+  $("#endemionLifeLink").href = endemionId.life;
+  $("#endemionIdPanel").hidden = false;
+}
+
 async function init() {
   const user = await initHeader();
   if (!user) {
@@ -287,6 +314,7 @@ async function init() {
     return;
   }
   me = (await getMe()).user;
+  await showEndemionId();
   const [profileResult, taxonomy, entries] = await Promise.all([api("/api/me/profile"), api("/api/taxonomy"), api("/api/library")]);
   if (!profileResult.ok) {
     $("#profileLoading").replaceChildren(errorBox(profileResult.data?.error || "Профиль не загрузился.", () => location.reload()));

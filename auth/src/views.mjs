@@ -36,6 +36,10 @@ ${scripts.map((src) => `  <script type="module" src="${escapeHtml(src)}"></scrip
 </html>`;
 }
 
+/**
+ * Поле формы с подписью, подсказкой или ошибкой
+ * @param {{ name: string, label: string, type?: string, value?: string, autocomplete?: string, required?: boolean, hint?: string, error?: string, extra?: string }} options
+ */
 function field({ name, label, type = "text", value = "", autocomplete, required = true, hint, error, extra = "" }) {
   const id = `f-${name}`;
   return `<div class="field${error ? " field-invalid" : ""}">
@@ -73,6 +77,7 @@ function authLayout({ title, clientPlatform, heading, description, content }) {
   });
 }
 
+/** @param {Record<string, any>} options */
 export function loginPage({ uid, clientPlatform, login = "", error, notice, mailEnabled }) {
   return authLayout({
     title: "Вход",
@@ -90,6 +95,7 @@ export function loginPage({ uid, clientPlatform, login = "", error, notice, mail
   });
 }
 
+/** @param {Record<string, any>} options */
 export function registerPage({ uid, clientPlatform, values = {}, errors = {}, error, privacyUrl }) {
   return authLayout({
     title: "Регистрация",
@@ -113,6 +119,7 @@ export function registerPage({ uid, clientPlatform, values = {}, errors = {}, er
   });
 }
 
+/** @param {Record<string, any>} options */
 export function verifyPage({ token }) {
   return layout({
     title: "Подтверждение почты",
@@ -127,6 +134,7 @@ export function verifyPage({ token }) {
   });
 }
 
+/** @param {Record<string, any>} options */
 export function forgotPage({ email = "", error, sent }) {
   return layout({
     title: "Восстановление пароля",
@@ -142,6 +150,7 @@ export function forgotPage({ email = "", error, sent }) {
   });
 }
 
+/** @param {Record<string, any>} options */
 export function resetPage({ token, error }) {
   return layout({
     title: "Новый пароль",
@@ -158,7 +167,10 @@ export function resetPage({ token, error }) {
   });
 }
 
-/** Простая страница с сообщением и ссылкой дальше */
+/**
+ * Простая страница с сообщением и ссылкой дальше
+ * @param {Record<string, any>} options
+ */
 export function noticePage({ title, text, kind = "success", link }) {
   return layout({
     title,
@@ -187,6 +199,7 @@ function accountNav(active) {
   return `<nav class="tabs" aria-label="Разделы аккаунта">${item("/account", "Профиль")}${item("/sessions", "Сессии")}${item("/logout", "Выйти")}</nav>`;
 }
 
+/** @param {Record<string, any>} options */
 export function accountPage({ account, avatarUrl, csrf, notice, error, links, mailEnabled }) {
   const verified = Boolean(account.email_verified_at);
   return layout({
@@ -257,6 +270,7 @@ function describeDevice(userAgent) {
   return os ? `${browser}, ${os}` : browser;
 }
 
+/** @param {Record<string, any>} options */
 export function sessionsPage({ sessions, csrf, notice }) {
   const rows = sessions.map((session) => `<li class="session-row">
       <div>
@@ -280,7 +294,10 @@ export function sessionsPage({ sessions, csrf, notice }) {
   });
 }
 
-/** Подтверждение выхода. form — скрытая форма от oidc-provider с защитой от CSRF (xsrf) */
+/**
+ * Подтверждение выхода. form — скрытая форма от oidc-provider с защитой от CSRF (xsrf)
+ * @param {Record<string, any>} options
+ */
 export function logoutPage({ form, clientPlatform }) {
   return layout({
     title: "Выход",
@@ -294,6 +311,7 @@ export function logoutPage({ form, clientPlatform }) {
   });
 }
 
+/** @param {Record<string, any>} options */
 export function errorPage({ title = "Что-то пошло не так", text, status }) {
   return layout({
     title,

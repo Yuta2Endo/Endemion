@@ -228,8 +228,8 @@ export function createApp(config, { mailer = createMailer(config.mail), log = cr
     if (!TOKEN_RE.test(String(token || ""))) return null;
     const row = db.prepare("DELETE FROM auth_tokens WHERE token_hash = ? AND purpose = ? RETURNING account_sub, email, expires_at")
       .get(sha256(token), purpose);
-    if (!row || row.expires_at < Date.now()) return null;
-    return row;
+    if (!row || Number(row.expires_at) < Date.now()) return null;
+    return { account_sub: String(row.account_sub), email: String(row.email) };
   }
 
   function sendInBackground(letter, event) {
@@ -265,7 +265,7 @@ export function createApp(config, { mailer = createMailer(config.mail), log = cr
     return db.prepare("SELECT id, payload, user_agent, ip FROM oidc_models WHERE model = 'Session' AND account_id = ? AND (expires_at IS NULL OR expires_at > ?)")
       .all(sub, now())
       .map((row) => {
-        const payload = JSON.parse(row.payload);
+        const payload = JSON.parse(String(row.payload));
         return {
           id: row.id,
           current: row.id === currentId,
@@ -350,6 +350,7 @@ export function createApp(config, { mailer = createMailer(config.mail), log = cr
     await finishInteraction(ctx, { consent: details.grantId ? {} : { grantId } }, true);
   }
 
+  /** @type {Record<string, (ctx: any, params?: Record<string, string>) => Promise<any>>} */
   const routes = {
     "GET /healthz": async (ctx) => {
       db.prepare("SELECT 1").get();

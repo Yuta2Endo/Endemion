@@ -2,7 +2,8 @@
 // Права проверяются в каждом обработчике /api/admin/*: интерфейсу админки сервер не доверяет
 
 import { verifyPassword } from "./crypto.js";
-import { clientIp, error } from "./http.js";
+import { reauthUrl, recentlyAuthenticated } from "./endemionId.js";
+import { clientIp, error, json } from "./http.js";
 import { chapterPrefix, pageKey } from "./pages.js";
 import { isLimited, recordAttempt, RETRY_AFTER_SECONDS } from "./rateLimit.js";
 import { hasRole } from "./roles.js";
@@ -31,6 +32,11 @@ export async function requireAdmin(env, request) {
  * Возвращает ответ с ошибкой или null, если пароль верный
  */
 export async function confirmPassword(env, request, user, password) {
+  // Вход через Endemion ID: пароля на сайте нет, вместо него нужен свежий вход в Endemion ID (не старше 10 минут)
+  if (user.viaEndemionId) {
+    if (recentlyAuthenticated(user)) return null;
+    return json({ error: "Подтвердите, что это вы: войдите в Endemion ID ещё раз и сразу повторите действие.", reauth: reauthUrl("/admin") }, 403);
+  }
   const ip = clientIp(request);
   if (await isLimited(env, ip, user.email)) {
     return error("Слишком много неудачных попыток. Попробуйте через 15 минут.", 429, { "Retry-After": String(RETRY_AFTER_SECONDS) });

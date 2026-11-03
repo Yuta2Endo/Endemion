@@ -14,7 +14,8 @@ function freePort() {
   return new Promise((resolve, reject) => {
     const server = createServer();
     server.listen(0, "127.0.0.1", () => {
-      const { port } = server.address();
+      const address = server.address();
+      const port = typeof address === "object" && address ? address.port : 0;
       server.close(() => resolve(port));
     });
     server.on("error", reject);
@@ -70,8 +71,13 @@ export function browser(issuer) {
     }
   }
 
+  /**
+   * @param {string} url
+   * @param {{ method?: string, form?: Record<string, string>, headers?: Record<string, string>, body?: any, origin?: string }} [options]
+   */
   async function request(url, { method = "GET", form, headers = {}, body, origin } = {}) {
     const target = new URL(url, issuer);
+    /** @type {Record<string, string>} */
     const sendHeaders = { ...headers };
     if (jar.size && target.origin === issuer) sendHeaders.cookie = [...jar].map(([k, v]) => `${k}=${v}`).join("; ");
     if (method !== "GET") sendHeaders.origin = origin ?? issuer;

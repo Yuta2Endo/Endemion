@@ -1,6 +1,7 @@
 // POST /api/auth/forgot — письмо со ссылкой для нового пароля.
 // Ответ одинаковый для любой почты: по нему нельзя узнать, зарегистрирован ли адрес
 
+import { legacyAuthClosed } from "../../_lib/endemionId.js";
 import { newToken, sha256 } from "../../_lib/crypto.js";
 import { escapeHtml as e } from "../../_lib/html.js";
 import { clientIp, error, json, readJson } from "../../_lib/http.js";
@@ -38,6 +39,8 @@ function letter(name, link) {
 }
 
 export async function onRequestPost({ request, env, waitUntil }) {
+  const closed = legacyAuthClosed(env);
+  if (closed) return closed;
   if (!mailConfigured(env, request)) return error("Восстановление пароля пока недоступно.", 503);
 
   const body = await readJson(request);

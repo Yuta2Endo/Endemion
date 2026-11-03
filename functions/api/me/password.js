@@ -1,6 +1,7 @@
 // POST /api/me/password — сменить пароль. Все остальные сессии завершаются
 
 import { hashPassword, verifyPassword } from "../../_lib/crypto.js";
+import { accountUrl } from "../../_lib/endemionId.js";
 import { error, json, readJson } from "../../_lib/http.js";
 import { createSession, currentUser, destroyAllSessions } from "../../_lib/session.js";
 import { validatePassword } from "../../_lib/validate.js";
@@ -8,6 +9,11 @@ import { validatePassword } from "../../_lib/validate.js";
 export async function onRequestPost({ request, env }) {
   const user = await currentUser(env, request);
   if (!user) return error("Войдите в профиль.", 401);
+
+  // Пароль аккаунта Endemion ID меняется только там: он общий для Endemion и Endemion Life
+  if (user.viaEndemionId) {
+    return json({ error: "Пароль меняется в Endemion ID.", account: accountUrl(env) }, 409);
+  }
 
   const body = await readJson(request);
   if (!body) return error("Некорректный запрос.");

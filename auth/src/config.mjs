@@ -63,6 +63,8 @@ function loadClients(env, production) {
       grant_types: ["authorization_code", "refresh_token"],
       response_types: ["code"],
       token_endpoint_auth_method: "client_secret_basic",
+      // auth_time всегда в ID token: по нему сайт решает, вводил ли пользователь пароль недавно (удаление аккаунта, роли)
+      require_auth_time: true,
       ...(client.backchannel_logout_uri
         ? { backchannel_logout_uri: client.backchannel_logout_uri, backchannel_logout_session_required: true }
         : {}),

@@ -1,6 +1,7 @@
 // POST /api/auth/reset — новый пароль по ссылке из письма. Ссылка одноразовая.
 // Все сессии завершаются: если пароль меняют из-за взлома, чужой вход тоже закончится. На этом устройстве пользователь входит
 
+import { legacyAuthClosed } from "../../_lib/endemionId.js";
 import { hashPassword, sha256 } from "../../_lib/crypto.js";
 import { error, json, readJson } from "../../_lib/http.js";
 import { createSession } from "../../_lib/session.js";
@@ -9,6 +10,8 @@ import { validatePassword } from "../../_lib/validate.js";
 const INVALID = "Ссылка устарела или уже использована. Запросите новую.";
 
 export async function onRequestPost({ request, env }) {
+  const closed = legacyAuthClosed(env);
+  if (closed) return closed;
   const body = await readJson(request);
   if (!body) return error("Некорректный запрос.");
 
