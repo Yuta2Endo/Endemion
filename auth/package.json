@@ -1,0 +1,23 @@
+{
+  "name": "endemion-auth",
+  "version": "0.1.0",
+  "description": "Endemion ID: OpenID Connect provider for endemion.online and life.endemion.online",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node --env-file-if-exists=.env --watch src/server.mjs",
+    "start": "node --env-file-if-exists=.env src/server.mjs",
+    "keys": "node scripts/generate-keys.mjs",
+    "import-users": "node --env-file-if-exists=.env scripts/import-endemion-users.mjs",
+    "test": "node --test --test-concurrency=1 tests/"
+  },
+  "dependencies": {
+    "oidc-provider": "^9.13.3"
+  },
+  "devDependencies": {
+    "openid-client": "^6.8.9"
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}
