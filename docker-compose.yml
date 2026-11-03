@@ -21,11 +21,46 @@ services:
         max-size: "10m"
         max-file: "5"
 
+  # Endemion ID — единый вход для endemion.online и life.endemion.online (auth.endemion.online).
+  # Настройки AUTH_* и OIDC_CLIENTS — в том же .env, инструкция — docs/ENDEMION_DEPLOYMENT.md
+  auth:
+    build:
+      context: .
+      dockerfile: auth/Dockerfile
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      TRUST_PROXY: "1"
+      AUTH_ISSUER: ${AUTH_ISSUER:-https://auth.${SITE_DOMAIN}}
+      AUTH_COOKIE_KEYS: ${AUTH_COOKIE_KEYS:-}
+      AUTH_JWKS_FILE: /app/data/auth-jwks.json
+      OIDC_CLIENTS: ${OIDC_CLIENTS:-[]}
+      ENDEMION_URL: https://${SITE_DOMAIN}
+      ENDEMION_LIFE_URL: https://life.${SITE_DOMAIN}
+      MAIL_FROM: ${AUTH_MAIL_FROM:-${MAIL_FROM:-}}
+      UNISENDER_API_KEY: ${UNISENDER_API_KEY:-}
+      UNISENDER_API_URL: ${UNISENDER_API_URL:-}
+      MAIL_SKIP_UNSUBSCRIBE: ${MAIL_SKIP_UNSUBSCRIBE:-}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+    volumes:
+      # Отдельная папка: база, ключ подписи и аватары Endemion ID не смешиваются с данными сайта
+      - ./data/auth:/app/data
+    expose:
+      - "3001"
+    # Сервер общий с сайтом и Life (2 ГБ памяти): провайдеру хватает ~100 МБ
+    mem_limit: 256m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
   caddy:
     image: caddy:2
     restart: unless-stopped
     depends_on:
       - app
+      - auth
     ports:
       - "80:80"
       - "443:443"

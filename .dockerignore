@@ -2,6 +2,9 @@
 .git
 .wrangler
 node_modules
+# Endemion ID собирается из этого же каталога: его зависимости ставит npm ci внутри образа
+auth/node_modules
+auth/.env
 data
 data-*
 backups

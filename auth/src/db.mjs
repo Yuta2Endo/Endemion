@@ -1,8 +1,8 @@
 // Одно соединение с SQLite на процесс. node:sqlite синхронный, поэтому запросы одного обработчика
 // не перемешиваются с чужими, пока между ними нет await
 
-import { DatabaseSync } from "node:sqlite";
-import { mkdirSync, readdirSync, readFileSync } from "node:fs";
+import { backup, DatabaseSync } from "node:sqlite";
+import { mkdirSync, readdirSync, readFileSync, rmSync, statSync } from "node:fs";
 import path from "node:path";
 
 export function openDatabase(file) {
@@ -29,6 +29,38 @@ export function migrate(db, dir) {
     }
   }
   return pending;
+}
+
+const BACKUP_NAME = /^auth-.+\.sqlite$/;
+
+/**
+ * Копия базы в dir средствами SQLite (не мешает работе). Остаются последние keep копий.
+ * В копии хеши паролей и почты: папку нельзя отдавать наружу
+ */
+export async function backupDatabase(db, dir, keep = 14) {
+  mkdirSync(dir, { recursive: true });
+  const file = path.join(dir, `auth-${new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19)}.sqlite`);
+  await backup(db, file);
+  const old = readdirSync(dir).filter((name) => BACKUP_NAME.test(name)).sort().reverse().slice(keep);
+  for (const name of old) rmSync(path.join(dir, name), { force: true });
+  return file;
+}
+
+/** Время последней копии (мс) или 0 */
+export function latestBackupTime(dir) {
+  try {
+    const names = readdirSync(dir).filter((name) => BACKUP_NAME.test(name)).sort();
+    return names.length ? statSync(path.join(dir, names.at(-1))).mtimeMs : 0;
+  } catch {
+    return 0;
+  }
+}
+
+/** Миграции, которые ещё не применены. Нужны, чтобы сделать копию базы до них */
+export function pendingMigrations(db, dir) {
+  db.exec("CREATE TABLE IF NOT EXISTS auth_migrations (name TEXT PRIMARY KEY, applied_at TEXT NOT NULL DEFAULT (datetime('now')))");
+  const applied = new Set(db.prepare("SELECT name FROM auth_migrations").all().map((row) => row.name));
+  return { pending: readdirSync(dir).filter((name) => name.endsWith(".sql") && !applied.has(name)), appliedCount: applied.size };
 }
 
 /** Несколько изменений одной транзакцией. fn синхронная: внутри нельзя ждать await */
