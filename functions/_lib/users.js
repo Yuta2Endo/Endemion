@@ -44,6 +44,7 @@ export function deleteUserStatements(env, user) {
     env.DB.prepare("DELETE FROM entry_reviews WHERE user_id = ?").bind(user.id),
     env.DB.prepare("DELETE FROM user_list WHERE user_id = ?").bind(user.id),
     env.DB.prepare("DELETE FROM favorites WHERE user_id = ?").bind(user.id),
+    env.DB.prepare("DELETE FROM user_spoiler_settings WHERE user_id = ?").bind(user.id),
     env.DB.prepare("DELETE FROM collections WHERE user_id = ?").bind(user.id),
     env.DB.prepare("DELETE FROM follows WHERE follower_id = ? OR followee_id = ?").bind(user.id, user.id),
     env.DB.prepare("DELETE FROM notifications WHERE user_id = ?").bind(user.id),
