@@ -1,158 +1,29 @@
-# Endemion Auth
+# Endemion ID
 
-Централизованный OpenID Connect Provider для единой авторизации в экосистеме Endemion.
+Единый аккаунт для endemion.online и life.endemion.online: OpenID Connect провайдер на `auth.endemion.online`.
+Провайдер — [oidc-provider](https://github.com/panva/node-oidc-provider) 9.13, база SQLite, страницы без сборки.
 
-## Что это
-
-**Endemion ID** — единый аккаунт для всех сервисов:
-- endemion.online (платформа для читателей манги)
-- life.endemion.online (симулятор жизни)
-- будущие сервисы Endemion
-
-Пользователь регистрируется один раз на auth.endemion.online и входит на все сайты без повторного ввода пароля (Single Sign-On через OpenID Connect).
-
-## Технологии
-
-- **Node.js 24+**
-- **oidc-provider 9.13** (сертифицированная реализация OpenID Connect)
-- **Koa 3** (веб-фреймворк)
-- **SQLite** (база аккаунтов Endemion ID)
-
-## Локальный запуск
+```
+src/server.mjs      запуск, копии базы, очистка
+src/app.mjs         настройка провайдера и свои страницы: вход, регистрация, письма, аккаунт, сессии
+src/config.mjs      настройки из окружения, проверки для рабочей среды
+src/adapter.mjs     хранилище oidc-provider в SQLite
+src/accounts.mjs    аккаунты: проверки, вход с блокировкой, профиль, пароль
+src/passwords.mjs   scrypt, проверка перенесённых хешей PBKDF2 сайта
+src/limits.mjs      лимиты попыток и журнал событий
+src/mail.mjs        письма: Unisender Go, Resend, файлы (разработка)
+src/views.mjs       HTML-страницы
+migrations/         схема базы
+public/assets/      стили и скрипт загрузки аватара
+scripts/            ключ подписи, перенос пользователей сайта
+tests/              node --test: путь входа глазами сайта, перенос
+```
 
 ```bash
-cd auth
-cp .env.example .env
-# Отредактируйте .env: задайте COOKIE_SECRET и TOKEN_SECRET (случайные строки)
-
 npm install
-npm run migrate          # Создать базу auth.sqlite
-npm run dev              # Сервер на http://localhost:3001
+cp .env.example .env
+npm run dev          # http://localhost:3001
+npm test
 ```
 
-Откройте http://localhost:3001/.well-known/openid-configuration — если видите JSON с конфигурацией OIDC, провайдер работает.
-
-## Импорт пользователей Endemion
-
-После развёртывания Auth нужно импортировать существующих пользователей основного сайта:
-
-```bash
-npm run import-users
-```
-
-Скрипт:
-1. Читает `../data/endemion.sqlite` (база основного сайта)
-2. Копирует users + user_profiles в auth.sqlite
-3. Сохраняет старые хеши паролей PBKDF2 (проверяются при первом входе и перехешируются в scrypt)
-4. Создаёт связь `platform_links`: endemion users.id → auth accounts.sub
-
-## Структура
-
-```
-auth/
-├── src/
-│   ├── server.mjs           # Точка входа: Koa + oidc-provider
-│   ├── migrate.mjs          # Применение миграций
-│   ├── config.mjs           # Чтение .env
-│   ├── adapter.mjs          # SQLite adapter для oidc-provider
-│   ├── account.mjs          # Поиск аккаунтов, проверка паролей
-│   └── routes/
-│       ├── login.mjs        # GET/POST /auth/login
-│       ├── register.mjs     # GET/POST /auth/register
-│       ├── logout.mjs       # POST /auth/logout
-│       └── profile.mjs      # GET /account (профиль Endemion ID)
-├── migrations/
-│   ├── 0001_init.sql        # accounts, sessions, platform_links
-│   └── 0002_legacy_hashes.sql
-├── public/                  # Статические файлы (CSS, JS)
-├── scripts/
-│   └── import-endemion-users.mjs
-├── tests/
-└── package.json
-```
-
-## Миграции
-
-Схема базы auth.sqlite:
-
-**accounts** — аккаунты Endemion ID
-- `sub` UUID PRIMARY KEY (OIDC subject claim, неизменяемый)
-- `email` TEXT UNIQUE
-- `email_verified_at` TEXT (timestamp подтверждения)
-- `username` TEXT UNIQUE (3-24 символа, alphanumeric + underscore)
-- `display_name` TEXT (отображаемое имя)
-- `avatar_url` TEXT
-- `password_hash` TEXT (scrypt$...)
-- `legacy_password_hash` TEXT (pbkdf2$... для импортированных из Endemion, NULL после первого входа)
-- `created_at`, `updated_at`
-
-**platform_links** — связь аккаунтов с платформами
-- `account_sub` UUID → accounts(sub)
-- `platform` TEXT ('endemion' | 'endemion_life')
-- `platform_user_id` TEXT (Endemion: users.id INTEGER, Life: players.id UUID)
-- PRIMARY KEY (account_sub, platform)
-
-**auth_tokens** — коды подтверждения email и токены сброса пароля
-- SHA-256 хранение, TTL, max attempts
-
-**Таблицы oidc-provider:** Session, AccessToken, AuthorizationCode, RefreshToken, etc. (управляются adapter.mjs)
-
-## Интеграция с сайтами
-
-### Endemion (основной сайт)
-
-1. Установить `openid-client` в основной сайт
-2. Добавить `functions/api/auth/oidc-callback.js`
-3. В `functions/_lib/session.js` добавить `currentUserFromOIDC()`
-4. После OIDC login создать запись в platform_links
-5. Переключатель `.env`: `USE_OIDC_AUTH=1`
-
-### Endemion Life
-
-1. Установить `openid-client` в apps/api
-2. Добавить OIDC endpoints в auth.controller.ts
-3. На регистрацию: создать аккаунт в Auth → вернуться в Life → связать с guest Player → transfer lives
-4. Переключатель: `USE_OIDC_AUTH=true`
-
-## Production
-
-В docker-compose.yml основного сайта:
-
-```yaml
-services:
-  auth:
-    build: ./auth
-    environment:
-      ISSUER: auth.endemion.online
-      PUBLIC_URL: https://auth.endemion.online
-      AUTH_DB_FILE: /app/data/auth.sqlite
-      COOKIE_SECRET: ${AUTH_COOKIE_SECRET}
-      TOKEN_SECRET: ${AUTH_TOKEN_SECRET}
-      OIDC_CLIENTS: ${AUTH_OIDC_CLIENTS}
-    volumes:
-      - ./data:/app/data
-    expose:
-      - "3001"
-```
-
-В Caddyfile:
-
-```
-auth.{$SITE_DOMAIN} {
-  encode zstd gzip
-  reverse_proxy auth:3001
-}
-```
-
-## Документация
-
-См. `../docs/`:
-- ENDEMION_ECOSYSTEM_AUDIT.md — аудит существующих систем
-- ENDEMION_ECOSYSTEM_ARCHITECTURE.md — архитектура SSO
-- ENDEMION_AUTH_SETUP.md — подробная настройка
-- ENDEMION_ACCOUNT_MIGRATION.md — стратегия миграции
-- ENDEMION_SECURITY.md — безопасность
-
-## Лицензия
-
-Приватный проект. Код не для публичного использования.
+Документы: `../docs/ENDEMION_AUTH_SETUP.md` (настройка), `ENDEMION_ECOSYSTEM_ARCHITECTURE.md`, `ENDEMION_ACCOUNT_MIGRATION.md`, `ENDEMION_DEPLOYMENT.md`, `ENDEMION_SECURITY.md`.

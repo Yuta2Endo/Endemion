@@ -38,6 +38,19 @@ server/                 свой сервер: SQLite через адаптер 
 tests/                  юнит- и интеграционные тесты (node:test), проверки API и браузерные тесты (Playwright)
 ```
 
+## Endemion ID — единый аккаунт с Endemion Life
+
+`auth/` — провайдер OpenID Connect для `auth.endemion.online`. С `ENDEMION_ID=1` сайт входит только через него: один аккаунт для сайта и игры life.endemion.online, вход без повторного пароля, общие имя, username и аватар. Без этой настройки сайт работает со своими паролями, как раньше.
+
+| Документ | О чём |
+|---|---|
+| [docs/ENDEMION_ECOSYSTEM_AUDIT.md](docs/ENDEMION_ECOSYSTEM_AUDIT.md) | Аудит обоих проектов до изменений |
+| [docs/ENDEMION_ECOSYSTEM_ARCHITECTURE.md](docs/ENDEMION_ECOSYSTEM_ARCHITECTURE.md) | Как устроен вход, связь аккаунтов, модель данных |
+| [docs/ENDEMION_AUTH_SETUP.md](docs/ENDEMION_AUTH_SETUP.md) | Локальный запуск, настройки, клиенты |
+| [docs/ENDEMION_ACCOUNT_MIGRATION.md](docs/ENDEMION_ACCOUNT_MIGRATION.md) | Перенос пользователей, конфликты, откат |
+| [docs/ENDEMION_DEPLOYMENT.md](docs/ENDEMION_DEPLOYMENT.md) | DNS, секреты, выкладка, Caddy, мониторинг |
+| [docs/ENDEMION_SECURITY.md](docs/ENDEMION_SECURITY.md) | Меры защиты, тесты, известные ограничения |
+
 ## Роли
 
 - `user` — читатель.
