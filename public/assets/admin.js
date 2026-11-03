@@ -4,6 +4,7 @@
 
 import { api, chaptersText, getMe, loginUrl, posterBackground, titlePicker, toast, TYPE_LABELS } from "./app.js";
 import { loadCollections, loadModeration, loadPlatformStats, loadPolls, loadReports, loadTaxonomy } from "./admin-community.js";
+import { initCatalogAdmin, loadCatalog, loadReviews } from "./admin-catalog.js";
 
 const $ = (selector) => document.querySelector(selector);
 
@@ -100,8 +101,8 @@ function busy() {
 
 // ==================== РАЗДЕЛЫ ====================
 
-const SECTIONS = ["dashboard", "titles", "taxonomy", "moderation", "polls", "collections", "complaints", "users", "audit"];
-const MODERATOR_SECTIONS = ["moderation", "polls"];
+const SECTIONS = ["dashboard", "catalog", "reviews", "titles", "taxonomy", "moderation", "polls", "collections", "complaints", "users", "audit"];
+const MODERATOR_SECTIONS = ["reviews", "moderation", "polls"];
 
 /** Разделы, доступные вошедшему: модератору — только модерация и голосования */
 const allowedSections = () => (me?.isAdmin ? SECTIONS : MODERATOR_SECTIONS);
@@ -127,6 +128,8 @@ async function route() {
   showSection(section);
 
   if (section === "dashboard") loadDashboard();
+  if (section === "catalog") loadCatalog();
+  if (section === "reviews") loadReviews(true);
   if (section === "taxonomy") loadTaxonomy();
   if (section === "moderation") loadModeration();
   if (section === "polls") loadPolls();
@@ -1173,7 +1176,10 @@ const ACTION_LABELS = {
   "character.create": "новый персонаж",
   "character.update": "изменение персонажа",
   "character.delete": "удаление персонажа",
-  "collection.update": "изменение подборки"
+  "collection.update": "изменение подборки",
+  "catalog.settings": "настройки каталога",
+  "catalog.cache": "очистка кеша каталога",
+  "catalog.errors": "очистка журнала ошибок каталога"
 };
 
 function auditRow(entry) {
@@ -1237,6 +1243,7 @@ async function init() {
     return;
   }
   me = user;
+  initCatalogAdmin();
 
   if (!user.isAdmin) {
     // Модератору не нужны тайтлы и жалобы правообладателей: эти запросы сервер ему всё равно отклонит

@@ -10,7 +10,7 @@ export const REPORT_REASONS = {
   illegal: "Нарушает закон или авторские права",
   other: "Другое"
 };
-export const REPORT_TARGETS = ["comment", "review", "thread", "collection", "user", "tournament"];
+export const REPORT_TARGETS = ["comment", "review", "thread", "collection", "user", "tournament", "entry_review"];
 
 /** Запрос в журнал модерации */
 export function moderationStatement(env, moderator, { action, targetType, targetId, reason = "", reportId = null }) {
@@ -28,7 +28,8 @@ export async function loadTarget(env, type, id) {
     thread: `SELECT t.id, t.user_id AS owner_id, t.subject || ' — ' || t.body AS text, t.deleted_at AS removed_at, 'thread' AS target_type, t.id AS target_id FROM threads t WHERE t.id = ?`,
     collection: `SELECT c.id, c.user_id AS owner_id, c.name || ' — ' || c.description AS text, c.hidden_at AS removed_at, 'collection' AS target_type, c.id AS target_id FROM collections c WHERE c.id = ?`,
     user: `SELECT u.id, u.id AS owner_id, u.name || ' (@' || COALESCE(p.username, '') || ') — ' || COALESCE(p.bio, '') AS text, u.blocked_at AS removed_at, 'user' AS target_type, u.id AS target_id FROM users u LEFT JOIN user_profiles p ON p.user_id = u.id WHERE u.id = ?`,
-    tournament: `SELECT t.id, t.created_by AS owner_id, t.name || ' — ' || t.description AS text, t.hidden_at AS removed_at, 'tournament' AS target_type, t.id AS target_id FROM tournaments t WHERE t.id = ?`
+    tournament: `SELECT t.id, t.created_by AS owner_id, t.name || ' — ' || t.description AS text, t.hidden_at AS removed_at, 'tournament' AS target_type, t.id AS target_id FROM tournaments t WHERE t.id = ?`,
+    entry_review: `SELECT r.id, r.user_id AS owner_id, r.body AS text, r.hidden_at AS removed_at, r.kind AS target_type, r.ext_id AS target_id FROM entry_reviews r WHERE r.id = ?`
   };
   if (!queries[type]) return null;
   const row = await env.DB.prepare(queries[type]).bind(id).first();
@@ -49,6 +50,8 @@ export async function targetLink(env, type, row) {
       return `/collection/${row.id}`;
     case "tournament":
       return `/arena#tournament-${row.id}`;
+    case "entry_review":
+      return `/${row.target_type}/${row.target_id}#review-${row.id}`;
     case "user": {
       const profile = await env.DB.prepare("SELECT username FROM user_profiles WHERE user_id = ?").bind(row.id).first();
       return profile ? `/u/${profile.username}` : "";
@@ -65,6 +68,13 @@ export async function commentLink(env, targetType, targetId, commentId) {
   if (targetType === "review") {
     const review = await env.DB.prepare("SELECT title_id FROM reviews WHERE id = ?").bind(targetId).first();
     return review ? `/title/${review.title_id}#review-${targetId}` : "";
+  }
+  if (targetType === "anime" || targetType === "manga") return `/${targetType}/${targetId}#comment-${commentId}`;
+  if (targetType === "character") return `/characters/${targetId}#comment-${commentId}`;
+  if (targetType === "person") return `/people/${targetId}#comment-${commentId}`;
+  if (targetType === "entry_review") {
+    const review = await env.DB.prepare("SELECT kind, ext_id FROM entry_reviews WHERE id = ?").bind(targetId).first();
+    return review ? `/${review.kind}/${review.ext_id}#review-${targetId}` : "";
   }
   return "";
 }
@@ -93,6 +103,10 @@ export function contentStatements(env, moderator, type, id, action) {
       return [env.DB.prepare(`UPDATE collections SET hidden_at = ${remove ? "datetime('now')" : "NULL"}${remove ? ", featured = 0" : ""} WHERE id = ?`).bind(id)];
     case "tournament":
       return [env.DB.prepare(`UPDATE tournaments SET hidden_at = ${remove ? "datetime('now')" : "NULL"} WHERE id = ?`).bind(id)];
+    case "entry_review":
+      return [remove
+        ? env.DB.prepare("UPDATE entry_reviews SET hidden_at = datetime('now'), hidden_by = ? WHERE id = ?").bind(moderator.id, id)
+        : env.DB.prepare("UPDATE entry_reviews SET hidden_at = NULL, hidden_by = NULL WHERE id = ?").bind(id)];
     default:
       return null;
   }
@@ -109,5 +123,6 @@ export const CONTENT_LABELS = {
   thread: "Обсуждение",
   collection: "Подборка",
   user: "Профиль",
-  tournament: "Турнир"
+  tournament: "Турнир",
+  entry_review: "Отзыв"
 };

@@ -7,7 +7,8 @@ export const AUDIT_GROUPS = {
   titles: ["title.", "cover."],
   chapters: ["chapter.", "pages."],
   complaints: ["complaint."],
-  users: ["user."]
+  users: ["user."],
+  catalog: ["catalog."]
 };
 
 /**

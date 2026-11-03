@@ -3,7 +3,7 @@
 
 import {
   announceAchievements, api, avatar, button, checkbox, el, errorBox, field, formValue, initHeader, input, lineSkeletons,
-  link, loginUrl, openDialog, posterBackground, stateBox, textarea, timeAgo, titlePicker, userLink
+  link, loginUrl, openDialog, posterBackground, stateBox, textarea, timeAgo, titlePicker, userLink, entryUrl, remoteImage, spoilerText
 } from "./app.js";
 
 const body = document.querySelector("#communityBody");
@@ -255,10 +255,63 @@ async function showReaders() {
 function renderActions() {
   actions.replaceChildren();
   if (current === "collections") actions.append(button("＋ Подборка", "primary-btn", newCollection));
-  else if (current !== "readers") actions.append(button(current === "theories" ? "＋ Теория" : "＋ Обсуждение", "primary-btn", () => newThread(current === "theories" ? "theory" : "discussion")));
+  else if (current !== "readers" && current !== "reviews") actions.append(button(current === "theories" ? "＋ Теория" : "＋ Обсуждение", "primary-btn", () => newThread(current === "theories" ? "theory" : "discussion")));
+}
+
+// ==================== ОТЗЫВЫ О ПРОИЗВЕДЕНИЯХ ====================
+
+async function showReviews() {
+  const filter = el("div", "tabs-bar");
+  filter.setAttribute("role", "group");
+  filter.setAttribute("aria-label", "Раздел");
+  const list = el("div", "review-teasers");
+  const more = el("div", "load-more");
+  body.replaceChildren(filter, list, more);
+  let kind = "";
+  let offset = 0;
+  for (const [key, label] of [["", "Все"], ["anime", "Аниме"], ["manga", "Манга"]]) {
+    const node = button(label, null, () => {
+      kind = key;
+      filter.querySelectorAll("button").forEach((other) => other.setAttribute("aria-pressed", String(other === node)));
+      load(true);
+    }, { pressed: key === "" });
+    filter.append(node);
+  }
+
+  async function load(reset) {
+    if (reset) {
+      offset = 0;
+      list.replaceChildren(...lineSkeletons(3, 110));
+    }
+    const result = await api(`/api/entry-reviews?offset=${offset}${kind ? `&kind=${kind}` : ""}`);
+    if (!result.ok) return list.replaceChildren(errorBox(result.data?.error || "Отзывы не загрузились.", () => load(true)));
+    if (reset) list.replaceChildren();
+    if (reset && !result.data.reviews.length) {
+      list.append(stateBox({ icon: "✍", title: "Отзывов пока нет", text: "Откройте любое аниме или мангу и напишите первый.", action: { href: "/anime", text: "Каталог аниме" } }));
+    }
+    for (const review of result.data.reviews) {
+      const card = el("article", "review-teaser");
+      const href = `${entryUrl(review.entry)}#review-${review.id}`;
+      const poster = link(href, "review-teaser-poster", null);
+      poster.tabIndex = -1;
+      poster.setAttribute("aria-hidden", "true");
+      poster.append(remoteImage(review.entry.poster?.small, ""));
+      const main = el("div");
+      const head = el("p", "review-teaser-head");
+      head.append(link(href, null, review.entry.title), el("span", "review-score", `${review.score}/10`));
+      const text = el("p", "review-teaser-text", review.body.length > 400 ? `${review.body.slice(0, 400)}…` : review.body);
+      main.append(head, spoilerText(text, review.spoiler), userLink(review.author, { size: "avatar-sm", small: timeAgo(review.createdAt) }));
+      card.append(poster, main);
+      list.append(card);
+    }
+    offset += result.data.reviews.length;
+    more.replaceChildren(...(result.data.hasMore ? [button("Показать ещё", "ghost-btn", () => load(false))] : []));
+  }
+  load(true);
 }
 
 const VIEWS = {
+  reviews: showReviews,
   threads: () => showThreads("discussion"),
   theories: () => showThreads("theory"),
   collections: showCollections,

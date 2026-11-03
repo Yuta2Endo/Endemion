@@ -17,7 +17,8 @@ export const PASSWORD = "correct-horse-1";
 
 let ipCounter = 0;
 
-export async function createApp({ withSeed = true } = {}) {
+/** extraEnv — дополнительные настройки, например CATALOG_FETCH: поддельный источник каталога вместо сети */
+export async function createApp({ withSeed = true, extraEnv = {} } = {}) {
   const dir = mkdtempSync(path.join(os.tmpdir(), "endemion-test-"));
   const db = openDatabase(path.join(dir, "test.sqlite"));
   // Миграции пишут в консоль о каждом файле: в тестах это шум
@@ -32,7 +33,8 @@ export async function createApp({ withSeed = true } = {}) {
     DB: db,
     PAGES: await createStorage({}, path.join(dir, "files")),
     ASSETS: createAssets(PUBLIC_DIR),
-    MAIL_DEV_MODE: "1"
+    MAIL_DEV_MODE: "1",
+    ...extraEnv
   };
   if (withSeed) await seed(env, { log: () => {} });
 

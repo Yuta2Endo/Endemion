@@ -1,9 +1,10 @@
 // Публичный профиль читателя /u/:username: описание, статистика, достижения, полка, подписка, подписчики, жалоба
 
 import {
-  api, avatar, button, el, errorBox, formatDate, getLibrary, getMe, initHeader, link, loginUrl, reportContent,
+  api, avatar, button, el, errorBox, formatDate, getLibrary, getMe, initHeader, link, loginUrl, remoteImage, reportContent,
   stateBox, STATUS_LABELS, titleCard, toast, toggleFavorite
 } from "./app.js";
+import { entryCardNode, LIST_STATUSES } from "./ency-lib.js";
 
 const root = document.querySelector("#userPage");
 const username = document.querySelector("main").dataset.username;
@@ -103,6 +104,8 @@ function render(data) {
   );
   root.append(stats);
 
+  root.append(encyclopediaBlock());
+
   const split = el("div", "split section");
   const left = el("div", "stack");
   const right = el("aside", "stack");
@@ -176,6 +179,58 @@ function render(data) {
   right.append(genres, achievements, collections, follows);
   split.append(left, right);
   root.append(split);
+}
+
+const FAVORITE_PATHS = { anime: "/anime", manga: "/manga", character: "/characters", person: "/people" };
+
+/** Списки энциклопедии: статистика аниме и манги, последние записи и избранное. Загружается отдельно */
+function encyclopediaBlock() {
+  const section = el("section", "section");
+  section.append(el("h2", "section-head", "Аниме и манга"));
+  const box = el("div");
+  box.append(el("p", "muted small", "Загружаем списки…"));
+  section.append(box);
+  api(`/api/users/${encodeURIComponent(username)}/encyclopedia`).then(async (result) => {
+    if (result.status === 403) return box.replaceChildren(el("p", "muted small", "Пользователь скрыл свои списки."));
+    if (!result.ok) return box.replaceChildren(errorBox(result.data?.error || "Списки не загрузились."));
+    const { stats, favorites } = result.data;
+    const parts = [];
+    for (const kind of ["anime", "manga"]) {
+      const s = stats[kind];
+      if (!s.total) continue;
+      const grid = el("div", "stat-grid");
+      grid.append(statBox(s.total, kind === "anime" ? "аниме в списке" : "манги в списке"));
+      for (const [key, label] of Object.entries(LIST_STATUSES[kind])) if (s.statuses[key]) grid.append(statBox(s.statuses[key], label.toLowerCase()));
+      grid.append(statBox(s.units, kind === "anime" ? "эпизодов" : "глав"));
+      if (kind === "anime") grid.append(statBox(s.hours, "часов"));
+      if (s.meanScore) grid.append(statBox(s.meanScore, "средняя оценка"));
+      const recent = await api(`/api/users/${encodeURIComponent(username)}/mylist?kind=${kind}`);
+      const rail = el("div", "e-rail");
+      if (recent.ok) {
+        rail.append(...recent.data.items.slice(0, 12).map((item) => entryCardNode(item.entry, {
+          extra: el("p", "e-role", `${LIST_STATUSES[kind][item.status]}${item.score ? ` · ★ ${item.score}` : ""}`)
+        })));
+      }
+      parts.push(el("p", "filter-sub", kind === "anime" ? "Аниме" : "Манга"), grid, rail);
+    }
+    if (favorites.length) {
+      const grid = el("div", "fav-grid");
+      for (const item of favorites.slice(0, 18)) {
+        const card = el("article", "p-card");
+        const photo = link(`${FAVORITE_PATHS[item.type]}/${item.id}`, "p-photo", null);
+        photo.tabIndex = -1;
+        photo.setAttribute("aria-hidden", "true");
+        photo.append(remoteImage(item.image, ""));
+        const name = el("h3", "p-name");
+        name.append(link(`${FAVORITE_PATHS[item.type]}/${item.id}`, null, item.name));
+        card.append(photo, name);
+        grid.append(card);
+      }
+      parts.push(el("p", "filter-sub", "Избранное"), grid);
+    }
+    box.replaceChildren(...(parts.length ? parts : [el("p", "muted small", "Списки пока пусты.")]));
+  });
+  return section;
 }
 
 async function init() {

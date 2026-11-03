@@ -20,6 +20,8 @@ export async function onRequest(context) {
   try {
     return await context.next();
   } catch (err) {
+    // Источник каталога не ответил, а копии в кеше нет: понятное сообщение вместо «ошибки сервера»
+    if (err?.name === "CatalogError") return error(err.message, err.status, { "Retry-After": "60" });
     console.error(err);
     return error("Ошибка сервера. Попробуйте позже.", 500);
   }

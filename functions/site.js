@@ -110,7 +110,7 @@ export const home = {
       </section>
     </div>`;
     return renderPage(request, {
-      path: "/", active: "home", body, scripts: ["home.js"],
+      title: "Читалка", path: "/reading", active: "reading", body, scripts: ["home.js"],
       description: `ENDEMION — ${SLOGAN} Каталог манги, манхвы и маньхуа, рекомендации по настроению, карта связей между историями и сообщество читателей.`
     });
   }
@@ -274,12 +274,13 @@ export const community = {
         <div>
           <div class="eyebrow">ENDEMION Community</div>
           <h1>Сообщество</h1>
-          <p class="section-text">Обсуждения и теории, подборки читателей и люди, на которых стоит подписаться.</p>
+          <p class="section-text">Обсуждения и теории, отзывы о произведениях, подборки и люди, на которых стоит подписаться.</p>
         </div>
         <div class="section-actions" id="communityActions"></div>
       </div>
       <div class="tabs-bar" role="tablist" aria-label="Разделы сообщества">
         <button type="button" role="tab" data-tab="threads" aria-selected="true">Обсуждения</button>
+        <button type="button" role="tab" data-tab="reviews" aria-selected="false">Отзывы</button>
         <button type="button" role="tab" data-tab="theories" aria-selected="false">Теории</button>
         <button type="button" role="tab" data-tab="collections" aria-selected="false">Подборки</button>
         <button type="button" role="tab" data-tab="readers" aria-selected="false">Читатели</button>
@@ -287,8 +288,8 @@ export const community = {
       <div id="communityBody" role="tabpanel" aria-live="polite"></div>
     </div>`;
     return renderPage(request, {
-      title: "Сообщество читателей", path: "/community", active: "community", body, scripts: ["community.js"],
-      description: "Сообщество ENDEMION: обсуждения и теории о манге, манхве и маньхуа, подборки читателей."
+      title: "Сообщество", path: "/community", active: "community", body, scripts: ["community.js"], styles: ["ency.css"],
+      description: "Сообщество ENDEMION: отзывы об аниме и манге, обсуждения, теории и подборки."
     });
   }
 };
@@ -366,7 +367,7 @@ export const userPage = {
       <div class="profile-hero"><div class="skeleton avatar-dot avatar-lg"></div><div><div class="skeleton skeleton-line"></div><div class="skeleton skeleton-line"></div></div></div>
     </div>`;
     return renderPage(request, {
-      title: "Профиль читателя", active: null, body, scripts: ["user.js"], path: `/u/${encodeURIComponent(params.username)}`,
+      title: "Профиль", active: null, body, scripts: ["user.js"], styles: ["ency.css"], path: `/u/${encodeURIComponent(params.username)}`,
       mainAttrs: `data-username="${e(params.username)}"`
     });
   }

@@ -2,9 +2,10 @@
 // root_id — корневой комментарий ветки, parent_id — на какой именно комментарий ответ (для «ответ @имя»).
 // Удалённый комментарий остаётся заглушкой без текста, чтобы ветка не рассыпалась
 
+import { getCharacter, getEntry, getPerson, getSettings, isHidden } from "./catalog/index.js";
 import { commentLink } from "./moderation.js";
 
-export const TARGET_TYPES = ["title", "thread", "collection", "review"];
+export const TARGET_TYPES = ["title", "thread", "collection", "review", "anime", "manga", "character", "person", "entry_review"];
 export const REACTIONS = { like: "👍", fire: "🔥", heart: "❤️", laugh: "😂", wow: "😮", sad: "😢" };
 export const COMMENT_MAX = 3000;
 export const PAGE = 20;
@@ -27,6 +28,26 @@ export async function loadCommentTarget(env, type, id) {
     case "review": {
       const row = await env.DB.prepare(
         "SELECT r.user_id, t.title FROM reviews r JOIN titles t ON t.id = r.title_id WHERE r.id = ? AND r.hidden_at IS NULL"
+      ).bind(id).first();
+      return row ? { ownerId: row.user_id, label: `отзыву на «${row.title}»` } : null;
+    }
+    // Произведения, персонажи и люди энциклопедии: проверяются по источнику каталога (с кешем)
+    case "anime":
+    case "manga": {
+      const entry = await getEntry(env, type, id);
+      return entry && !isHidden(entry, await getSettings(env)) ? { ownerId: null, label: `«${entry.title}»` } : null;
+    }
+    case "character": {
+      const character = await getCharacter(env, id);
+      return character ? { ownerId: null, label: `персонажу «${character.name}»` } : null;
+    }
+    case "person": {
+      const person = await getPerson(env, id);
+      return person ? { ownerId: null, label: `странице «${person.name}»` } : null;
+    }
+    case "entry_review": {
+      const row = await env.DB.prepare(
+        "SELECT r.user_id, e.title FROM entry_reviews r JOIN entries e ON e.kind = r.kind AND e.ext_id = r.ext_id WHERE r.id = ? AND r.hidden_at IS NULL"
       ).bind(id).first();
       return row ? { ownerId: row.user_id, label: `отзыву на «${row.title}»` } : null;
     }

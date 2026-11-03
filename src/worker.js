@@ -46,6 +46,8 @@ import * as arena from "../functions/api/arena.js";
 import * as moderation from "../functions/api/moderation.js";
 import * as adminPlatform from "../functions/api/adminPlatform.js";
 import * as site from "../functions/site.js";
+import * as ency from "../functions/api/encyclopedia.js";
+import * as encyPages from "../functions/encyclopedia.js";
 import { error } from "../functions/_lib/http.js";
 
 // Эти же пути перечислены в run_worker_first в wrangler.toml
@@ -151,13 +153,50 @@ const ROUTE_LIST = [
   ["/api/admin/collections", adminPlatform.adminCollections],
   ["/api/admin/collections/:id", adminPlatform.adminCollection],
   ["/api/admin/platform-stats", adminPlatform.adminPlatformStats],
+  // Энциклопедия: каталог из внешнего источника (functions/_lib/catalog), списки, избранное и отзывы пользователей
+  ["/api/catalog/:kind", ency.catalogList],
+  ["/api/catalog/:kind/genres", ency.catalogGenres],
+  ["/api/catalog/:kind/:id/reviews", ency.entryReviews],
+  ["/api/search", ency.search],
+  ["/api/rankings", ency.rankings],
+  ["/api/recommendations", ency.recommendationList],
+  ["/api/mylist", ency.myList],
+  ["/api/mylist/:kind/:id", ency.myListItem],
+  ["/api/favorites", ency.favorites],
+  ["/api/favorites/:type/:id", ency.favorite],
+  ["/api/entry-reviews", ency.recentReviews],
+  ["/api/entry-reviews/:id", ency.entryReview],
+  ["/api/users/:username/encyclopedia", ency.userEncyclopedia],
+  ["/api/users/:username/mylist", ency.userList],
+  ["/api/admin/catalog", ency.adminCatalog],
+  ["/api/admin/catalog/settings", ency.adminCatalogSettings],
+  ["/api/admin/catalog/cache", ency.adminCatalogCache],
+  ["/api/admin/catalog/errors", ency.adminCatalogErrors],
+  ["/api/admin/entry-reviews", ency.adminReviews],
   ["/title/:id", titlePage],
   ["/read/:id/:chapter", readerPage],
   ["/pages/:id/:chapter/:page", pageImage],
   ["/covers/:id", coverImage],
   ["/avatars/:id", profile.avatarImage],
   // Страницы разделов: каркас с сервера, данные подгружает скрипт раздела
-  ["/", site.home],
+  ["/", encyPages.home],
+  ["/anime", encyPages.animeCatalog],
+  ["/manga", encyPages.mangaCatalog],
+  ["/anime/:slug", encyPages.animePage],
+  ["/manga/:slug", encyPages.mangaPage],
+  ["/characters", encyPages.characters],
+  ["/characters/:slug", encyPages.characterPage],
+  ["/people", encyPages.people],
+  ["/people/:slug", encyPages.personPage],
+  ["/studios", encyPages.studios],
+  ["/studios/:slug", encyPages.studioPage],
+  ["/seasons", encyPages.seasons],
+  ["/seasons/:code", encyPages.seasons],
+  ["/rankings", encyPages.rankingsPage],
+  ["/mylist", encyPages.myListPage],
+  ["/search", encyPages.searchPage],
+  // Прежняя главная платформы чтения: подборки по настроению, полка, Nexus и Oracle
+  ["/reading", site.home],
   ["/catalog", site.catalog],
   ["/nexus", site.nexus],
   ["/oracle", site.oracle],

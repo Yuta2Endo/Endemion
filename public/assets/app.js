@@ -270,7 +270,121 @@ export async function initHeader() {
     bell.hidden = !user;
     if (user) setUnread(me.unread || 0);
   }
+  initSearch();
   return user;
+}
+
+// ==================== ПОИСК ПО ЭНЦИКЛОПЕДИИ ====================
+
+const slugPart = (item) => `${item.id}${item.slug ? `-${item.slug}` : ""}`;
+export const entryUrl = (entry) => `/${entry.kind}/${slugPart(entry)}`;
+export const characterUrl = (item) => `/characters/${slugPart(item)}`;
+export const personUrl = (item) => `/people/${slugPart(item)}`;
+export const studioUrl = (item) => `/studios/${slugPart(item)}`;
+
+/** Картинка из каталога (Shikimori) без отправки адреса страницы. Нет картинки — заглушка */
+export function remoteImage(url, alt = "", className = "") {
+  if (!url) {
+    const empty = el("span", `poster-empty${className ? ` ${className}` : ""}`, "✦");
+    empty.setAttribute("aria-hidden", "true");
+    return empty;
+  }
+  const img = el("img", className || null);
+  img.src = url;
+  img.alt = alt;
+  img.loading = "lazy";
+  img.decoding = "async";
+  img.referrerPolicy = "no-referrer";
+  return img;
+}
+
+const SEARCH_GROUPS = [
+  ["anime", "Аниме", (item) => entryUrl(item), (item) => [item.year, item.titleEn].filter(Boolean).join(" · ")],
+  ["manga", "Манга", (item) => entryUrl(item), (item) => [item.year, item.titleEn].filter(Boolean).join(" · ")],
+  ["characters", "Персонажи", characterUrl, (item) => item.nameEn || ""],
+  ["people", "Люди", personUrl, (item) => item.nameEn || ""],
+  ["studios", "Студии", studioUrl, () => "Студия"]
+];
+
+/**
+ * Поиск в шапке: кнопка с лупой открывает поле, подсказки появляются по мере ввода.
+ * «/» открывает поиск с любого места страницы, Escape закрывает. Без скриптов лупа ведёт на страницу /search
+ */
+function initSearch() {
+  const toggle = document.querySelector("#searchToggle");
+  const panel = document.querySelector("#searchPanel");
+  const input = document.querySelector("#globalSearch");
+  const results = document.querySelector("#searchResults");
+  if (!(toggle instanceof HTMLElement && panel instanceof HTMLElement && input instanceof HTMLInputElement && results)) return;
+  toggle.setAttribute("aria-controls", "searchPanel");
+  toggle.setAttribute("aria-expanded", "false");
+
+  const setOpen = (open) => {
+    panel.hidden = !open;
+    toggle.setAttribute("aria-expanded", String(open));
+    if (open) input.focus();
+  };
+  toggle.addEventListener("click", (event) => {
+    event.preventDefault();
+    setOpen(panel.hidden);
+  });
+  document.addEventListener("keydown", (event) => {
+    const target = event.target;
+    const typing = target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement ||
+      (target instanceof HTMLElement && target.isContentEditable);
+    if (event.key === "/" && !typing && !event.ctrlKey && !event.metaKey && !event.altKey) {
+      event.preventDefault();
+      setOpen(true);
+    } else if (event.key === "Escape" && !panel.hidden) {
+      setOpen(false);
+      toggle.focus();
+    }
+  });
+
+  let timer = null;
+  // Ответ на устаревший запрос (пользователь продолжил печатать) отбрасывается
+  let requestId = 0;
+  input.addEventListener("input", () => {
+    clearTimeout(timer);
+    timer = setTimeout(run, 300);
+  });
+
+  async function run() {
+    const query = input.value.trim();
+    const id = ++requestId;
+    if ([...query].length < 2) {
+      results.replaceChildren();
+      return;
+    }
+    results.replaceChildren(el("p", "muted small", "Ищем…"));
+    const result = await api(`/api/search?q=${encodeURIComponent(query)}`);
+    if (id !== requestId) return;
+    if (!result.ok) {
+      results.replaceChildren(el("p", "muted small", result.data?.error || "Поиск не удался. Попробуйте ещё раз."));
+      return;
+    }
+    const groups = [];
+    for (const [key, label, url, note] of SEARCH_GROUPS) {
+      const items = (result.data[key] || []).slice(0, 5);
+      if (!items.length) continue;
+      const group = el("section", "search-group");
+      group.append(el("h3", null, label));
+      for (const item of items) {
+        const hit = el("a", "search-hit");
+        hit.href = url(item);
+        const text = el("span");
+        text.append(el("strong", null, item.title || item.name), el("small", null, note(item)));
+        hit.append(remoteImage(item.poster?.small || item.image?.small || item.image, ""), text);
+        group.append(hit);
+      }
+      groups.push(group);
+    }
+    if (!groups.length) {
+      results.replaceChildren(el("p", "muted small", "Ничего не найдено. Попробуйте другое написание или название на английском."));
+      return;
+    }
+    results.replaceChildren(...groups, link(`/search?q=${encodeURIComponent(query)}`, "ghost-btn small-btn search-all", "Все результаты →"));
+  }
 }
 
 /** Число непрочитанных уведомлений на колокольчике в шапке */

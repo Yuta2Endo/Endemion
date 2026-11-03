@@ -10,6 +10,8 @@ export function onRequestGet({ request }) {
     "Disallow: /profile",
     "Disallow: /admin",
     "Disallow: /reset",
+    "Disallow: /mylist",
+    "Disallow: /search",
     "",
     `Sitemap: ${origin}/sitemap.xml`,
     ""

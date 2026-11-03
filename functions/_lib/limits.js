@@ -18,8 +18,31 @@ export const ACTION_LIMITS = {
   poll: [[5, 24 * HOUR]],
   tournament: [[3, 24 * HOUR]],
   avatar: [[10, HOUR]],
-  oracle: [[60, 60 * 1000]]
+  oracle: [[60, 60 * 1000]],
+  list: [[120, 60 * 1000], [2000, 24 * HOUR]],
+  favorite: [[60, 60 * 1000], [500, 24 * HOUR]],
+  entryReview: [[5, HOUR], [20, 24 * HOUR]]
 };
+
+// Запросы к каталогу с одного IP (гости тоже): каждый новый запрос может уйти во внешний источник
+export const IP_LIMITS = {
+  search: [[40, 60 * 1000]],
+  catalog: [[150, 60 * 1000]]
+};
+
+/** То же, что takeAction, но по IP посетителя. Ответ 429 или null */
+export async function takeIpAction(env, ip, action) {
+  const key = `ip:${ip}:${action}`;
+  const now = Date.now();
+  for (const [count, windowMs] of IP_LIMITS[action]) {
+    const row = await env.DB.prepare("SELECT COUNT(*) AS n FROM rate_events WHERE key = ? AND created_at > ?").bind(key, now - windowMs).first();
+    if (row.n >= count) return error("Слишком много запросов. Подождите минуту.", 429, { "Retry-After": String(Math.ceil(windowMs / 1000)) });
+  }
+  const statements = [env.DB.prepare("INSERT INTO rate_events (key, created_at) VALUES (?, ?)").bind(key, now)];
+  if (Math.random() < 0.01) statements.push(env.DB.prepare("DELETE FROM rate_events WHERE created_at < ?").bind(now - LONGEST));
+  await env.DB.batch(statements);
+  return null;
+}
 
 const LONGEST = 24 * HOUR;
 

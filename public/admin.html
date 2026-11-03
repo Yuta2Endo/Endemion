@@ -30,6 +30,8 @@
       <nav class="admin-panel admin-menu" aria-labelledby="adminHeading">
         <h1 id="adminHeading">Админка</h1>
         <a href="#dashboard" data-section="dashboard" data-admin-only>Сводка</a>
+        <a href="#catalog" data-section="catalog" data-admin-only>Каталог</a>
+        <a href="#reviews" data-section="reviews">Отзывы</a>
         <a href="#titles" data-section="titles" data-admin-only>Тайтлы</a>
         <a href="#taxonomy" data-section="taxonomy" data-admin-only>Жанры и авторы</a>
         <a href="#moderation" data-section="moderation">Модерация <span class="admin-badge" id="reportsBadge" hidden></span></a>
@@ -321,12 +323,73 @@
           </section>
         </div>
 
+        <!-- ==================== КАТАЛОГ ЭНЦИКЛОПЕДИИ ==================== -->
+        <div class="admin-main" data-panel="catalog" data-admin-only hidden>
+          <section class="admin-panel" aria-labelledby="catalogHeading">
+            <h2 id="catalogHeading">Источник данных</h2>
+            <p class="panel-description">
+              Произведения, персонажи, люди и студии загружаются из Shikimori через единый слой каталога и хранятся в кеше.
+              Если источник не отвечает, сайт показывает сохранённые копии. Списки, оценки, избранное и отзывы хранятся в базе Endemion.
+            </p>
+            <div class="admin-actions">
+              <button class="secondary-button" id="catalogRefresh" type="button">Проверить ещё раз</button>
+              <button class="secondary-button" id="catalogClearCache" type="button">Очистить кеш</button>
+            </div>
+            <p class="form-message" id="catalogMessage" role="status" aria-live="polite"></p>
+            <div class="admin-stats" id="catalogStatus"></div>
+          </section>
+          <section class="admin-panel" aria-labelledby="catalogSettingsHeading">
+            <h2 id="catalogSettingsHeading">Настройки каталога</h2>
+            <form id="catalogSettingsForm" novalidate>
+              <label class="admin-tag-chip"><input id="allowAdult" type="checkbox"> Показывать взрослый контент (рейтинг Rx и скрытые жанры)</label>
+              <p class="admin-subheading">Скрытые жанры аниме</p>
+              <p class="admin-hint">Произведения с этими жанрами не показываются в каталоге, на главной и в поиске.</p>
+              <div id="hiddenAnime"></div>
+              <p class="admin-subheading">Скрытые жанры манги</p>
+              <div id="hiddenManga"></div>
+              <p class="admin-subheading">Первое произведение на главной</p>
+              <p class="admin-hint">Номер из адреса страницы: для /anime/16498-shingeki-no-kyojin — 16498. Пусто — самое популярное из выходящих.</p>
+              <div class="admin-filters">
+                <div class="field"><label for="heroKind">Раздел</label>
+                  <select id="heroKind"><option value="anime">Аниме</option><option value="manga">Манга</option></select></div>
+                <div class="field"><label for="heroId">Номер</label><input id="heroId" type="text" inputmode="numeric" maxlength="9"></div>
+              </div>
+              <button class="main-button" type="submit">Сохранить настройки</button>
+              <p class="form-message" id="catalogSettingsMessage" role="status" aria-live="polite"></p>
+            </form>
+          </section>
+          <section class="admin-panel" aria-labelledby="catalogErrorsHeading">
+            <h2 id="catalogErrorsHeading">Ошибки интеграции</h2>
+            <p class="panel-description">Последние 50 неудачных запросов к источнику: сбои сети, тайм-ауты, ответы 429 и 5xx.</p>
+            <button class="secondary-button" id="catalogClearErrors" type="button">Очистить журнал</button>
+            <ol class="admin-audit-list" id="catalogErrors"></ol>
+          </section>
+        </div>
+
+        <!-- ==================== ОТЗЫВЫ О ПРОИЗВЕДЕНИЯХ ==================== -->
+        <div class="admin-main" data-panel="reviews" hidden>
+          <section class="admin-panel" aria-labelledby="entryReviewsHeading">
+            <h2 id="entryReviewsHeading">Отзывы о произведениях</h2>
+            <p class="panel-description">
+              Скрытый отзыв не виден другим и не входит в оценку ENDEMION, автор получает уведомление.
+              Жалобы пользователей на отзывы — в разделе «Модерация».
+            </p>
+            <div class="admin-filters">
+              <div class="field"><label for="entryReviewFilter">Показать</label>
+                <select id="entryReviewFilter"><option value="all">Все</option><option value="hidden">Скрытые</option></select></div>
+            </div>
+            <p class="form-message" id="entryReviewsMessage" role="status" aria-live="polite"></p>
+            <ul class="admin-complaint-list" id="entryReviewList"></ul>
+            <button class="secondary-button admin-more" id="entryReviewsMore" type="button" hidden>Показать ещё</button>
+          </section>
+        </div>
+
         <!-- ==================== МОДЕРАЦИЯ ==================== -->
         <div class="admin-main" data-panel="moderation" hidden>
           <section class="admin-panel" aria-labelledby="reportsHeading">
             <h2 id="reportsHeading">Жалобы пользователей</h2>
             <p class="panel-description">
-              Жалобы на комментарии, рецензии, обсуждения, подборки, турниры и профили. Решение закрывает все жалобы на этот контент
+              Жалобы на комментарии, отзывы, рецензии, обсуждения, подборки, турниры и профили. Решение закрывает все жалобы на этот контент
               и попадает в журнал модерации. Автор скрытого контента получает уведомление.
             </p>
             <div class="admin-filters">
@@ -467,6 +530,7 @@
                 <option value="chapters">Главы и страницы</option>
                 <option value="complaints">Жалобы</option>
                 <option value="users">Пользователи</option>
+                <option value="catalog">Каталог</option>
               </select>
             </div>
           </div>
