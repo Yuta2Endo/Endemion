@@ -19,3 +19,11 @@
 www.{$SITE_DOMAIN} {
 	redir https://{$SITE_DOMAIN}{uri} permanent
 }
+
+# Endemion Life — отдельный проект в /opt/endemion-life. Его Nginx подключён к сети endemion_default
+# под именем endemion-life-nginx; сжатие и лимиты запросов делает он сам
+life.{$SITE_DOMAIN} {
+	reverse_proxy endemion-life-nginx:80 {
+		header_up X-Forwarded-For {remote_host}
+	}
+}
