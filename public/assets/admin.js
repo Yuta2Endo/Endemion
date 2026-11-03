@@ -5,6 +5,7 @@
 import { api, chaptersText, getMe, loginUrl, posterBackground, titlePicker, toast, TYPE_LABELS } from "./app.js";
 import { loadCollections, loadModeration, loadPlatformStats, loadPolls, loadReports, loadTaxonomy } from "./admin-community.js";
 import { initCatalogAdmin, loadCatalog, loadReviews } from "./admin-catalog.js";
+import { initUniverseAdmin, loadUniverse } from "./admin-universe.js";
 
 const $ = (selector) => document.querySelector(selector);
 
@@ -101,7 +102,7 @@ function busy() {
 
 // ==================== РАЗДЕЛЫ ====================
 
-const SECTIONS = ["dashboard", "catalog", "reviews", "titles", "taxonomy", "moderation", "polls", "collections", "complaints", "users", "audit"];
+const SECTIONS = ["dashboard", "catalog", "universe", "reviews", "titles", "taxonomy", "moderation", "polls", "collections", "complaints", "users", "audit"];
 const MODERATOR_SECTIONS = ["reviews", "moderation", "polls"];
 
 /** Разделы, доступные вошедшему: модератору — только модерация и голосования */
@@ -129,6 +130,7 @@ async function route() {
 
   if (section === "dashboard") loadDashboard();
   if (section === "catalog") loadCatalog();
+  if (section === "universe") loadUniverse(id);
   if (section === "reviews") loadReviews(true);
   if (section === "taxonomy") loadTaxonomy();
   if (section === "moderation") loadModeration();
@@ -1179,7 +1181,13 @@ const ACTION_LABELS = {
   "collection.update": "изменение подборки",
   "catalog.settings": "настройки каталога",
   "catalog.cache": "очистка кеша каталога",
-  "catalog.errors": "очистка журнала ошибок каталога"
+  "catalog.errors": "очистка журнала ошибок каталога",
+  "universe.entity.create": "новая запись вселенной",
+  "universe.entity.update": "изменение записи вселенной",
+  "universe.entity.delete": "удаление записи вселенной",
+  "universe.relation.create": "новая связь вселенной",
+  "universe.relation.update": "изменение связи вселенной",
+  "universe.relation.delete": "удаление связи вселенной"
 };
 
 function auditRow(entry) {
@@ -1244,6 +1252,7 @@ async function init() {
   }
   me = user;
   initCatalogAdmin();
+  initUniverseAdmin();
 
   if (!user.isAdmin) {
     // Модератору не нужны тайтлы и жалобы правообладателей: эти запросы сервер ему всё равно отклонит

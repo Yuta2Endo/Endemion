@@ -13,6 +13,24 @@ export const RELATION_TYPES = ["friend", "family", "enemy", "rival", "mentor", "
 export const SPOILER_MODES = ["safe", "full"];
 export const TIMELINE_ORDERS = ["episode", "chronology"];
 
+// Какие концы допустимы у связи: character — персонаж каталога, остальные — тип сущности
+const PEOPLE = ["character"];
+const SIDES = ["character", "organization"];
+export const RELATION_RULES = {
+  friend: { source: PEOPLE, target: PEOPLE },
+  family: { source: PEOPLE, target: PEOPLE },
+  mentor: { source: PEOPLE, target: PEOPLE },
+  enemy: { source: SIDES, target: SIDES },
+  rival: { source: SIDES, target: SIDES },
+  member_of: { source: SIDES, target: ["organization"] },
+  participates_in: { source: SIDES, target: ["event"] },
+  located_in: { source: ["character", "organization", "event", "location"], target: ["location"] }
+};
+// Связи-вложенность: цепочка не может замкнуться (организация в организации, локация в локации)
+export const HIERARCHY_RELATIONS = ["member_of", "located_in"];
+// Связи без направления: A — друг B то же, что B — друг A
+export const SYMMETRIC_RELATIONS = ["friend", "family", "enemy", "rival"];
+
 // Сколько узлов брать из каталога: карта должна оставаться читаемой и быстрой на телефоне
 export const LIMITS = { characters: 24, staff: 8, related: 12 };
 
@@ -76,7 +94,13 @@ export async function universeGraph(env, viewer, kind, extId, requestedMode = nu
   const workId = `work:${kind}:${extId}`;
   add({ id: workId, type: "work", title: entry.title, image: entry.poster?.small || null, url: entryPath(entry), center: true });
 
-  for (const character of (entry.characters || []).slice(0, LIMITS.characters)) {
+  const { entities, relations } = await manualRows(env, kind, extId);
+  // Персонаж за пределами лимита попадает на карту, если администратор указал его в связи
+  const linked = new Set(relations.flatMap((row) => [
+    row.source_type === "character" ? row.source_id : null, row.target_type === "character" ? row.target_id : null
+  ]));
+  const characters = (entry.characters || []).filter((character, index) => index < LIMITS.characters || linked.has(character.id));
+  for (const character of characters) {
     const id = `character:${character.id}`;
     add({ id, type: "character", title: character.name, image: character.image?.small || null, url: characterPath(character), role: character.role });
     edges.push({ source: id, target: workId, type: "appears_in", label: ROLE_LABELS[character.role] || "", auto: true });
@@ -97,7 +121,6 @@ export async function universeGraph(env, viewer, kind, extId, requestedMode = nu
     edges.push({ source: workId, target: id, type: "related", label: item.relation, auto: true });
   }
 
-  const { entities, relations } = await manualRows(env, kind, extId);
   let hidden = 0;
   for (const row of entities) {
     if (!visible(row)) {

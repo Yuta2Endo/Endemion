@@ -195,3 +195,111 @@ describe("целостность данных", () => {
     assert.equal(left, 0);
   });
 });
+
+// Последний блок: записи, созданные здесь, не влияют на счётчики скрытого выше
+describe("админка вселенной", () => {
+  const base = "/api/admin/universe/anime/16498";
+
+  test("только администратор", async () => {
+    const reader = await app.user("Не админ");
+    const moderator = await app.user("Модератор вселенной", "moderator");
+    assert.equal((await app.client().call("GET", base)).status, 401);
+    assert.equal((await reader.call("GET", base)).status, 403);
+    assert.equal((await moderator.call("POST", `${base}/entities`, { type: "location", title: "Стена", reference: "Эпизод 1" })).status, 403);
+    assert.equal((await reader.call("DELETE", `/api/admin/universe/entities/${E.corps}`)).status, 403);
+  });
+
+  test("сущности: создание, проверки, правка, удаление", async () => {
+    const admin = await app.user("Админ вселенной", "admin");
+    let r = await admin.call("GET", base);
+    assert.equal(r.status, 200);
+    assert.equal(r.data.entry.units, 25);
+    assert.equal(r.data.entry.url, "/anime/16498-shingeki-no-kyojin");
+    assert.equal(r.data.characters.length, 3);
+    assert.ok(r.data.entities.some((entity) => entity.id === E.corps));
+    assert.equal((await admin.call("GET", "/api/admin/universe/anime/123456")).status, 404);
+
+    const bad = [
+      { body: { type: "planet", title: "X", reference: "Эпизод 1" }, message: /Тип/ },
+      { body: { type: "location", title: "Шиганшина" }, message: /Источник/ },
+      { body: { type: "location", title: "", reference: "Эпизод 1" }, message: /Название/ },
+      { body: { type: "location", title: "Шиганшина", reference: "Эпизод 1", episode: 26 }, message: /от 1 до 25/ },
+      { body: { type: "location", title: "Шиганшина", reference: "Эпизод 1", spoilerLevel: 3 }, message: /спойлера/ },
+      { body: { type: "location", title: "Шиганшина", reference: "Эпизод 1", chronologyOrder: 1 }, message: /только у события/ }
+    ];
+    for (const { body, message } of bad) {
+      r = await admin.call("POST", `${base}/entities`, body);
+      assert.equal(r.status, 400, JSON.stringify(body));
+      assert.match(r.data.error, message);
+    }
+
+    r = await admin.call("POST", `${base}/entities`, { type: "location", title: "  Шиганшина ", reference: "Эпизод 1", description: "Район стены Мария" });
+    assert.equal(r.status, 201);
+    assert.equal(r.data.entity.title, "Шиганшина");
+    const city = r.data.entity.id;
+    assert.equal((await admin.call("POST", `${base}/entities`, { type: "location", title: "Шиганшина", reference: "Эпизод 1" })).status, 409);
+
+    r = await admin.call("PUT", `/api/admin/universe/entities/${city}`, { title: "Шиганшина", reference: "Эпизод 1", episode: 1, spoilerLevel: 1 });
+    assert.equal(r.status, 200);
+    assert.equal(r.data.entity.episode, 1);
+    assert.equal((await admin.call("PUT", `/api/admin/universe/entities/${city}`, { type: "event", title: "Шиганшина", reference: "Эпизод 1" })).status, 400);
+    assert.equal((await admin.call("PUT", "/api/admin/universe/entities/999999", { title: "Нет", reference: "Эпизод 1" })).status, 404);
+
+    // Запись видна на карте в полном режиме
+    r = await app.client().call("GET", "/api/universe/anime/16498?mode=full");
+    assert.ok(nodeIds(r.data).has(`entity:${city}`));
+
+    assert.equal((await admin.call("DELETE", `/api/admin/universe/entities/${city}`)).status, 200);
+    assert.equal((await admin.call("DELETE", `/api/admin/universe/entities/${city}`)).status, 404);
+    const log = await app.db.prepare("SELECT action FROM audit_log WHERE action LIKE 'universe.%' ORDER BY id").all();
+    assert.deepEqual(log.results.map((row) => row.action), ["universe.entity.create", "universe.entity.update", "universe.entity.delete"]);
+  });
+
+  test("связи: допустимые концы, повторы, циклы", async () => {
+    const admin = await app.user("Админ связей", "admin");
+    const post = (body) => admin.call("POST", `${base}/relations`, { reference: "Эпизод 2", ...body });
+    const eren = { type: "character", id: 40882 };
+    const hannes = { type: "character", id: 46496 };
+    const corps = { type: "entity", id: E.corps };
+
+    let r = await post({ type: "member_of", from: { type: "character", id: 99999 }, to: corps });
+    assert.equal(r.status, 400);
+    assert.match(r.data.error, /нет в этом произведении/);
+    r = await post({ type: "friend", from: eren, to: corps });
+    assert.equal(r.status, 400, "дружба только между персонажами");
+    r = await post({ type: "member_of", from: eren, to: eren });
+    assert.match(r.data.error, /самой собой/);
+    r = await post({ type: "participates_in", from: eren, to: corps });
+    assert.equal(r.status, 400, "участвовать можно только в событии");
+
+    r = await post({ type: "member_of", from: eren, to: corps, episode: 2, description: "Вступает после выпуска" });
+    assert.equal(r.status, 201);
+    const membership = r.data.relation.id;
+    assert.equal((await post({ type: "member_of", from: eren, to: corps })).status, 409);
+
+    // Дружба без направления: обратная связь — повтор
+    assert.equal((await post({ type: "friend", from: eren, to: hannes })).status, 201);
+    assert.equal((await post({ type: "friend", from: hannes, to: eren })).status, 409);
+
+    // Вложенность локаций не замыкается
+    const place = async (title) => (await admin.call("POST", `${base}/entities`, { type: "location", title, reference: "Эпизод 1" })).data.entity.id;
+    const [wall, district, town] = [await place("Стена Мария"), await place("Округ Шиганшина"), await place("Город")];
+    assert.equal((await post({ type: "located_in", from: { type: "entity", id: town }, to: { type: "entity", id: district } })).status, 201);
+    assert.equal((await post({ type: "located_in", from: { type: "entity", id: district }, to: { type: "entity", id: wall } })).status, 201);
+    r = await post({ type: "located_in", from: { type: "entity", id: wall }, to: { type: "entity", id: town } });
+    assert.equal(r.status, 400);
+    assert.match(r.data.error, /замкнёт/);
+
+    r = await admin.call("PUT", `/api/admin/universe/relations/${membership}`, { reference: "Эпизод 3", episode: 3, spoilerLevel: 1 });
+    assert.equal(r.status, 200);
+    assert.equal(r.data.relation.episode, 3);
+    assert.equal(r.data.relation.from.id, 40882, "концы не меняются");
+    assert.equal((await admin.call("PUT", `/api/admin/universe/relations/${membership}`, { reference: "" })).status, 400);
+
+    r = await app.client().call("GET", "/api/universe/anime/16498?mode=full");
+    assert.ok(r.data.edges.some((edge) => edge.type === "member_of" && edge.source === "character:40882" && edge.target === `entity:${E.corps}`));
+    assert.equal((await admin.call("DELETE", `/api/admin/universe/relations/${membership}`)).status, 200);
+    r = await app.client().call("GET", "/api/universe/anime/16498?mode=full");
+    assert.ok(!r.data.edges.some((edge) => edge.type === "member_of" && edge.source === "character:40882"));
+  });
+});
