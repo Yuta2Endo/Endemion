@@ -251,6 +251,9 @@ export async function initHeader() {
   const account = document.querySelector("#accountButton");
   const me = await getMe();
   const { user } = me;
+  // «Регистрация» рядом с «Войти» только для гостя. /auth?mode=register ведёт на регистрацию в Endemion ID или на старую форму
+  const register = document.querySelector("#registerButton");
+  if (register instanceof HTMLElement) register.hidden = Boolean(user);
   if (account instanceof HTMLAnchorElement) {
     if (user) {
       const name = el("span", "account-name", user.name);

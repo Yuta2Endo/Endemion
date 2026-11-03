@@ -14,7 +14,9 @@ export const NAV = [
   ["/oracle", "Oracle", "oracle"],
   ["/pulse", "Pulse", "pulse"],
   ["/community", "Сообщество", "community"],
-  ["/arena", "Арена", "arena"]
+  ["/arena", "Арена", "arena"],
+  // Игра Endemion Life: тот же аккаунт Endemion ID, вход без пароля при активной сессии
+  ["https://life.endemion.online", "Endemion Life", "life"]
 ];
 
 // Контуры иконок 24×24. Такие же есть в public/assets/app.js для иконок, которые рисует скрипт
@@ -40,6 +42,7 @@ export function siteHeader(active) {
       <div class="nav-actions">
         <a class="icon-btn" href="/catalog" aria-label="Поиск по каталогу">${svgIcon("search")}</a>
         <a class="icon-btn" id="notifyButton" href="/pulse#notifications" aria-label="Уведомления" hidden>${svgIcon("bell")}<span class="badge-count" id="notifyCount" hidden></span></a>
+        <a class="ghost-btn register-btn" id="registerButton" href="/auth?mode=register" hidden>Регистрация</a>
         <a class="profile-btn" id="accountButton" href="/auth">Войти</a>
         <button class="icon-btn menu-toggle" type="button" aria-controls="navLinks" aria-expanded="false" aria-label="Меню">${svgIcon("menu", "icon-open")}${svgIcon("close", "icon-close")}</button>
       </div>
@@ -57,6 +60,7 @@ export function siteFooter() {
       <nav class="footer-links" aria-label="Документы и разделы">
         <a href="/catalog">Каталог</a>
         <a href="/community">Сообщество</a>
+        <a href="https://life.endemion.online">Endemion Life</a>
         <a href="/copyright">Правообладателям</a>
         <a href="/privacy">Политика конфиденциальности</a>
         <a href="/privacy#cookie" data-cookie-settings hidden>Настройки cookie</a>

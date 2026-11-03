@@ -743,6 +743,11 @@ img {
     display: none;
   }
 
+  /* На телефоне в шапке остаётся только «Войти»: регистрация открывается со страницы входа */
+  .register-btn {
+    display: none;
+  }
+
   .footer-inner {
     display: block;
   }
