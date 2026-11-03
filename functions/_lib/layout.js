@@ -17,20 +17,13 @@ export const NAV = [
   ["/seasons", "Сезоны", "seasons"],
   ["/rankings", "Рейтинги", "rankings"],
   ["/mylist", "Мой список", "mylist"],
-  ["/community", "Сообщество", "community"]
+  ["/community", "Сообщество", "community"],
+  ["/pulse", "Pulse", "pulse"],
+  ["/arena", "Арена", "arena"]
 ];
 
-// Меню «Ещё»: платформа чтения, которая была на сайте до энциклопедии, и игра Endemion Life
-export const NAV_MORE = [
-  ["/reading", "Читалка: главная", "reading"],
-  ["/catalog", "Читалка: каталог", "catalog"],
-  ["/nexus", "Nexus", "nexus"],
-  ["/oracle", "Oracle", "oracle"],
-  ["/pulse", "Pulse", "pulse"],
-  ["/arena", "Арена", "arena"],
-  // Тот же аккаунт Endemion ID, вход без пароля при активной сессии
-  ["https://life.endemion.online", "Endemion Life", "life"]
-];
+// Внешняя ссылка на Life в меню «Ещё» больше не нужна: остались только разделы энциклопедии
+export const NAV_MORE = [];
 
 // Контуры иконок 24×24. Такие же есть в public/assets/app.js для иконок, которые рисует скрипт
 const ICONS = {
@@ -47,13 +40,10 @@ export function svgIcon(name, className = "") {
 
 export function siteHeader(active) {
   const item = ([href, label, key]) => `<a href="${href}"${key === active ? ' aria-current="page"' : ""}>${e(label)}</a>`;
-  const moreActive = NAV_MORE.some(([, , key]) => key === active);
   return `<header class="header">
     <div class="container nav">
       <a class="logo" href="/" aria-label="ENDEMION — на главную"><span class="logo-mark" aria-hidden="true">E</span><span class="logo-text">ENDEMION</span></a>
-      <nav class="nav-links" id="navLinks" aria-label="Разделы">${NAV.map(item).join("")}
-        <details class="nav-more"${moreActive ? " data-active" : ""}><summary>Ещё</summary><div class="nav-more-menu">${NAV_MORE.map(item).join("")}</div></details>
-      </nav>
+      <nav class="nav-links" id="navLinks" aria-label="Разделы">${NAV.map(item).join("")}</nav>
       <div class="nav-actions">
         <a class="icon-btn" id="searchToggle" href="/search" aria-label="Поиск: аниме, манга, персонажи, люди, студии" aria-keyshortcuts="/">${svgIcon("search")}</a>
         <a class="icon-btn" id="notifyButton" href="/pulse#notifications" aria-label="Уведомления" hidden>${svgIcon("bell")}<span class="badge-count" id="notifyCount" hidden></span></a>
@@ -88,7 +78,6 @@ export function siteFooter() {
         <a href="/anime">Аниме</a>
         <a href="/manga">Манга</a>
         <a href="/community">Сообщество</a>
-        <a href="/reading">Читалка</a>
         <a href="https://life.endemion.online">Endemion Life</a>
         <a href="/copyright">Правообладателям</a>
         <a href="/privacy">Политика конфиденциальности</a>

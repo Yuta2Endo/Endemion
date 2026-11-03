@@ -240,15 +240,15 @@ img {
   align-items: center;
   gap: 0;
   color: var(--muted);
-  font-size: 13.5px;
+  font-size: 14px;
   font-weight: 600;
   white-space: nowrap;
 }
 
-/* Десять разделов энциклопедии и «Ещё» должны уместиться в одну строку шапки */
+/* Двенадцать разделов (с Pulse и Ареной) должны уместиться в одну строку шапки */
 .nav-links a {
   position: relative;
-  padding: 8px 9px;
+  padding: 8px 10px;
   border-radius: 10px;
   transition: color 0.2s ease, background 0.2s ease;
 }
@@ -264,9 +264,9 @@ img {
 
 .nav-links a[aria-current="page"]::after {
   position: absolute;
-  right: 9px;
+  right: 10px;
   bottom: 2px;
-  left: 9px;
+  left: 10px;
   height: 2px;
   border-radius: 2px;
   content: "";
@@ -364,78 +364,6 @@ img {
 }
 
 /* ==================== ШАПКА: МЕНЮ «ЕЩЁ» И ПОИСК ПО ЭНЦИКЛОПЕДИИ ==================== */
-
-.nav-more {
-  position: relative;
-}
-
-.nav-more summary {
-  padding: 8px 9px;
-  border-radius: 10px;
-  color: var(--muted);
-  cursor: pointer;
-  list-style: none;
-  transition: color 0.2s ease, background 0.2s ease;
-}
-
-.nav-more summary::-webkit-details-marker {
-  display: none;
-}
-
-.nav-more summary::after {
-  margin-left: 6px;
-  content: "▾";
-  font-size: 11px;
-  transition: transform 0.25s ease;
-}
-
-.nav-more[open] summary::after {
-  transform: rotate(180deg);
-}
-
-.nav-more summary:hover,
-.nav-more[open] summary,
-.nav-more[data-active] summary {
-  color: var(--text);
-  background: var(--panel-soft);
-}
-
-.nav-more-menu {
-  position: absolute;
-  top: calc(100% + 8px);
-  right: 0;
-  z-index: 40;
-  display: grid;
-  min-width: 220px;
-  padding: 8px;
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  background: rgba(13, 11, 36, 0.98);
-  box-shadow: 0 12px 32px rgba(3, 2, 14, 0.5);
-  animation: menu-in 0.2s ease;
-}
-
-@keyframes menu-in {
-  from {
-    opacity: 0;
-    transform: translateY(-8px);
-  }
-}
-
-.nav-more-menu a {
-  padding: 10px 12px;
-  border-radius: 10px;
-  transition: background 0.2s ease, color 0.2s ease;
-}
-
-.nav-more-menu a:hover {
-  color: var(--text);
-  background: var(--panel-soft);
-}
-
-.nav-more-menu a::after {
-  display: none;
-}
 
 .search-panel {
   border-top: 1px solid var(--border);
@@ -818,7 +746,7 @@ img {
 /* ==================== ПЛАНШЕТЫ И ТЕЛЕФОНЫ ==================== */
 
 /* На средних экранах «Регистрация» не помещается рядом с разделами: она есть на странице входа */
-@media (max-width: 1499px) {
+@media (max-width: 1679px) {
   .register-btn {
     display: none;
   }
@@ -871,25 +799,6 @@ img {
     display: none;
   }
 
-  /* В мобильном меню «Ещё» раскрывается списком на месте */
-  .nav-more-menu {
-    position: static;
-    min-width: 0;
-    padding: 0 0 0 12px;
-    border: 0;
-    background: none;
-    box-shadow: none;
-    animation: none;
-  }
-
-  .nav-more-menu a {
-    padding: 10px 12px;
-  }
-
-  .nav-more summary {
-    padding: 13px 12px;
-    font-size: 16px;
-  }
 }
 
 @media (max-width: 680px) {
