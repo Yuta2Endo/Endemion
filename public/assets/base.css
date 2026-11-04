@@ -237,8 +237,8 @@ img {
   place-items: center;
   border-radius: 12px 12px 12px 4px;
   color: #fff;
-  background: linear-gradient(135deg, var(--accent-strong), var(--secondary) 65%, var(--highlight));
-  box-shadow: 0 0 24px rgba(var(--accent-rgb), 0.55), inset 0 0 0 1px rgba(255, 255, 255, 0.2);
+  background: linear-gradient(135deg, #6366f1, #8b5cf6 65%, #a855f7);
+  box-shadow: 0 0 24px rgba(139, 92, 246, 0.55), inset 0 0 0 1px rgba(255, 255, 255, 0.2);
   font-size: 16px;
   letter-spacing: 0;
 }
