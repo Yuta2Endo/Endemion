@@ -6,6 +6,7 @@ import { api, chaptersText, getMe, loginUrl, posterBackground, titlePicker, toas
 import { loadCollections, loadModeration, loadPlatformStats, loadPolls, loadReports, loadTaxonomy } from "./admin-community.js";
 import { initCatalogAdmin, loadCatalog, loadReviews } from "./admin-catalog.js";
 import { initUniverseAdmin, loadUniverse } from "./admin-universe.js";
+import { initStudioAdmin, loadForumCategories, loadGames, loadSiteSettings, loadStudioPosts } from "./admin-studio.js";
 
 const $ = (selector) => document.querySelector(selector);
 
@@ -102,7 +103,7 @@ function busy() {
 
 // ==================== РАЗДЕЛЫ ====================
 
-const SECTIONS = ["dashboard", "catalog", "universe", "reviews", "titles", "taxonomy", "moderation", "polls", "collections", "complaints", "users", "audit"];
+const SECTIONS = ["dashboard", "games", "studio", "forum-categories", "site-settings", "catalog", "universe", "reviews", "titles", "taxonomy", "moderation", "polls", "collections", "complaints", "users", "audit"];
 const MODERATOR_SECTIONS = ["reviews", "moderation", "polls"];
 
 /** Разделы, доступные вошедшему: модератору — только модерация и голосования */
@@ -129,6 +130,10 @@ async function route() {
   showSection(section);
 
   if (section === "dashboard") loadDashboard();
+  if (section === "games") loadGames();
+  if (section === "studio") loadStudioPosts();
+  if (section === "forum-categories") loadForumCategories();
+  if (section === "site-settings") loadSiteSettings();
   if (section === "catalog") loadCatalog();
   if (section === "universe") loadUniverse(id);
   if (section === "reviews") loadReviews(true);
@@ -1145,6 +1150,25 @@ let auditRequest = 0;
 
 // Коды действий пишет сервер (functions/_lib/audit.js и обработчики /api/admin/*)
 const ACTION_LABELS = {
+  "game.create": "новая игра",
+  "game.update": "изменение игры",
+  "game.delete": "удаление игры",
+  "game.cover": "обложка игры",
+  "game.coverDelete": "удаление обложки игры",
+  "game.shot": "новый скриншот",
+  "game.shotDelete": "удаление скриншота",
+  "post.create": "новая публикация",
+  "post.update": "изменение публикации",
+  "post.published": "публикация опубликована",
+  "post.draft": "публикация в черновики",
+  "post.archived": "публикация в архив",
+  "post.delete": "удаление публикации",
+  "post.image": "картинка публикации",
+  "post.imageDelete": "удаление картинки публикации",
+  "forum.create": "новая категория форума",
+  "forum.update": "изменение категории форума",
+  "forum.delete": "удаление категории форума",
+  "settings.update": "настройки сайта",
   "title.create": "создание тайтла",
   "title.update": "изменение тайтла",
   "title.delete": "удаление тайтла",
@@ -1253,6 +1277,7 @@ async function init() {
   me = user;
   initCatalogAdmin();
   initUniverseAdmin();
+  initStudioAdmin();
 
   if (!user.isAdmin) {
     // Модератору не нужны тайтлы и жалобы правообладателей: эти запросы сервер ему всё равно отклонит

@@ -161,6 +161,27 @@ document.addEventListener("click", async (event) => {
 
 initAnalytics();
 
+// Ссылки на соцсети в подвале (Настройки сайта в админке). Адреса уже проверены сервером, здесь ещё раз — только https
+async function initFooterSocial() {
+  const list = document.getElementById("footerSocial");
+  if (!list) return;
+  const { socialLinks } = await getConfig();
+  const links = (socialLinks || []).filter((item) => typeof item?.label === "string" && typeof item.url === "string" && item.url.startsWith("https://"));
+  list.replaceChildren(...links.map((item) => {
+    const node = document.createElement("li");
+    const a = document.createElement("a");
+    a.href = item.url;
+    a.textContent = item.label;
+    a.rel = "noopener noreferrer";
+    a.target = "_blank";
+    node.append(a);
+    return node;
+  }));
+  list.hidden = !links.length;
+}
+
+initFooterSocial();
+
 // Service worker: установка сайта как приложения и страница «Нет связи» без интернета (public/sw.js)
 function registerServiceWorker() {
   navigator.serviceWorker.register("/sw.js").catch((err) => console.warn("Service worker не зарегистрирован:", err.message));

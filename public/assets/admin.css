@@ -893,3 +893,69 @@ a.secondary-button[hidden] {
     justify-content: flex-start;
   }
 }
+
+/* ==================== ПОРТАЛ СТУДИИ ==================== */
+
+.admin-studio-form {
+  margin-bottom: 16px;
+}
+
+.admin-studio-image {
+  display: block;
+  width: 100%;
+  max-width: 420px;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.admin-checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  margin-bottom: 12px;
+}
+
+.admin-check {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  cursor: pointer;
+}
+
+.admin-shots {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+  list-style: none;
+}
+
+.admin-shot {
+  display: grid;
+  gap: 6px;
+  align-content: start;
+}
+
+.admin-shot small {
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.admin-social-rows {
+  display: grid;
+  gap: 8px;
+}
+
+.admin-social-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) auto;
+  gap: 8px;
+}
+
+@media (max-width: 640px) {
+  .admin-social-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

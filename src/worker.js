@@ -50,6 +50,7 @@ import * as ency from "../functions/api/encyclopedia.js";
 import * as encyPages from "../functions/encyclopedia.js";
 import * as universe from "../functions/api/universe.js";
 import * as adminUniverse from "../functions/api/adminUniverse.js";
+import * as adminStudio from "../functions/api/adminStudio.js";
 import * as studioPages from "../functions/studio.js";
 import * as media from "../functions/media.js";
 import { error } from "../functions/_lib/http.js";
@@ -147,6 +148,17 @@ const ROUTE_LIST = [
   ["/api/moderation/log", moderation.moderationLog],
   ["/api/moderation/comments", moderation.moderationComments],
   // Админка платформы
+  ["/api/admin/games", adminStudio.adminGames],
+  ["/api/admin/games/:id", adminStudio.adminGame],
+  ["/api/admin/games/:id/cover", adminStudio.adminGameCover],
+  ["/api/admin/games/:id/media", adminStudio.adminGameMedia],
+  ["/api/admin/games/:id/media/:mediaId", adminStudio.adminGameMediaItem],
+  ["/api/admin/studio-posts", adminStudio.adminPosts],
+  ["/api/admin/studio-posts/:id", adminStudio.adminPost],
+  ["/api/admin/studio-posts/:id/image", adminStudio.adminPostImage],
+  ["/api/admin/forum-categories", adminStudio.adminCategories],
+  ["/api/admin/forum-categories/:id", adminStudio.adminCategory],
+  ["/api/admin/site-settings", adminStudio.adminSiteSettings],
   ["/api/admin/genres", adminPlatform.adminGenres],
   ["/api/admin/genres/:id", adminPlatform.adminGenre],
   ["/api/admin/authors", adminPlatform.adminAuthors],

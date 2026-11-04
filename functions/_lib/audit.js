@@ -9,7 +9,8 @@ export const AUDIT_GROUPS = {
   complaints: ["complaint."],
   users: ["user."],
   catalog: ["catalog."],
-  universe: ["universe."]
+  universe: ["universe."],
+  studio: ["game.", "post.", "forum.", "settings."]
 };
 
 /**

@@ -30,6 +30,10 @@
       <nav class="admin-panel admin-menu" aria-labelledby="adminHeading">
         <h1 id="adminHeading">Админка</h1>
         <a href="#dashboard" data-section="dashboard" data-admin-only>Сводка</a>
+        <a href="#games" data-section="games" data-admin-only>Игры</a>
+        <a href="#studio" data-section="studio" data-admin-only>Публикации студии</a>
+        <a href="#forum-categories" data-section="forum-categories" data-admin-only>Категории форума</a>
+        <a href="#site-settings" data-section="site-settings" data-admin-only>Настройки сайта</a>
         <a href="#catalog" data-section="catalog" data-admin-only>Каталог</a>
         <a href="#universe" data-section="universe" data-admin-only>Вселенные</a>
         <a href="#reviews" data-section="reviews">Отзывы</a>
@@ -554,12 +558,39 @@
                 <option value="users">Пользователи</option>
                 <option value="catalog">Каталог</option>
                 <option value="universe">Вселенные</option>
+                <option value="studio">Портал студии</option>
               </select>
             </div>
           </div>
           <p class="form-message" id="auditMessage" role="status" aria-live="polite"></p>
           <ol class="admin-audit-list" id="auditList"></ol>
           <button class="secondary-button admin-more" id="auditMore" type="button" hidden>Показать ещё</button>
+        </section>
+
+        <!-- ==================== ИГРЫ ==================== -->
+        <section class="admin-panel" data-panel="games" aria-labelledby="gamesHeading" hidden>
+          <h2 id="gamesHeading">Игры студии</h2>
+          <button class="main-button" id="newGameButton" type="button">+ Новая игра</button>
+          <div id="gamesContent"></div>
+        </section>
+
+        <!-- ==================== ПУБЛИКАЦИИ СТУДИИ ==================== -->
+        <section class="admin-panel" data-panel="studio" aria-labelledby="studioHeading" hidden>
+          <h2 id="studioHeading">Публикации студии</h2>
+          <button class="main-button" id="newPostButton" type="button">+ Новая публикация</button>
+          <div id="studioContent"></div>
+        </section>
+
+        <!-- ==================== КАТЕГОРИИ ФОРУМА ==================== -->
+        <section class="admin-panel" data-panel="forum-categories" aria-labelledby="forumHeading" hidden>
+          <h2 id="forumHeading">Категории форума</h2>
+          <div id="forumContent"></div>
+        </section>
+
+        <!-- ==================== НАСТРОЙКИ САЙТА ==================== -->
+        <section class="admin-panel" data-panel="site-settings" aria-labelledby="settingsHeading" hidden>
+          <h2 id="settingsHeading">Настройки сайта</h2>
+          <div id="settingsContent"></div>
         </section>
       </div>
     </div>
