@@ -3,30 +3,27 @@
 
 import { escapeHtml as e, html } from "./html.js";
 
-export const SLOGAN = "Энциклопедия аниме и манги: произведения, персонажи, авторы и студии.";
-export const BRAND = "ENDEMION — энциклопедия аниме и манги";
+export const SLOGAN = "ENDEMION — Create. Play. Connect.";
+export const BRAND = "ENDEMION — Create. Play. Connect.";
+export const DEFAULT_DESCRIPTION = "Endemion — независимая игровая студия и сообщество: наши игры, форум, devlog и новости разработки.";
 
-// [адрес, подпись, ключ раздела]
+// [адрес, подпись, ключ раздела]. Энциклопедия в меню не входит (решение владельца 2026-11-04), её адреса работают
 export const NAV = [
   ["/", "Главная", "home"],
-  ["/anime", "Аниме", "anime"],
-  ["/manga", "Манга", "manga"],
-  ["/characters", "Персонажи", "characters"],
-  ["/people", "Люди", "people"],
-  ["/studios", "Студии", "studios"],
-  ["/seasons", "Сезоны", "seasons"],
-  ["/rankings", "Рейтинги", "rankings"],
-  ["/mylist", "Мой список", "mylist"],
+  ["/games", "Игры", "games"],
   ["/community", "Сообщество", "community"],
-  ["/pulse", "Pulse", "pulse"],
-  ["/arena", "Арена", "arena"]
+  ["/studio", "Разработка", "studio"],
+  ["/about", "О студии", "about"]
 ];
 
-// Внешняя ссылка на Life в меню «Ещё» больше не нужна: остались только разделы энциклопедии
 export const NAV_MORE = [];
 
+// Разделы энциклопедии: на их страницах в шапке есть поиск по каталогу, а в подвале — указание источника данных
+const ENCYCLOPEDIA_KEYS = new Set(["encyclopedia", "anime", "manga", "characters", "people", "studios", "seasons", "rankings", "mylist", "search"]);
+export const isEncyclopedia = (active) => ENCYCLOPEDIA_KEYS.has(active);
+
 // Версия assets добавляется к URL, чтобы браузеры обновляли кеш при выкладке. Время сборки в base36
-const ASSET_VERSION = "mw18al4e";
+const ASSET_VERSION = "mw1hsbrl";
 
 // Контуры иконок 24×24. Такие же есть в public/assets/app.js для иконок, которые рисует скрипт
 const ICONS = {
@@ -43,19 +40,20 @@ export function svgIcon(name, className = "") {
 
 export function siteHeader(active) {
   const item = ([href, label, key]) => `<a href="${href}"${key === active ? ' aria-current="page"' : ""}>${e(label)}</a>`;
+  const encyclopedia = isEncyclopedia(active);
   return `<header class="header">
     <div class="container nav">
       <a class="logo" href="/" aria-label="ENDEMION — на главную"><span class="logo-mark" aria-hidden="true">E</span><span class="logo-text">ENDEMION</span></a>
       <nav class="nav-links" id="navLinks" aria-label="Разделы">${NAV.map(item).join("")}</nav>
       <div class="nav-actions">
-        <a class="icon-btn" id="searchToggle" href="/search" aria-label="Поиск: аниме, манга, персонажи, люди, студии" aria-keyshortcuts="/">${svgIcon("search")}</a>
+        ${encyclopedia ? `<a class="icon-btn" id="searchToggle" href="/search" aria-label="Поиск: аниме, манга, персонажи, люди, студии" aria-keyshortcuts="/">${svgIcon("search")}</a>` : ""}
         <a class="icon-btn" id="notifyButton" href="/pulse#notifications" aria-label="Уведомления" hidden>${svgIcon("bell")}<span class="badge-count" id="notifyCount" hidden></span></a>
         <a class="ghost-btn register-btn" id="registerButton" href="/auth?mode=register" hidden>Регистрация</a>
         <a class="profile-btn" id="accountButton" href="/auth">Войти</a>
         <button class="icon-btn menu-toggle" type="button" aria-controls="navLinks" aria-expanded="false" aria-label="Меню">${svgIcon("menu", "icon-open")}${svgIcon("close", "icon-close")}</button>
       </div>
     </div>
-    <div class="search-panel" id="searchPanel" hidden>
+    ${encyclopedia ? `<div class="search-panel" id="searchPanel" hidden>
       <div class="container">
         <form class="search-box search-panel-form" action="/search" method="get" role="search">
           ${svgIcon("search")}
@@ -66,29 +64,44 @@ export function siteHeader(active) {
         </form>
         <div class="search-results" id="searchResults" aria-live="polite"></div>
       </div>
-    </div>
+    </div>` : ""}
   </header>`;
 }
 
-export function siteFooter() {
+export function siteFooter(active = null) {
+  const year = new Date().getUTCFullYear();
   return `<footer class="footer">
-    <div class="container footer-inner">
-      <div>
-        <strong class="footer-brand">ENDEMION</strong>
-        <p class="footer-tagline">${e(SLOGAN)}</p>
+    <div class="container footer-grid">
+      <div class="footer-about">
+        <a class="logo" href="/" aria-label="ENDEMION — на главную"><span class="logo-mark" aria-hidden="true">E</span><span class="logo-text">ENDEMION</span></a>
+        <p class="footer-tagline">Create. Play. Connect.</p>
+        <p class="footer-text">Независимая игровая студия и сообщество игроков.</p>
+        <!-- Ссылки на соцсети задаёт администратор (Настройки сайта), их подставляет app.js. Пока ссылок нет, блок скрыт -->
+        <ul class="footer-social" id="footerSocial" aria-label="Endemion в соцсетях" hidden></ul>
       </div>
-      <nav class="footer-links" aria-label="Документы и разделы">
-        <a href="/anime">Аниме</a>
-        <a href="/manga">Манга</a>
-        <a href="/community">Сообщество</a>
+      <nav class="footer-col" aria-label="Разделы">
+        <h2 class="footer-title">Разделы</h2>
+        ${NAV.map(([href, label]) => `<a href="${href}">${e(label)}</a>`).join("")}
+      </nav>
+      <nav class="footer-col" aria-label="Проекты">
+        <h2 class="footer-title">Проекты</h2>
         <a href="https://life.endemion.online">Endemion Life</a>
-        <a href="/copyright">Правообладателям</a>
+        <a href="/community">Endemion Community</a>
+        <a href="/studio">Devlog</a>
+      </nav>
+      <nav class="footer-col" aria-label="Документы">
+        <h2 class="footer-title">Документы</h2>
         <a href="/privacy">Политика конфиденциальности</a>
+        <a href="/terms">Условия использования</a>
+        <a href="/copyright">Правообладателям</a>
         <a href="/privacy#cookie" data-cookie-settings hidden>Настройки cookie</a>
       </nav>
     </div>
-    <p class="container footer-source">Данные каталога, описания и изображения — <a href="https://shikimori.io" rel="noopener">Shikimori</a>.
-      Оценки, списки и отзывы — пользователей ENDEMION.</p>
+    <div class="container footer-bottom">
+      <p>© ${year} Endemion. Все права защищены.</p>
+      ${isEncyclopedia(active) ? `<p class="footer-source">Данные каталога, описания и изображения — <a href="https://shikimori.io" rel="noopener">Shikimori</a>.
+        Оценки, списки и отзывы — пользователей ENDEMION.</p>` : ""}
+    </div>
   </footer>`;
 }
 
@@ -103,13 +116,13 @@ export function renderPage(request, {
   const origin = new URL(request.url).origin;
   const fullTitle = title ? `${title} | ENDEMION` : BRAND;
   const canonical = path ? `${origin}${path}` : null;
-  const desc = description || "ENDEMION — энциклопедия аниме и манги: каталог с фильтрами, персонажи, авторы, студии, сезоны, рейтинги, личные списки и отзывы.";
+  const desc = description || DEFAULT_DESCRIPTION;
   const page = `<!doctype html>
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#07061a">
+  <meta name="theme-color" content="#080a10">
   <title>${e(fullTitle)}</title>
   <meta name="description" content="${e(desc)}">
   ${noindex ? '<meta name="robots" content="noindex">' : ""}
@@ -138,7 +151,7 @@ export function renderPage(request, {
   <main id="main"${mainClass ? ` class="${mainClass}"` : ""}${mainAttrs ? ` ${mainAttrs}` : ""}>
 ${body}
   </main>
-  ${siteFooter()}
+  ${siteFooter(active)}
 </body>
 </html>`;
   return html(page, status, { "Cache-Control": cache, ...(noindex ? { "X-Robots-Tag": "noindex" } : {}) });

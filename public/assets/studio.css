@@ -1,0 +1,439 @@
+/* Компоненты портала Endemion Studio: hero, карточки игр, бейджи статусов, сетки, списки тем форума и публикаций.
+   Токены цветов — в base.css (--surface, --surface-elevated, --primary, --secondary, --highlight). Подключается на страницах портала */
+
+/* ==================== ТИПОГРАФИКА ==================== */
+
+.display-1 {
+  font-family: var(--font-display);
+  font-size: clamp(36px, 6vw, 72px);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.02;
+}
+
+.display-2 {
+  font-family: var(--font-display);
+  font-size: clamp(26px, 3.6vw, 40px);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+.lead {
+  max-width: 60ch;
+  color: var(--muted);
+  font-size: clamp(16px, 1.6vw, 19px);
+  line-height: 1.6;
+}
+
+.gradient-text {
+  color: transparent;
+  background: linear-gradient(100deg, var(--text) 10%, var(--accent-light) 55%, var(--highlight));
+  background-clip: text;
+  -webkit-background-clip: text;
+}
+
+/* ==================== РАЗМЕТКА ==================== */
+
+.studio-section {
+  padding: clamp(48px, 7vw, 88px) 0 0;
+}
+
+.studio-section > .section-head {
+  margin-bottom: 24px;
+}
+
+.grid-games {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
+  gap: 20px;
+}
+
+.grid-posts {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
+  gap: 20px;
+}
+
+.split-2 {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 24px;
+}
+
+@media (max-width: 900px) {
+  .split-2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ==================== КНОПКИ ==================== */
+
+.btn-lg {
+  min-height: 52px;
+  padding: 0 26px;
+  font-size: 16px;
+}
+
+.btn-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+/* ==================== HERO ==================== */
+
+.studio-hero {
+  position: relative;
+  overflow: hidden;
+  padding: clamp(56px, 9vw, 120px) 0 clamp(48px, 7vw, 96px);
+  border-bottom: 1px solid var(--border);
+}
+
+.studio-hero-bg {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(ellipse 50% 70% at 78% 30%, rgba(var(--accent-rgb), 0.28), transparent 70%),
+    radial-gradient(ellipse 40% 60% at 95% 80%, rgba(var(--highlight-rgb), 0.12), transparent 70%),
+    linear-gradient(to bottom, transparent 60%, var(--bg));
+}
+
+.studio-hero-bg img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.35;
+  mask-image: linear-gradient(90deg, transparent 15%, black 70%);
+}
+
+.studio-hero-inner {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+  align-items: center;
+  gap: 48px;
+}
+
+.studio-hero .lead {
+  margin: 20px 0 32px;
+}
+
+@media (max-width: 900px) {
+  .studio-hero-inner {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ==================== БЕЙДЖИ ==================== */
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 26px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--muted);
+  background: var(--panel-soft);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.badge::before {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  content: "";
+  background: currentColor;
+}
+
+.badge.plain::before {
+  display: none;
+}
+
+.status-in_development { color: var(--accent-light); border-color: rgba(var(--accent-rgb), 0.35); background: rgba(var(--accent-rgb), 0.1); }
+.status-prototype { color: #fbbf24; border-color: rgba(251, 191, 36, 0.3); background: rgba(251, 191, 36, 0.08); }
+.status-released { color: #34d399; border-color: rgba(52, 211, 153, 0.3); background: rgba(52, 211, 153, 0.08); }
+.status-planned { color: var(--highlight); border-color: rgba(var(--highlight-rgb), 0.3); background: rgba(var(--highlight-rgb), 0.08); }
+.status-unknown { color: var(--faint); }
+
+.badge-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* ==================== КАРТОЧКИ ==================== */
+
+.card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  transition: border-color 0.25s ease, transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.card:hover,
+.card:focus-within {
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow);
+  transform: translateY(-3px);
+}
+
+.card-media {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  background: var(--surface-elevated);
+}
+
+.card-media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.4s ease;
+}
+
+.card:hover .card-media img {
+  transform: scale(1.04);
+}
+
+.card-media .badge {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  backdrop-filter: blur(8px);
+  background: rgba(8, 10, 16, 0.7);
+}
+
+.card-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 10px;
+  padding: 18px 20px 20px;
+}
+
+.card-title {
+  font-size: 19px;
+}
+
+/* Вся карточка кликабельна через ссылку заголовка, остальные ссылки внутри остаются доступны */
+.card-title a::after {
+  position: absolute;
+  inset: 0;
+  content: "";
+}
+
+.card-text {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--muted);
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  margin-top: auto;
+  color: var(--faint);
+  font-size: 13px;
+}
+
+/* Заглушка вместо обложки: явно помечена, чтобы её не приняли за игровой ассет */
+.placeholder-art {
+  display: grid;
+  width: 100%;
+  height: 100%;
+  place-content: center;
+  justify-items: center;
+  gap: 6px;
+  color: var(--faint);
+  background:
+    linear-gradient(135deg, rgba(var(--accent-rgb), 0.16), rgba(99, 102, 241, 0.08) 50%, rgba(var(--highlight-rgb), 0.08)),
+    var(--surface-elevated);
+  text-align: center;
+}
+
+.placeholder-art strong {
+  color: var(--muted);
+  font-family: var(--font-display);
+  font-size: 22px;
+  letter-spacing: 0.04em;
+}
+
+.placeholder-art small {
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+/* ==================== ВЫДЕЛЕННАЯ ИГРА ==================== */
+
+.featured {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  overflow: hidden;
+  border: 1px solid var(--border-strong);
+  border-radius: calc(var(--radius) + 6px);
+  background:
+    radial-gradient(ellipse 80% 80% at 100% 0%, rgba(var(--accent-rgb), 0.14), transparent 60%),
+    var(--surface);
+}
+
+.featured .card-media {
+  aspect-ratio: auto;
+  min-height: 320px;
+}
+
+.featured-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: clamp(24px, 4vw, 44px);
+}
+
+.featured-facts {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 8px 18px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.featured-facts dt {
+  color: var(--faint);
+}
+
+@media (max-width: 900px) {
+  .featured {
+    grid-template-columns: 1fr;
+  }
+
+  .featured .card-media {
+    min-height: 0;
+    aspect-ratio: 16 / 9;
+  }
+}
+
+/* ==================== СПИСКИ: ТЕМЫ ФОРУМА, ПУБЛИКАЦИИ ==================== */
+
+.list-panel {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.list-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 20px;
+  border-top: 1px solid var(--border);
+  transition: background 0.2s ease;
+}
+
+.list-row:first-child {
+  border-top: 0;
+}
+
+.list-row:hover {
+  background: var(--panel-soft);
+}
+
+.list-row h3 {
+  font-family: var(--font-body);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+.list-row h3 a::after {
+  position: absolute;
+  inset: 0;
+  content: "";
+}
+
+.list-row .card-meta {
+  margin-top: 4px;
+}
+
+.list-count {
+  min-width: 64px;
+  color: var(--muted);
+  font-size: 13px;
+  text-align: right;
+}
+
+.list-count strong {
+  display: block;
+  color: var(--text);
+  font-size: 17px;
+}
+
+.pin-mark,
+.lock-mark {
+  margin-right: 6px;
+  color: var(--accent-light);
+}
+
+/* ==================== ПУСТО И ОШИБКИ НА ПОРТАЛЕ ==================== */
+
+.empty-card {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  padding: 40px 24px;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius);
+  color: var(--muted);
+  background: var(--panel-soft);
+  text-align: center;
+}
+
+.empty-card strong {
+  color: var(--text);
+  font-size: 16px;
+}
+
+/* ==================== ПОЯВЛЕНИЕ ==================== */
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: none; }
+}
+
+.rise {
+  animation: rise 0.6s ease both;
+}
+
+.rise-2 { animation-delay: 0.08s; }
+.rise-3 { animation-delay: 0.16s; }
+
+@media (max-width: 680px) {
+  .list-row {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+
+  .list-count {
+    text-align: left;
+  }
+
+  .list-count strong {
+    display: inline;
+    margin-right: 4px;
+  }
+}

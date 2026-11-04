@@ -190,7 +190,9 @@ const ROUTE_LIST = [
   ["/covers/:id", coverImage],
   ["/avatars/:id", profile.avatarImage],
   // Страницы разделов: каркас с сервера, данные подгружает скрипт раздела
+  // Временно, до главной портала (STAGE 03): / показывает главную энциклопедии
   ["/", encyPages.home],
+  ["/encyclopedia", encyPages.home],
   ["/anime", encyPages.animeCatalog],
   ["/manga", encyPages.mangaCatalog],
   ["/anime/:slug", encyPages.animePage],

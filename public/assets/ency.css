@@ -19,7 +19,7 @@
   overflow-x: auto;
   overscroll-behavior-x: contain;
   scroll-snap-type: x mandatory;
-  scrollbar-color: rgba(182, 156, 255, 0.3) transparent;
+  scrollbar-color: rgba(167, 139, 250, 0.3) transparent;
   scrollbar-width: thin;
 }
 
@@ -43,7 +43,7 @@
   border: 1px solid var(--border);
   border-radius: 14px;
   background: var(--panel-solid);
-  box-shadow: 0 10px 26px rgba(3, 2, 14, 0.45);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.45);
   transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
 }
 
@@ -67,7 +67,7 @@
   padding: 3px 8px;
   border-radius: 8px;
   color: var(--yellow);
-  background: rgba(7, 6, 26, 0.82);
+  background: rgba(8, 10, 16, 0.82);
   font-size: 12px;
   font-weight: 800;
 }
@@ -241,7 +241,7 @@
   inset: 0;
   content: "";
   background:
-    linear-gradient(90deg, var(--bg) 8%, rgba(7, 6, 26, 0.72) 50%, rgba(7, 6, 26, 0.35)),
+    linear-gradient(90deg, var(--bg) 8%, rgba(8, 10, 16, 0.72) 50%, rgba(8, 10, 16, 0.35)),
     linear-gradient(0deg, var(--bg), transparent 40%);
 }
 
@@ -260,7 +260,7 @@
   aspect-ratio: 225 / 320;
   border: 1px solid var(--border-strong);
   border-radius: 18px;
-  box-shadow: 0 26px 60px rgba(3, 2, 14, 0.7), 0 0 0 6px rgba(var(--accent-rgb), 0.08);
+  box-shadow: 0 26px 60px rgba(0, 0, 0, 0.7), 0 0 0 6px rgba(var(--accent-rgb), 0.08);
 }
 
 .hero-poster img {
@@ -328,7 +328,7 @@
 
 .hero-dots button[aria-pressed="true"] {
   width: 44px;
-  background: linear-gradient(90deg, var(--accent), var(--pink));
+  background: linear-gradient(90deg, var(--primary), var(--secondary));
 }
 
 @keyframes hero-in {
@@ -538,7 +538,7 @@
   border: 1px solid var(--border-strong);
   border-radius: 20px;
   background: var(--panel-solid);
-  box-shadow: 0 24px 60px rgba(3, 2, 14, 0.6), 0 0 40px rgba(var(--accent-rgb), 0.18);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6), 0 0 40px rgba(var(--accent-rgb), 0.18);
 }
 
 .entry-poster.is-portrait {
@@ -645,7 +645,7 @@
   border-radius: 999px;
   color: #fff;
   background:
-    radial-gradient(circle at 20% 0%, rgba(182, 156, 255, 0.35), transparent 60%),
+    radial-gradient(circle at 20% 0%, rgba(167, 139, 250, 0.35), transparent 60%),
     linear-gradient(135deg, rgba(var(--accent-rgb), 0.35), rgba(79, 124, 255, 0.2));
   box-shadow: 0 0 24px rgba(var(--accent-rgb), 0.25);
   font-weight: 800;
@@ -1221,7 +1221,7 @@
 .score-bar i {
   height: 8px;
   border-radius: 999px;
-  background: linear-gradient(90deg, var(--accent), var(--pink));
+  background: linear-gradient(90deg, var(--primary), var(--secondary));
 }
 
 .fav-grid {

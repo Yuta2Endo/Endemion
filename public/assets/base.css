@@ -38,32 +38,40 @@
 }
 
 :root {
-  --bg: #07061a;
-  --bg-soft: #100d2b;
-  --bg-deep: #050414;
-  --panel: rgba(22, 18, 54, 0.78);
-  --panel-solid: #15123a;
-  --panel-light: rgba(255, 255, 255, 0.07);
-  --panel-soft: rgba(255, 255, 255, 0.05);
-  --text: #f4f2ff;
-  --muted: #a39fc8;
-  --faint: #6f6a99;
-  /* Акцент: электрический фиолетовый. --cyan — прежнее имя акцента, его используют стили читалки и админки */
-  --accent: #8b5cff;
-  --accent-strong: #7a3cff;
-  --accent-light: #b69cff;
-  --accent-rgb: 139, 92, 255;
-  --blue: #4f7cff;
+  /* Палитра Endemion Studio: Background #080A10, Surface #11141D, Surface Elevated #181D29,
+     Primary #8B5CF6, Secondary #6366F1, Accent #22D3EE (здесь --highlight), Text #F8FAFC, Muted #94A3B8 */
+  --surface: #11141d;
+  --surface-elevated: #181d29;
+  --primary: #8b5cf6;
+  --secondary: #6366f1;
+  --highlight: #22d3ee;
+  --highlight-rgb: 34, 211, 238;
+  --bg: #080a10;
+  --bg-soft: var(--surface);
+  --bg-deep: #05070c;
+  --panel: rgba(17, 20, 29, 0.82);
+  --panel-solid: var(--surface-elevated);
+  --panel-light: rgba(255, 255, 255, 0.06);
+  --panel-soft: rgba(255, 255, 255, 0.04);
+  --text: #f8fafc;
+  --muted: #94a3b8;
+  --faint: #64748b;
+  /* Акцент: фиолетовый Primary. --cyan — прежнее имя акцента, его используют стили читалки и админки */
+  --accent: var(--primary);
+  --accent-strong: #7c3aed;
+  --accent-light: #a78bfa;
+  --accent-rgb: 139, 92, 246;
+  --blue: var(--secondary);
   --cyan: var(--accent-light);
-  --pink: #ff6fb5;
-  --yellow: #ffd27a;
-  --green: #7be3b6;
-  --red: #ff6b81;
-  --border: rgba(182, 156, 255, 0.14);
-  --border-strong: rgba(182, 156, 255, 0.32);
-  --radius: 20px;
+  --pink: #f472b6;
+  --yellow: #fbbf24;
+  --green: #34d399;
+  --red: #f87171;
+  --border: rgba(148, 163, 184, 0.12);
+  --border-strong: rgba(148, 163, 184, 0.26);
+  --radius: 18px;
   --radius-sm: 12px;
-  --shadow: 0 20px 50px rgba(3, 2, 14, 0.55);
+  --shadow: 0 18px 44px rgba(0, 0, 0, 0.45);
   --font-display: "Unbounded", "Manrope", "Segoe UI", sans-serif;
   --font-body: "Manrope", "Segoe UI", system-ui, sans-serif;
   --header-height: 72px;
@@ -85,9 +93,9 @@ body {
   overflow-x: hidden;
   color: var(--text);
   background:
-    radial-gradient(ellipse 60rem 32rem at 85% -8%, rgba(var(--accent-rgb), 0.22), transparent 70%),
-    radial-gradient(ellipse 40rem 28rem at -10% 35%, rgba(79, 124, 255, 0.14), transparent 70%),
-    radial-gradient(ellipse 40rem 30rem at 110% 80%, rgba(255, 111, 181, 0.08), transparent 70%),
+    radial-gradient(ellipse 60rem 32rem at 85% -8%, rgba(var(--accent-rgb), 0.16), transparent 70%),
+    radial-gradient(ellipse 40rem 28rem at -10% 35%, rgba(99, 102, 241, 0.1), transparent 70%),
+    radial-gradient(ellipse 40rem 30rem at 110% 80%, rgba(var(--highlight-rgb), 0.05), transparent 70%),
     var(--bg);
   font-family: var(--font-body);
   font-size: 15px;
@@ -105,7 +113,7 @@ body::before {
   opacity: 0.5;
   background-image:
     radial-gradient(circle at 1px 1px, rgba(255, 255, 255, 0.18) 1px, transparent 0),
-    radial-gradient(circle at 1px 1px, rgba(182, 156, 255, 0.14) 1px, transparent 0);
+    radial-gradient(circle at 1px 1px, rgba(167, 139, 250, 0.14) 1px, transparent 0);
   background-position: 0 0, 37px 61px;
   background-size: 97px 97px, 131px 131px;
   mask-image: linear-gradient(to bottom, black, transparent 80%);
@@ -198,7 +206,7 @@ img {
   top: 0;
   z-index: 30;
   border-bottom: 1px solid var(--border);
-  background: rgba(7, 6, 26, 0.72);
+  background: rgba(8, 10, 16, 0.78);
   backdrop-filter: blur(18px) saturate(1.4);
 }
 
@@ -229,7 +237,7 @@ img {
   place-items: center;
   border-radius: 12px 12px 12px 4px;
   color: #fff;
-  background: linear-gradient(135deg, var(--accent-strong), var(--blue) 60%, var(--pink));
+  background: linear-gradient(135deg, var(--accent-strong), var(--secondary) 65%, var(--highlight));
   box-shadow: 0 0 24px rgba(var(--accent-rgb), 0.55), inset 0 0 0 1px rgba(255, 255, 255, 0.2);
   font-size: 16px;
   letter-spacing: 0;
@@ -270,7 +278,7 @@ img {
   height: 2px;
   border-radius: 2px;
   content: "";
-  background: linear-gradient(90deg, var(--accent), var(--pink));
+  background: linear-gradient(90deg, var(--primary), var(--secondary));
 }
 
 .nav-actions {
@@ -367,7 +375,7 @@ img {
 
 .search-panel {
   border-top: 1px solid var(--border);
-  background: rgba(7, 6, 26, 0.96);
+  background: rgba(8, 10, 16, 0.96);
 }
 
 .search-panel-form {
@@ -439,7 +447,7 @@ img {
   height: 100%;
   place-items: center;
   color: var(--faint);
-  background: linear-gradient(150deg, var(--panel-solid), #241d5c);
+  background: linear-gradient(150deg, var(--panel-solid), #1f2433);
   font-size: 34px;
 }
 
@@ -533,7 +541,7 @@ img {
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   color: var(--text);
-  background: rgba(5, 4, 20, 0.6);
+  background: rgba(5, 7, 12, 0.6);
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
@@ -586,7 +594,7 @@ img {
 
 .skeleton {
   border-radius: var(--radius);
-  background: linear-gradient(100deg, var(--panel-soft) 30%, rgba(182, 156, 255, 0.1) 50%, var(--panel-soft) 70%);
+  background: linear-gradient(100deg, var(--panel-soft) 30%, rgba(167, 139, 250, 0.1) 50%, var(--panel-soft) 70%);
   background-size: 300% 100%;
   animation: shimmer 1.4s linear infinite;
 }
@@ -637,7 +645,7 @@ img {
 .spinner {
   width: 22px;
   height: 22px;
-  border: 3px solid rgba(182, 156, 255, 0.2);
+  border: 3px solid rgba(167, 139, 250, 0.2);
   border-top-color: var(--accent-light);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
@@ -650,33 +658,107 @@ img {
 /* ==================== ПОДВАЛ И УВЕДОМЛЕНИЯ ==================== */
 
 .footer {
-  margin-top: 60px;
-  padding: 36px 0 48px;
+  margin-top: 80px;
+  padding: 48px 0 32px;
   border-top: 1px solid var(--border);
   color: var(--muted);
-  font-size: 13px;
+  background: linear-gradient(to bottom, transparent, rgba(17, 20, 29, 0.6));
+  font-size: 14px;
 }
 
-.footer-inner {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 20px;
+/* Подвал: о студии и три колонки ссылок. На планшете — две колонки, на телефоне — одна */
+.footer-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) repeat(3, minmax(0, 1fr));
+  gap: 32px;
 }
 
 .footer-tagline {
-  margin-top: 4px;
-  color: var(--faint);
+  margin-top: 14px;
+  color: var(--text);
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
 }
 
-.footer-links {
+.footer-text {
+  max-width: 32ch;
+  margin-top: 6px;
+  color: var(--muted);
+}
+
+.footer-col {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.footer-title {
+  margin-bottom: 4px;
+  color: var(--faint);
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.footer-col a,
+.footer-social a {
+  transition: color 0.2s ease;
+}
+
+.footer-col a:hover,
+.footer-social a:hover {
+  color: var(--text);
+}
+
+.footer-social {
   display: flex;
   flex-wrap: wrap;
-  gap: 18px;
+  gap: 8px;
+  margin-top: 18px;
+  list-style: none;
 }
 
-.footer-links a:hover {
-  color: var(--accent-light);
+.footer-social a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--panel-soft);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.footer-bottom {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px 24px;
+  margin-top: 40px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+  color: var(--faint);
+  font-size: 13px;
+}
+
+.footer-bottom a {
+  color: var(--muted);
+}
+
+@media (max-width: 900px) {
+  .footer-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .footer-about {
+    grid-column: 1 / -1;
+  }
 }
 
 .toast {
@@ -779,7 +861,7 @@ img {
     padding: 10px 20px 18px;
     overflow-y: auto;
     border-bottom: 1px solid var(--border);
-    background: rgba(7, 6, 26, 0.97);
+    background: rgba(8, 10, 16, 0.97);
   }
 
   .nav-links.open {
@@ -842,12 +924,14 @@ img {
     display: none;
   }
 
-  .footer-inner {
-    display: block;
+  .footer-grid {
+    grid-template-columns: 1fr;
+    gap: 28px;
   }
 
-  .footer-links {
-    margin-top: 14px;
+  /* В подвале логотип с текстом остаётся и на телефоне: в шапке он скрыт ради места */
+  .footer-about .logo-text {
+    display: inline;
   }
 }
 

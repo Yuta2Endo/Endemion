@@ -138,7 +138,8 @@ function reviewTeaser(review) {
   </article>`;
 }
 
-export const home = catalogPage("home", async ({ request, env }) => {
+// Главная энциклопедии. С 2026-11-04 на / портал студии, энциклопедия живёт на /encyclopedia и в меню не входит
+export const home = catalogPage("encyclopedia", async ({ request, env }) => {
   const origin = new URL(request.url).origin;
   const [data, reviews] = await Promise.all([homeData(env), recentEntryReviews(env, null, { limit: 6 })]);
   const slides = data.hero.map(heroSlide).join("");
@@ -178,13 +179,14 @@ export const home = catalogPage("home", async ({ request, env }) => {
   const head = ogHead({
     title: "ENDEMION — энциклопедия аниме и манги",
     description: "Аниме и манга: каталог с фильтрами, персонажи, авторы, студии, сезоны и рейтинги. Личные списки, оценки и отзывы.",
-    url: `${origin}/`, image: `${origin}/assets/og-image.png`
+    url: `${origin}/encyclopedia`, image: `${origin}/assets/og-image.png`
   }) + ld({
-    "@context": "https://schema.org", "@type": "WebSite", name: "ENDEMION", url: `${origin}/`,
+    "@context": "https://schema.org", "@type": "WebSite", name: "ENDEMION", url: `${origin}/encyclopedia`,
     potentialAction: { "@type": "SearchAction", target: `${origin}/search?q={search_term_string}`, "query-input": "required name=search_term_string" }
   });
   return renderPage(request, {
-    path: "/", active: "home", body, styles: STYLES, scripts: ["ency.js"], head, cache: CACHE, mainAttrs: 'data-page="home"',
+    title: "Энциклопедия аниме и манги",
+    path: "/encyclopedia", active: "encyclopedia", body, styles: STYLES, scripts: ["ency.js"], head, cache: CACHE, mainAttrs: 'data-page="home"',
     description: "ENDEMION — энциклопедия аниме и манги: каталог с фильтрами, персонажи, авторы, студии, сезоны, рейтинги, личные списки и отзывы."
   });
 });

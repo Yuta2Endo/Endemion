@@ -129,7 +129,7 @@
 .t-card:hover,
 .t-card:focus-within {
   border-color: var(--border-strong);
-  box-shadow: 0 18px 40px rgba(3, 2, 14, 0.6), 0 0 0 1px rgba(var(--accent-rgb), 0.18);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(var(--accent-rgb), 0.18);
   transform: translateY(-4px);
 }
 
@@ -155,7 +155,7 @@
   position: absolute;
   inset: 0;
   content: "";
-  background: linear-gradient(to top, rgba(5, 4, 20, 0.92), transparent 55%);
+  background: linear-gradient(to top, rgba(5, 7, 12, 0.92), transparent 55%);
 }
 
 .t-cover.has-image .t-symbol {
@@ -195,7 +195,7 @@
   padding: 3px 8px;
   border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 999px;
-  background: rgba(7, 6, 26, 0.62);
+  background: rgba(8, 10, 16, 0.62);
   backdrop-filter: blur(6px);
   font-size: 10px;
   font-weight: 800;
@@ -228,7 +228,7 @@
   border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 50%;
   color: #fff;
-  background: rgba(7, 6, 26, 0.5);
+  background: rgba(8, 10, 16, 0.5);
   backdrop-filter: blur(6px);
   font-size: 15px;
   transition: color 0.2s ease, background 0.2s ease, transform 0.2s ease;
@@ -319,7 +319,7 @@
   display: block;
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, var(--accent), var(--pink));
+  background: linear-gradient(90deg, var(--primary), var(--secondary));
 }
 
 /* Широкая карточка: обложка слева, текст справа (Oracle, Nexus, «Продолжить чтение») */
@@ -408,7 +408,7 @@
   overflow-x: auto;
   overscroll-behavior-x: contain;
   scroll-snap-type: x mandatory;
-  scrollbar-color: rgba(182, 156, 255, 0.3) transparent;
+  scrollbar-color: rgba(167, 139, 250, 0.3) transparent;
   scrollbar-width: thin;
 }
 
@@ -519,7 +519,7 @@ a.tag:hover {
   overflow-x: auto;
   border: 1px solid var(--border);
   border-radius: 14px;
-  background: rgba(5, 4, 20, 0.5);
+  background: rgba(5, 7, 12, 0.5);
   scrollbar-width: none;
 }
 
@@ -591,7 +591,7 @@ a.tag:hover {
   width: 96px;
   height: 96px;
   font-size: 36px;
-  box-shadow: 0 0 0 4px rgba(7, 6, 26, 0.9), 0 0 0 6px rgba(var(--accent-rgb), 0.5), 0 0 40px rgba(var(--accent-rgb), 0.4);
+  box-shadow: 0 0 0 4px rgba(8, 10, 16, 0.9), 0 0 0 6px rgba(var(--accent-rgb), 0.5), 0 0 40px rgba(var(--accent-rgb), 0.4);
 }
 
 .avatar-sm {
@@ -646,7 +646,7 @@ a.tag:hover {
 }
 
 .modal::backdrop {
-  background: rgba(3, 2, 14, 0.72);
+  background: rgba(0, 0, 0, 0.72);
   backdrop-filter: blur(4px);
 }
 
@@ -842,7 +842,7 @@ a.tag:hover {
   padding: 7px 7px 7px 18px;
   border: 1px solid var(--border-strong);
   border-radius: 18px;
-  background: rgba(5, 4, 20, 0.6);
+  background: rgba(5, 7, 12, 0.6);
   box-shadow: 0 0 0 6px rgba(var(--accent-rgb), 0.06);
   transition: box-shadow 0.2s ease, border-color 0.2s ease;
 }
@@ -903,7 +903,7 @@ a.tag:hover {
   position: absolute;
   top: 50%;
   left: 50%;
-  border: 1px solid rgba(182, 156, 255, 0.18);
+  border: 1px solid rgba(167, 139, 250, 0.18);
   border-radius: 50%;
   content: "";
   transform: translate(-50%, -50%) rotateX(68deg);
@@ -1257,7 +1257,7 @@ a.tag:hover {
   border-radius: 24px;
   background:
     radial-gradient(circle at 50% 50%, rgba(var(--accent-rgb), 0.16), transparent 60%),
-    rgba(5, 4, 20, 0.7);
+    rgba(5, 7, 12, 0.7);
   touch-action: none;
 }
 
@@ -1286,7 +1286,7 @@ a.tag:hover {
   font-size: 12px;
   font-weight: 700;
   paint-order: stroke;
-  stroke: rgba(5, 4, 20, 0.9);
+  stroke: rgba(5, 7, 12, 0.9);
   stroke-width: 4px;
   transition: opacity 0.15s ease;
 }
@@ -1330,7 +1330,7 @@ a.tag:hover {
   padding: 8px 12px;
   border: 1px solid var(--border);
   border-radius: 12px;
-  background: rgba(7, 6, 26, 0.75);
+  background: rgba(8, 10, 16, 0.75);
   font-size: 11.5px;
 }
 
