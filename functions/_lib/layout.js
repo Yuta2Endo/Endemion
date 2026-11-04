@@ -90,11 +90,12 @@ export function siteFooter() {
  * head — дополнительные мета-теги (уже экранированные), status и cache — для ответа
  */
 export function renderPage(request, {
-  title = "", description = "", path = null, active = null, body, scripts = [], styles = [], head = "",
+  title = "", fullTitle: titleIsFull = false, description = "", path = null, active = null, body, scripts = [], styles = [], head = "",
   noindex = false, status = 200, cache = "no-cache", mainClass = "", mainAttrs = ""
 }) {
   const origin = new URL(request.url).origin;
-  const fullTitle = title ? `${title} | ENDEMION` : BRAND;
+  // fullTitle: true — заголовок уже полный (SEO-заголовок страницы игры), суффикс «| ENDEMION» не добавляется
+  const fullTitle = title ? (titleIsFull ? title : `${title} | ENDEMION`) : BRAND;
   const canonical = path ? `${origin}${path}` : null;
   const desc = description || DEFAULT_DESCRIPTION;
   const page = `<!doctype html>

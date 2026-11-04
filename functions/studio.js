@@ -11,6 +11,11 @@ import {
 import { cleanLine } from "./_lib/validate.js";
 import { hasRole } from "./_lib/roles.js";
 import { currentUser } from "./_lib/session.js";
+import {
+  aboutSection, communitySection, coverSources, devlogSection, featuresSection, heroSection, newsSection, roadmapSection,
+  screenshotsSection, sectionNav, statusSection, worldsSection
+} from "./_lib/gamePage.js";
+import { GAME_PROFILES } from "./_lib/gameProfiles.js";
 
 const STYLES = ["studio.css"];
 const SCRIPTS = ["studio-page.js"];
@@ -154,71 +159,87 @@ export const gamesPage = {
   }
 };
 
+const DEVLOG_PAGE = 6;
+
 export const gamePage = {
   async onRequestGet({ request, env, params }) {
-    const origin = new URL(request.url).origin;
+    const url = new URL(request.url);
+    const origin = url.origin;
     const game = await getGameBySlug(env, String(params.slug || "").toLowerCase());
     const viewer = game && !game.published ? await currentUser(env, request) : null;
     if (!game || (!game.published && !hasRole(viewer, "admin"))) return notFoundPage(request, "games", "Такой игры нет в каталоге.");
 
-    const [media, posts, devlog, categoryIds, category] = await Promise.all([
+    const profile = GAME_PROFILES[game.slug] || null;
+    const devlogPage = Math.max(1, Math.min(1000, Number.parseInt(url.searchParams.get("devlog") || "1", 10) || 1));
+    const [media, news, devlog, roadmapPosts, categoryIds, category, ideas, bugs, lastUpdate] = await Promise.all([
       listGameMedia(env, game.id),
-      listPosts(env, { gameId: game.id, kinds: ["update", "news", "announcement"], limit: 4 }),
-      listPosts(env, { gameId: game.id, kinds: ["devlog"], limit: 4 }),
+      listPosts(env, { gameId: game.id, kinds: ["update", "news", "announcement"], limit: 3 }),
+      listPosts(env, { gameId: game.id, kinds: ["devlog"], limit: DEVLOG_PAGE, offset: (devlogPage - 1) * DEVLOG_PAGE }),
+      listPosts(env, { gameId: game.id, kinds: ["roadmap"], limit: 3 }),
       gameCategoryIds(env, game.id),
-      gameCategory(env, game.id)
+      gameCategory(env, game.id),
+      getCategoryBySlug(env, "feature-requests"),
+      getCategoryBySlug(env, "bug-reports"),
+      listPosts(env, { gameId: game.id, kinds: ["update", "devlog", "news", "announcement"], limit: 1 })
     ]);
-    const roadmapPosts = await listPosts(env, { gameId: game.id, kinds: ["roadmap"], limit: 3 });
     const threads = await recentThreads(env, { limit: 5, categoryIds });
 
-    const facts = `<dl class="featured-facts">
-        <dt>Статус</dt><dd>${statusBadge(game.status)}</dd>
-        <dt>Платформы</dt><dd>${e(game.platforms.join(", ") || "не указаны")}</dd>
-        ${game.websiteUrl ? `<dt>Сайт игры</dt><dd><a href="${e(game.websiteUrl)}" rel="noopener">${e(new URL(game.websiteUrl).host)}</a></dd>` : ""}
-      </dl>`;
+    const cover = coverSources(game, profile);
+    const links = {
+      discuss: category ? `/community/c/${category.slug}` : null,
+      idea: ideas ? `/community/c/${ideas.slug}` : null,
+      bug: bugs ? `/community/c/${bugs.slug}` : null
+    };
+    const latest = lastUpdate.posts[0];
+    const latestDate = latest ? latest.publishedAt || latest.createdAt : null;
+    const statusRows = [
+      ["Статус разработки", statusBadge(game.status)],
+      // Версия и дата обновления — только из реальных данных: публикаций студии о игре. Выдумывать их нельзя
+      ["Текущая версия", profile?.version ? e(profile.version) : ""],
+      ["Последнее обновление", latestDate ? `<a href="/studio/${e(latest.slug)}"><time datetime="${e(isoDate(latestDate))}">${e(formatDate(latestDate))}</time></a>` : ""],
+      ["Платформа", e(game.platforms.join(", "))],
+      ["Тип игры", e(profile?.genre || "")]
+    ];
 
-    const section = (id, title, content) => `<section class="studio-section" aria-labelledby="${id}"><div class="section-head"><div><h2 id="${id}">${e(title)}</h2></div></div>${content}</section>`;
-    const postsList = (list, emptyTitle, emptyText) => list.posts.length
-      ? `<div class="grid-posts">${list.posts.map(postCard).join("")}</div>` : emptyCard(emptyTitle, emptyText);
+    const sections = [
+      ["about", "Об игре", aboutSection(game, profile)],
+      ["worlds", "Миры", worldsSection(profile?.worlds, profile?.worldsHeading || { title: "Миры" })],
+      ["features", "Особенности", featuresSection(profile?.features)],
+      ["screenshots", "Скриншоты", screenshotsSection(game, media)],
+      ["roadmap", "Roadmap", roadmapSection(game, roadmapPosts.posts, postCard, { title: profile?.roadmapTitle || "Roadmap" })],
+      ["news", "Новости", newsSection(news.posts)],
+      ["devlog", "Devlog", devlogSection(game, devlog, { page: devlogPage, pageSize: DEVLOG_PAGE })],
+      ["community", "Сообщество", communitySection(game, { links, threads, knownIssues: game.knownIssues })],
+      ["status", "Статус", statusSection(statusRows)]
+    ].filter(([, , html]) => html);
 
     const body = `
-    <section class="studio-hero" aria-labelledby="gameTitle">
-      <div class="studio-hero-bg" aria-hidden="true">${game.coverUrl ? `<img src="${e(game.coverUrl)}" alt="" fetchpriority="high">` : ""}</div>
-      <div class="container studio-hero-inner">
-        <div>
-          <nav class="breadcrumbs" aria-label="Навигация"><a href="/games">Игры</a> <span aria-hidden="true">/</span> <span>${e(game.title)}</span></nav>
-          ${!game.published ? '<p class="badge status-unknown">Черновик: страница видна только администраторам</p>' : ""}
-          <h1 class="display-1" id="gameTitle">${e(game.title)}</h1>
-          ${game.tagline ? `<p class="lead">${e(game.tagline)}</p>` : ""}
-          ${facts}
-          <div class="btn-row">
-            ${game.websiteUrl ? `<a class="primary-btn btn-lg" href="${e(game.websiteUrl)}" rel="noopener">Перейти к игре</a>` : ""}
-            ${category ? `<a class="ghost-btn btn-lg" href="/community/c/${e(category.slug)}">Обсуждение на форуме</a>` : ""}
-          </div>
-        </div>
-        <div class="card"><div class="card-media">${gameArt(game, { eager: true })}</div></div>
-      </div>
-    </section>
+    ${heroSection(game, profile, { cover, discussionHref: links.discuss })}
+    ${sectionNav(sections.map(([id, label]) => [id, label]))}
     <div class="container">
-      ${section("aboutTitle", "Об игре", game.description ? `<div class="rich-text">${richText(game.description)}</div>` : emptyCard("Описание пока не добавлено", "Студия расскажет об игре позже."))}
-      ${media.length ? section("shotsTitle", "Скриншоты", `<div class="shots">${media.map((m) => `<figure><img src="${e(m.url)}" alt="${e(m.caption || `Скриншот ${game.title}`)}" loading="lazy" decoding="async">${m.caption ? `<figcaption>${e(m.caption)}</figcaption>` : ""}</figure>`).join("")}</div>`) : ""}
-      ${section("updatesTitle", "Последние обновления", postsList(posts, "Обновлений пока нет", "Новости и обновления игры появятся здесь."))}
-      ${section("devlogTitle", "Devlog", postsList(devlog, "Записей devlog пока нет", "Дневник разработки игры появится здесь."))}
-      ${section("roadmapTitle", "Roadmap", game.roadmap || roadmapPosts.posts.length
-    ? `${game.roadmap ? `<div class="rich-text">${richText(game.roadmap)}</div>` : ""}${roadmapPosts.posts.length ? `<div class="grid-posts">${roadmapPosts.posts.map(postCard).join("")}</div>` : ""}`
-    : emptyCard("Планы пока не опубликованы", "Roadmap игры появится, когда студия его опубликует."))}
-      ${section("issuesTitle", "Известные проблемы", game.knownIssues ? `<div class="rich-text">${richText(game.knownIssues)}</div>` : emptyCard("Известных проблем нет в списке", category ? "Нашли ошибку? Сообщите о ней на форуме." : "Нашли ошибку? Сообщите о ней на форуме в разделе «Сообщения об ошибках»."))}
-      ${section("threadsTitle", "Обсуждения на форуме", threads.length ? `<div class="list-panel">${threads.map(threadRow).join("")}</div>`
-    : emptyCard("Обсуждений пока нет", "Начните первую тему об этой игре.", category ? `<a class="primary-btn" href="/community/c/${e(category.slug)}">Открыть раздел</a>` : ""))}
+      ${sections.map(([, , html]) => html).join("")}
+      <div class="gp-page-end"></div>
     </div>`;
 
-    const description = game.tagline || game.description.slice(0, 200) || `${game.title} — игра Endemion.`;
+    const seo = profile?.seo || {};
+    const description = seo.description || game.tagline || game.description.slice(0, 200) || `${game.title} — игра Endemion.`;
+    const ogTitle = seo.title || `${game.title} | ENDEMION`;
+    const image = cover?.og ? `${origin}${cover.og}` : game.coverUrl ? `${origin}${game.coverUrl}` : `${origin}/assets/og-image.png`;
+    const pageUrl = `${origin}/games/${game.slug}`;
     return renderPage(request, {
-      title: game.title, path: `/games/${game.slug}`, active: "games", body, styles: STYLES, scripts: SCRIPTS, description,
-      noindex: !game.published,
-      head: head({ title: `${game.title} | ENDEMION`, description, url: `${origin}/games/${game.slug}`, image: game.coverUrl ? `${origin}${game.coverUrl}` : `${origin}/assets/og-image.png` })
-        + ld({ "@context": "https://schema.org", "@type": "VideoGame", name: game.title, description, url: `${origin}/games/${game.slug}`,
-          ...(game.platforms.length ? { gamePlatform: game.platforms } : {}), publisher: { "@type": "Organization", name: "Endemion" } })
+      title: seo.title || game.title, fullTitle: Boolean(seo.title), path: `/games/${game.slug}`, active: "games", body,
+      styles: [...STYLES, "game-page.css"], scripts: ["game-page.js"], description, mainClass: "gp-page",
+      noindex: !game.published || devlogPage > 1,
+      head: head({ title: ogTitle, description, url: pageUrl, image })
+        + `\n  <meta property="og:image:alt" content="${e(`Обложка ${game.title}`)}">`
+        + `\n  <meta name="twitter:title" content="${e(ogTitle)}">\n  <meta name="twitter:description" content="${e(description)}">`
+        + `\n  <meta name="twitter:image" content="${e(image)}">`
+        + (cover ? `\n  <link rel="preload" as="image" href="${e(cover.src)}"${cover.srcset ? ` imagesrcset="${e(cover.srcset)}" imagesizes="(max-width: 900px) 92vw, 560px"` : ""} fetchpriority="high">` : "")
+        + ld({ "@context": "https://schema.org", "@type": "VideoGame", name: game.title, description, url: pageUrl, image,
+          ...(profile?.genre ? { genre: profile.genre } : {}),
+          ...(game.platforms.length ? { gamePlatform: game.platforms } : {}),
+          ...(game.websiteUrl ? { sameAs: game.websiteUrl } : {}),
+          inLanguage: "ru", publisher: { "@type": "Organization", name: "Endemion", url: `${origin}/` } })
     });
   }
 };
