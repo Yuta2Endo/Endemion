@@ -55,7 +55,7 @@ export async function loadCatalog() {
   statusBox.replaceChildren(
     statCard("Источник", data.provider.label, data.ping.ok ? `отвечает за ${data.ping.ms} мс` : `не отвечает: ${data.ping.error}`, !data.ping.ok),
     statCard("Кеш", data.cache.total, `свежих: ${data.cache.fresh} · ${kb(data.cache.bytes)}`),
-    statCard("Ошибки за сутки", data.errorsDay, `в очереди запросов: ${data.queue.pending}`, data.errorsDay > 0),
+    statCard("Ошибки за сутки", data.errorsDay, `в очереди: ${data.queue.pending}, запросов/мин: ${data.queue.requestsLastMinute}`, data.errorsDay > 0),
     statCard("Списки", data.counts.listItems, `пользователей: ${data.counts.listUsers} · произведений: ${data.counts.entries}`),
     statCard("Избранное", data.counts.favorites, "записей у всех пользователей"),
     statCard("Отзывы", data.counts.reviews, `скрыто модераторами: ${data.counts.reviewsHidden}`)

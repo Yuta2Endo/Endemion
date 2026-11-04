@@ -15,7 +15,7 @@ const DAY = 24 * HOUR;
 
 // Сколько живёт ответ в кеше. После срока запись остаётся ещё STALE_KEEP: её покажут, если источник не отвечает
 const TTL = {
-  list: 30 * MINUTE, home: 20 * MINUTE, search: HOUR, entry: 12 * HOUR, character: DAY, person: DAY, people: 6 * HOUR,
+  list: 30 * MINUTE, home: 20 * MINUTE, search: HOUR, entry: DAY, character: DAY, person: DAY, people: 6 * HOUR,
   characters: 6 * HOUR, popular: 6 * HOUR, genres: 7 * DAY, studios: 7 * DAY, missing: HOUR
 };
 const STALE_KEEP = 7 * DAY;
@@ -58,6 +58,8 @@ export class RateGate {
     this.pending = 0;
     this.pausedUntil = 0;
     this.chain = Promise.resolve();
+    this.requestsLastMinute = 0;
+    this.lastMinuteReset = Date.now();
   }
 
   /** После ответа 429 источник просит подождать: вся очередь ждёт */
@@ -80,6 +82,11 @@ export class RateGate {
     for (;;) {
       const now = Date.now();
       this.times = this.times.filter((time) => time > now - MINUTE);
+      // Обновить счётчик запросов за последнюю минуту
+      if (now - this.lastMinuteReset >= MINUTE) {
+        this.requestsLastMinute = 0;
+        this.lastMinuteReset = now;
+      }
       let delay = Math.max(0, this.pausedUntil - now);
       for (const [count, windowMs] of this.rules) {
         const recent = this.times.filter((time) => time > now - windowMs);
@@ -87,6 +94,7 @@ export class RateGate {
       }
       if (delay <= 0) {
         this.times.push(now);
+        this.requestsLastMinute++;
         return;
       }
       if (now + delay - enqueued > this.maxWaitMs) throw new UpstreamError("queue", null, "Источник занят: очередь запросов слишком длинная");
@@ -161,6 +169,18 @@ async function logError(env, err) {
       .bind(provider(env).name, upstream ? err.operation : "internal", upstream ? err.status : null, String(err.message).slice(0, 500)).run();
     if (Math.random() < 0.05) {
       await env.DB.prepare("DELETE FROM catalog_errors WHERE id <= (SELECT MAX(id) FROM catalog_errors) - ?").bind(ERRORS_KEEP).run();
+    }
+    // Проверка порога ошибок: если за последний час больше 50 — уведомить администраторов
+    if (Math.random() < 0.02) {
+      const count = await env.DB.prepare("SELECT COUNT(*) AS n FROM catalog_errors WHERE created_at > datetime('now', '-1 hour')").first();
+      if (count.n >= 50) {
+        const admins = await env.DB.prepare("SELECT id FROM users WHERE role = 'admin'").all();
+        const text = `Каталог: более ${count.n} ошибок за последний час. Проверьте состояние источника в /admin#catalog`;
+        for (const admin of admins.results) {
+          await env.DB.prepare("INSERT INTO notifications (user_id, type, text, link) VALUES (?, 'system', ?, '/admin')")
+            .bind(admin.id, text).run().catch(() => {});
+        }
+      }
     }
   } catch (logErr) {
     console.error("Ошибка каталога не записана в журнал:", logErr.message);
@@ -465,7 +485,7 @@ export async function providerStatus(env) {
   return {
     provider: { name: current.name, label: current.label, base: current.BASE },
     ping,
-    queue: { pending: gate.pending },
+    queue: { pending: gate.pending, requestsLastMinute: gate.requestsLastMinute },
     cache: { total: stats.total || 0, fresh: stats.fresh || 0, bytes: stats.bytes || 0 },
     errorsDay: errorsDay.results[0].n,
     errors: errors.results.map((row) => ({
