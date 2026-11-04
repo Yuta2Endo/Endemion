@@ -29,7 +29,7 @@ function renderHead() {
   $("#profileName").textContent = me.name;
   const handle = $("#profileHandle");
   handle.textContent = `@${profile.username}`;
-  handle.href = `/u/${encodeURIComponent(profile.username)}`;
+  handle.href = `/users/${encodeURIComponent(profile.username)}`;
   $("#publicLink").href = handle.href;
   $("#profileEmail").textContent = me.email;
   $("#profileBio").textContent = profile.bio || "";

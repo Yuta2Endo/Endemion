@@ -515,7 +515,7 @@ export function userLink(user, { small = "", size = "" } = {}) {
     return wrap;
   }
   const text = el("span");
-  const name = user.username ? link(`/u/${encodeURIComponent(user.username)}`, null, user.name) : el("span", null, user.name);
+  const name = user.username ? link(`/users/${encodeURIComponent(user.username)}`, null, user.name) : el("span", null, user.name);
   const strong = el("strong");
   strong.append(name);
   if (user.role === "admin" || user.role === "moderator") strong.append(el("span", "role-badge", user.role === "admin" ? "админ" : "модератор"));

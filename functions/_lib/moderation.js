@@ -54,7 +54,7 @@ export async function targetLink(env, type, row) {
       return `/${row.target_type}/${row.target_id}#review-${row.id}`;
     case "user": {
       const profile = await env.DB.prepare("SELECT username FROM user_profiles WHERE user_id = ?").bind(row.id).first();
-      return profile ? `/u/${profile.username}` : "";
+      return profile ? `/users/${profile.username}` : "";
     }
     default:
       return "";

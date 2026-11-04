@@ -126,7 +126,7 @@ function heroSlide(entry, index) {
 
 function reviewTeaser(review) {
   const author = review.author.username
-    ? `<a href="/u/${e(encodeURIComponent(review.author.username))}">${e(review.author.name)}</a>`
+    ? `<a href="/users/${e(encodeURIComponent(review.author.username))}">${e(review.author.name)}</a>`
     : e(review.author.name);
   return `<article class="review-teaser">
     <a class="review-teaser-poster" href="${e(entryPath(review.entry))}#review-${review.id}" tabindex="-1" aria-hidden="true">${posterImg(review.entry.poster, "", { sizes: "64px" })}</a>

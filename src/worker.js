@@ -102,6 +102,7 @@ const ROUTE_LIST = [
   ["/api/users/:username/library", profile.userLibrary],
   ["/api/users/:username/follows", profile.userFollows],
   ["/api/users/:username/follow", profile.userFollow],
+  ["/api/users/:username/forum", profile.userForum],
   // ENDEMION PULSE
   ["/api/notifications", pulse.notifications],
   ["/api/notifications/count", pulse.notificationCount],
@@ -125,6 +126,7 @@ const ROUTE_LIST = [
   ["/api/comments/:id/reactions", community.commentReactions],
   ["/api/threads", community.threads],
   ["/api/threads/:id", community.thread],
+  ["/api/threads/:id/moderation", community.threadModeration],
   ["/api/collections", community.collections],
   ["/api/collections/:id", community.collection],
   ["/api/collections/:id/items", community.collectionItems],
@@ -228,10 +230,12 @@ const ROUTE_LIST = [
   ["/pulse", site.pulse],
   ["/profile", site.profile],
   ["/community", site.community],
+  ["/community/c/:slug", studioPages.categoryPage],
   ["/community/thread/:id", site.threadPage],
   ["/collection/:id", site.collectionPage],
   ["/arena", site.arena],
-  ["/u/:username", site.userPage],
+  ["/users/:username", site.userPage],
+  ["/u/:username", site.userRedirect],
   ["/robots.txt", robots],
   ["/sitemap.xml", sitemap]
 ];

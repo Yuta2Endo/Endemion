@@ -47,7 +47,7 @@ export async function onRequestPost({ request, env }) {
     if (String(err).includes("UNIQUE")) return error("Пользователь с такой почтой уже существует.", 409);
     throw err;
   }
-  // Профиль ENDEMION ID с адресом /u/<имя>. Имя можно сменить в настройках профиля
+  // Профиль ENDEMION ID с адресом /users/<имя>. Имя можно сменить в настройках профиля
   await createProfile(env, userId, email, name);
 
   const setCookie = await createSession(env, request, userId);

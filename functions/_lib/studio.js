@@ -294,3 +294,99 @@ export function pluralReplies(n) {
 export function emptyCard(title, text, action = "") {
   return `<div class="empty-card"><strong>${e(title)}</strong><p>${e(text)}</p>${action}</div>`;
 }
+
+// ==================== ФОРУМ: КАТЕГОРИИ ====================
+
+export const FORUM_SECTIONS = [
+  ["general", "Общее"],
+  ["games", "Игры"],
+  ["development", "Разработка"],
+  ["community", "Сообщество"]
+];
+export const FORUM_PAGE = 20;
+
+/** Категории форума по разделам: число тем и последняя активность (удалённые темы не считаются) */
+export async function listCategories(env) {
+  const rows = (await env.DB.prepare(
+    `SELECT c.id, c.slug, c.section, c.title, c.description, c.staff_only, c.position, g.slug AS game_slug,
+       (SELECT COUNT(*) FROM threads th WHERE th.category_id = c.id AND th.deleted_at IS NULL) AS topics,
+       (SELECT MAX(th.last_activity_at) FROM threads th WHERE th.category_id = c.id AND th.deleted_at IS NULL) AS last_activity_at
+     FROM forum_categories c LEFT JOIN games g ON g.id = c.game_id
+     WHERE c.game_id IS NULL OR g.published = 1
+     ORDER BY c.position, c.id`
+  ).all()).results;
+  return rows.map(toCategory);
+}
+
+export function toCategory(row) {
+  return {
+    id: row.id,
+    slug: row.slug,
+    section: row.section,
+    title: row.title,
+    description: row.description,
+    staffOnly: row.staff_only === 1,
+    gameSlug: row.game_slug || null,
+    topics: row.topics ?? 0,
+    lastActivityAt: row.last_activity_at || null
+  };
+}
+
+export async function getCategoryBySlug(env, slug) {
+  if (typeof slug !== "string" || !SLUG.test(slug)) return null;
+  const row = await env.DB.prepare(
+    `SELECT c.*, g.slug AS game_slug, g.published AS game_published FROM forum_categories c LEFT JOIN games g ON g.id = c.game_id WHERE c.slug = ?`
+  ).bind(slug).first();
+  if (!row || (row.game_id && row.game_published !== 1)) return null;
+  return toCategory(row);
+}
+
+/** Темы категории: закреплённые первыми, затем по активности. query — поиск по заголовку и тексту */
+export async function categoryThreads(env, categoryId, { page = 1, query = "" } = {}) {
+  const where = ["th.category_id = ?", "th.deleted_at IS NULL"];
+  const binds = [categoryId];
+  if (query) {
+    const pattern = `%${query.replace(/[\\%_]/g, "\\$&")}%`;
+    where.push("(th.subject LIKE ? ESCAPE '\\' OR th.body LIKE ? ESCAPE '\\')");
+    binds.push(pattern, pattern);
+  }
+  const clause = where.join(" AND ");
+  const [list, count] = await env.DB.batch([
+    env.DB.prepare(
+      `SELECT th.id, th.subject, th.comments_count, th.last_activity_at, th.pinned_at, th.locked_at,
+         c.slug AS category_slug, c.title AS category_title, u.name AS author_name, p.username AS author_username
+       FROM threads th LEFT JOIN forum_categories c ON c.id = th.category_id
+       LEFT JOIN users u ON u.id = th.user_id LEFT JOIN user_profiles p ON p.user_id = th.user_id
+       WHERE ${clause} ORDER BY th.pinned_at IS NULL, th.last_activity_at DESC, th.id DESC LIMIT ? OFFSET ?`
+    ).bind(...binds, FORUM_PAGE, (page - 1) * FORUM_PAGE),
+    env.DB.prepare(`SELECT COUNT(*) AS n FROM threads th WHERE ${clause}`).bind(...binds)
+  ]);
+  return { threads: list.results.map(toThreadPreview), total: count.results[0].n };
+}
+
+export function pluralTopics(n) {
+  const mod10 = n % 10;
+  const mod100 = n % 100;
+  if (mod10 === 1 && mod100 !== 11) return "тема";
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return "темы";
+  return "тем";
+}
+
+/** Блок категорий форума по разделам: для /community */
+export function categoryIndex(categories) {
+  return FORUM_SECTIONS.map(([key, label]) => {
+    const items = categories.filter((c) => c.section === key);
+    if (!items.length) return "";
+    return `<section class="forum-section" aria-labelledby="forum-${key}">
+        <h2 class="forum-section-title" id="forum-${key}">${e(label)}</h2>
+        <div class="list-panel">${items.map((c) => `<div class="list-row">
+          <div>
+            <h3><a href="/community/c/${e(c.slug)}">${e(c.title)}</a>${c.staffOnly ? ' <span class="badge plain">Команда</span>' : ""}</h3>
+            ${c.description ? `<p class="card-text">${e(c.description)}</p>` : ""}
+            <div class="card-meta">${c.lastActivityAt ? `<span>Активность: <time datetime="${e(isoDate(c.lastActivityAt))}">${e(formatDate(c.lastActivityAt, true))}</time></span>` : "<span>Тем пока нет</span>"}</div>
+          </div>
+          <div class="list-count"><strong>${c.topics}</strong> ${pluralTopics(c.topics)}</div>
+        </div>`).join("")}</div>
+      </section>`;
+  }).join("");
+}

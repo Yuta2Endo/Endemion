@@ -257,7 +257,7 @@ async function loadComments() {
     const item = el("li", "admin-plain-item");
     const info = el("div", "admin-plain-info");
     const author = comment.author
-      ? (comment.author.username ? link(`/u/${comment.author.username}`, null, comment.author.name) : el("span", null, comment.author.name))
+      ? (comment.author.username ? link(`/users/${comment.author.username}`, null, comment.author.name) : el("span", null, comment.author.name))
       : el("span", null, "удалённый пользователь");
     const meta = el("small");
     meta.append(author, ` · ${COMMENT_PLACES[comment.targetType] || comment.targetType} #${comment.targetId} · ${timeAgo(comment.createdAt)}`);

@@ -230,7 +230,7 @@ async function showReaders() {
       const head = el("div", "user-chip");
       const text = el("div");
       const name = el("strong");
-      name.append(link(`/u/${encodeURIComponent(reader.username)}`, null, reader.name));
+      name.append(link(`/users/${encodeURIComponent(reader.username)}`, null, reader.name));
       text.append(name, el("small", null, `@${reader.username} · подписчиков: ${reader.followers}`));
       head.append(avatar(reader), text);
       card.append(head);

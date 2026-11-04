@@ -4,6 +4,7 @@
 
 import { escapeHtml as e } from "./_lib/html.js";
 import { renderPage, sectionHeading, SLOGAN, svgIcon } from "./_lib/layout.js";
+import { categoryIndex, listCategories } from "./_lib/studio.js";
 import { TYPES } from "./_lib/titles.js";
 
 const skeletonCards = (n) => Array.from({ length: n }, () =>
@@ -267,17 +268,20 @@ export const pulse = {
 
 /** GET /community — обсуждения, теории, подборки, читатели */
 export const community = {
-  async onRequestGet({ request }) {
+  async onRequestGet({ request, env }) {
+    const categories = await listCategories(env);
     const body = `
     <div class="container page">
       <div class="page-head">
         <div>
-          <div class="eyebrow">ENDEMION Community</div>
+          <div class="eyebrow">Endemion Community</div>
           <h1>Сообщество</h1>
-          <p class="section-text">Обсуждения и теории, отзывы о произведениях, подборки и люди, на которых стоит подписаться.</p>
+          <p class="section-text">Форум студии и игроков: общение, игры, разработка, творчество и события.</p>
         </div>
         <div class="section-actions" id="communityActions"></div>
       </div>
+      <div class="forum-index">${categoryIndex(categories)}</div>
+      <h2 class="forum-section-title" id="feedTitle">Лента сообщества</h2>
       <div class="tabs-bar" role="tablist" aria-label="Разделы сообщества">
         <button type="button" role="tab" data-tab="threads" aria-selected="true">Обсуждения</button>
         <button type="button" role="tab" data-tab="reviews" aria-selected="false">Отзывы</button>
@@ -288,8 +292,8 @@ export const community = {
       <div id="communityBody" role="tabpanel" aria-live="polite"></div>
     </div>`;
     return renderPage(request, {
-      title: "Сообщество", path: "/community", active: "community", body, scripts: ["community.js"], styles: ["ency.css"],
-      description: "Сообщество ENDEMION: отзывы об аниме и манге, обсуждения, теории и подборки."
+      title: "Сообщество", path: "/community", active: "community", body, scripts: ["community.js"], styles: ["ency.css", "studio.css"],
+      description: "Сообщество Endemion: форум студии и игроков, обсуждения игр, разработки и творчества."
     });
   }
 };
@@ -359,7 +363,7 @@ export const arena = {
   }
 };
 
-/** GET /u/:username — публичный профиль читателя */
+/** GET /users/:username — публичный профиль читателя */
 export const userPage = {
   async onRequestGet({ request, params }) {
     const body = `
@@ -367,7 +371,7 @@ export const userPage = {
       <div class="profile-hero"><div class="skeleton avatar-dot avatar-lg"></div><div><div class="skeleton skeleton-line"></div><div class="skeleton skeleton-line"></div></div></div>
     </div>`;
     return renderPage(request, {
-      title: "Профиль", active: null, body, scripts: ["user.js"], styles: ["ency.css"], path: `/u/${encodeURIComponent(params.username)}`,
+      title: "Профиль", active: null, body, scripts: ["user.js"], styles: ["ency.css"], path: `/users/${encodeURIComponent(params.username)}`,
       mainAttrs: `data-username="${e(params.username)}"`
     });
   }
@@ -430,7 +434,7 @@ export const profile = {
             <form class="panel stack" id="profileForm" novalidate>
               <h2>Профиль</h2>
               <div class="form-row" data-local-identity><label for="newName">Имя</label><input class="input" id="newName" type="text" autocomplete="nickname" minlength="2" maxlength="40" required></div>
-              <div class="form-row" data-local-identity><label for="username">Адрес профиля</label><input class="input" id="username" type="text" minlength="3" maxlength="24" pattern="[A-Za-z0-9_]{3,24}" required><small class="muted small">endemion.online/u/имя — латиница, цифры и «_»</small></div>
+              <div class="form-row" data-local-identity><label for="username">Адрес профиля</label><input class="input" id="username" type="text" minlength="3" maxlength="24" pattern="[A-Za-z0-9_]{3,24}" required><small class="muted small">endemion.online/users/имя — латиница, цифры и «_»</small></div>
               <div class="form-row"><label for="bio">О себе</label><textarea class="textarea" id="bio" maxlength="500" rows="4"></textarea></div>
               <div class="form-row"><span class="form-label">Цвет аватара</span><div class="color-options" id="colorOptions"></div></div>
               <div class="form-row" data-local-identity><span class="form-label">Аватар</span>
@@ -480,5 +484,13 @@ export const profile = {
     </div>
     <div class="container page" id="profileLoading"><div class="state"><span class="spinner"></span>Загружаем профиль…</div></div>`;
     return renderPage(request, { title: "Мой профиль", body, scripts: ["profile.js"], noindex: true });
+  }
+};
+
+/** GET /u/:username — старый адрес профиля: постоянное перенаправление на /users/:username */
+export const userRedirect = {
+  async onRequestGet({ request, params }) {
+    const { search } = new URL(request.url);
+    return new Response(null, { status: 301, headers: { Location: `/users/${encodeURIComponent(params.username)}${search}` } });
   }
 };

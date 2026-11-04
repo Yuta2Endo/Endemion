@@ -4,10 +4,11 @@
 import { escapeHtml as e } from "./_lib/html.js";
 import { renderPage } from "./_lib/layout.js";
 import {
-  emptyCard, formatDate, gameArt, gameCard, gameCategory, gameCategoryIds, getGameBySlug, getPostBySlug, getSettings,
-  isoDate, listGameMedia, listGames, listPosts, POST_KIND_LABELS, POST_KINDS, postCard, recentThreads, richText,
-  statusBadge, threadRow
+  categoryThreads, emptyCard, FORUM_PAGE, formatDate, gameArt, gameCard, gameCategory, gameCategoryIds, getCategoryBySlug,
+  getGameBySlug, getPostBySlug, getSettings, isoDate, listGameMedia, listGames, listPosts, POST_KIND_LABELS, POST_KINDS,
+  postCard, recentThreads, richText, statusBadge, threadRow
 } from "./_lib/studio.js";
+import { cleanLine } from "./_lib/validate.js";
 import { hasRole } from "./_lib/roles.js";
 import { currentUser } from "./_lib/session.js";
 
@@ -371,3 +372,49 @@ export const termsPage = {
 };
 
 export { POST_KINDS };
+
+// ==================== ФОРУМ: КАТЕГОРИЯ ====================
+
+/** GET /community/c/:slug — темы категории: закреплённые первыми, поиск, страницы. Новую тему открывает forum-category.js */
+export const categoryPage = {
+  async onRequestGet({ request, env, params }) {
+    const category = await getCategoryBySlug(env, params.slug);
+    if (!category) return notFoundPage(request, "community", "Такой категории форума нет.");
+    const url = new URL(request.url);
+    const query = cleanLine(url.searchParams.get("q") || "").slice(0, 80);
+    const page = Math.max(1, Math.min(1000, Number.parseInt(url.searchParams.get("page") || "1", 10) || 1));
+    const list = await categoryThreads(env, category.id, { page, query });
+    const pages = Math.max(1, Math.ceil(list.total / FORUM_PAGE));
+    const base = `/community/c/${category.slug}`;
+    const pageLink = (n, label) => `<a class="ghost-btn small-btn" href="${e(base)}?${e(new URLSearchParams({ ...(query ? { q: query } : {}), page: String(n) }).toString())}">${label}</a>`;
+    const empty = query
+      ? emptyCard("Ничего не нашлось", "Попробуйте другие слова или откройте все темы категории.", `<a class="ghost-btn" href="${e(base)}">Все темы</a>`)
+      : emptyCard("Тем пока нет", category.staffOnly ? "Здесь появятся публикации команды Endemion." : "Начните первую тему в этой категории.");
+
+    const body = `
+    <div class="container page">
+      <nav class="breadcrumbs" aria-label="Навигация"><a href="/community">Сообщество</a> <span aria-hidden="true">/</span> <span>${e(category.title)}</span></nav>
+      <div class="page-head">
+        <div>
+          <div class="eyebrow">Форум</div>
+          <h1>${e(category.title)}</h1>
+          ${category.description ? `<p class="section-text">${e(category.description)}</p>` : ""}
+          ${category.gameSlug ? `<p><a class="link-btn" href="/games/${e(category.gameSlug)}">Страница игры →</a></p>` : ""}
+        </div>
+        <div class="section-actions" id="categoryActions"></div>
+      </div>
+      <form class="forum-search" role="search" action="${e(base)}" method="get">
+        <input class="input" type="search" name="q" value="${e(query)}" maxlength="80" placeholder="Поиск по темам категории…" aria-label="Поиск по темам категории">
+        <button class="ghost-btn" type="submit">Найти</button>
+      </form>
+      ${list.threads.length ? `<div class="list-panel">${list.threads.map(threadRow).join("")}</div>` : empty}
+      ${pages > 1 ? `<nav class="btn-row pager" aria-label="Страницы">${page > 1 ? pageLink(page - 1, "← Назад") : ""}<span class="muted">Страница ${page} из ${pages}</span>${page < pages ? pageLink(page + 1, "Дальше →") : ""}</nav>` : ""}
+    </div>`;
+    return renderPage(request, {
+      title: `${category.title} — форум`, path: base, active: "community", body, styles: ["ency.css", ...STYLES],
+      scripts: ["forum-category.js"], description: category.description || `Форум Endemion: ${category.title}.`,
+      noindex: Boolean(query) || page > 1,
+      mainAttrs: `data-category="${e(category.slug)}" data-staff-only="${category.staffOnly ? 1 : 0}"`
+    });
+  }
+};

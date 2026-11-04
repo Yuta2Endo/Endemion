@@ -290,7 +290,7 @@ function renderTournament(tournament) {
   if (tournament.description) text.append(el("p", "section-text", tournament.description));
   if (tournament.author) {
     const byline = el("p", "muted small");
-    byline.append("Автор: ", tournament.author.username ? link(`/u/${encodeURIComponent(tournament.author.username)}`, null, tournament.author.name) : tournament.author.name);
+    byline.append("Автор: ", tournament.author.username ? link(`/users/${encodeURIComponent(tournament.author.username)}`, null, tournament.author.name) : tournament.author.name);
     text.append(byline);
   }
   const buttons = el("div", "section-actions");
@@ -463,7 +463,7 @@ async function showLeaders() {
     board("Жанры", "Голоса в голосованиях за жанры", genres, (row) => [link(`/catalog?genre=${encodeURIComponent(row.name)}`, null, row.name), el("strong", null, String(row.votes))]),
     board("Читатели", "Прочитанные главы, только открытые профили", readers, (row) => {
       const name = el("span", "user-chip");
-      name.append(avatar(row, "avatar-sm"), link(`/u/${encodeURIComponent(row.username)}`, null, row.name));
+      name.append(avatar(row, "avatar-sm"), link(`/users/${encodeURIComponent(row.username)}`, null, row.name));
       return [name, el("small", null, `${row.chapters} гл. · ${row.completed} дочитано`)];
     })
   );

@@ -1,4 +1,4 @@
-// Публичный профиль читателя /u/:username: описание, статистика, достижения, полка, подписка, подписчики, жалоба
+// Публичный профиль читателя /users/:username: описание, статистика, достижения, полка, подписка, подписчики, жалоба
 
 import {
   api, avatar, button, el, errorBox, formatDate, getLibrary, getMe, initHeader, link, loginUrl, remoteImage, reportContent,
@@ -56,7 +56,7 @@ async function showFollows(kind) {
   const list = el("div", "stack");
   for (const user of result.data.users) {
     const row = el("a", "user-chip");
-    row.href = `/u/${encodeURIComponent(user.username)}`;
+    row.href = `/users/${encodeURIComponent(user.username)}`;
     row.append(avatar(user), el("strong", null, user.name), el("small", null, `@${user.username}`));
     list.append(row);
   }
@@ -104,6 +104,7 @@ function render(data) {
   );
   root.append(stats);
 
+  root.append(forumBlock());
   root.append(encyclopediaBlock());
 
   const split = el("div", "split section");
@@ -250,3 +251,42 @@ async function init() {
 }
 
 init();
+
+/** Активность на форуме: число тем и ответов, последние темы и ответы. Загружается отдельно, сервер учитывает приватность */
+function forumBlock() {
+  const section = el("section", "section");
+  section.append(el("h2", "section-head", "Форум"));
+  const box = el("div");
+  box.append(el("p", "muted small", "Загружаем активность…"));
+  section.append(box);
+  api(`/api/users/${encodeURIComponent(username)}/forum`).then((result) => {
+    if (result.status === 403) return box.replaceChildren(el("p", "muted small", "Пользователь скрыл свою активность."));
+    if (!result.ok) return box.replaceChildren(errorBox(result.data?.error || "Активность не загрузилась."));
+    const { topicsCount, postsCount, topics, posts } = result.data;
+    const stats = el("div", "stat-grid");
+    stats.append(statBox(topicsCount, "тем"), statBox(postsCount, "ответов"));
+    const parts = [stats];
+    if (topics.length) {
+      const list = el("div", "stack section");
+      for (const topic of topics) {
+        const row = el("p");
+        row.append(link(`/community/thread/${topic.id}`, null, topic.subject), el("span", "muted small", ` · ${formatDate(topic.createdAt)}`));
+        list.append(row);
+      }
+      parts.push(el("p", "filter-sub", "Последние темы"), list);
+    }
+    if (posts.length) {
+      const list = el("div", "stack section");
+      for (const post of posts) {
+        const row = el("div");
+        const head = el("p");
+        head.append(link(`/community/thread/${post.thread.id}#comment-${post.id}`, null, post.thread.subject), el("span", "muted small", ` · ${formatDate(post.createdAt)}`));
+        row.append(head, el("p", "muted small", post.spoiler ? "Ответ скрыт под спойлером." : post.excerpt));
+        list.append(row);
+      }
+      parts.push(el("p", "filter-sub", "Последние ответы"), list);
+    }
+    box.replaceChildren(...parts);
+  });
+  return section;
+}

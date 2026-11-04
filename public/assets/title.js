@@ -285,7 +285,7 @@ function reviewNode(review) {
   node.id = `review-${review.id}`;
   const head = el("div", "comment-head");
   head.append(avatar(review.author, "avatar-sm"));
-  head.append(review.author.username ? link(`/u/${encodeURIComponent(review.author.username)}`, null, review.author.name) : el("strong", null, review.author.name));
+  head.append(review.author.username ? link(`/users/${encodeURIComponent(review.author.username)}`, null, review.author.name) : el("strong", null, review.author.name));
   head.append(el("time", null, timeAgo(review.updatedAt)), el("span", "review-score", `${review.score}/10`));
   const text = el("p", "comment-text", review.body);
   node.append(head, spoilerText(text, review.spoiler));

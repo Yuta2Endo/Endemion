@@ -95,7 +95,7 @@ function commentNode(comment, ctx, isReply = false) {
   const head = el("div", "comment-head");
   if (comment.author) {
     head.append(comment.author.username
-      ? link(`/u/${encodeURIComponent(comment.author.username)}`, null, comment.author.name)
+      ? link(`/users/${encodeURIComponent(comment.author.username)}`, null, comment.author.name)
       : el("strong", null, comment.author.name));
     if (comment.author.role !== "user") head.append(el("span", "role-badge", comment.author.role === "admin" ? "админ" : "модератор"));
   } else {
@@ -131,7 +131,8 @@ function commentNode(comment, ctx, isReply = false) {
     picker.append(add);
     actions.append(bar, picker);
 
-    actions.append(button("Ответить", null, () => {
+    if (!ctx.locked && ctx.user && comment.body) actions.append(button("Цитировать", null, () => ctx.quote(comment)));
+    if (!ctx.locked) actions.append(button("Ответить", null, () => {
       if (!ctx.user) return askLogin("Чтобы отвечать, войдите в профиль.");
       if (node.querySelector(":scope > div > .comment-form")) return;
       const form = commentForm({
@@ -209,7 +210,7 @@ function editComment(comment, text, main) {
  * Комментарии к цели в контейнере. Возвращает { reload }.
  * Если в адресе #comment-N, после загрузки страница прокручивается к этому комментарию
  */
-export async function mountComments(container, { targetType, targetId, placeholder = "Поделитесь мнением…" }) {
+export async function mountComments(container, { targetType, targetId, placeholder = "Поделитесь мнением…", locked = false }) {
   const { user } = await getMe();
   const list = el("div", "comment-list");
   const more = button("Показать ещё", "ghost-btn", () => load(false));
@@ -222,6 +223,17 @@ export async function mountComments(container, { targetType, targetId, placehold
     user,
     targetType,
     targetId,
+    locked,
+    /** Вставить цитату в основную форму: «> Имя: текст» и пустая строка для ответа */
+    quote(comment) {
+      const area = container.querySelector(".comments > .comment-form textarea");
+      if (!area) return;
+      const quoted = comment.body.split("\n").map((line) => `> ${line}`).join("\n");
+      const head = comment.author ? `> ${comment.author.name}:\n` : "";
+      area.value = `${area.value ? `${area.value.trimEnd()}\n\n` : ""}${head}${quoted}\n\n`.slice(0, MAX);
+      area.focus();
+      area.setSelectionRange(area.value.length, area.value.length);
+    },
     addReply(rootId, reply) {
       const replies = list.querySelector(`.comment-replies[data-root="${rootId}"]`);
       if (!replies) return;
@@ -241,7 +253,9 @@ export async function mountComments(container, { targetType, targetId, placehold
   }
   top.append(total, sortBar);
 
-  const formBox = user
+  const formBox = locked
+    ? stateBox({ icon: "🔒", text: "Тема закрыта модератором, новые ответы не принимаются." })
+    : user
     ? commentForm({
       targetType, targetId, placeholder,
       onSent(comment) {

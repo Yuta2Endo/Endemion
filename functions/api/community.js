@@ -11,7 +11,7 @@ import { isDuplicate, spamProblem, takeAction } from "../_lib/limits.js";
 import { commentLink, REPORT_REASONS, REPORT_TARGETS, loadTarget, moderationStatement } from "../_lib/moderation.js";
 import { notifyStatement } from "../_lib/notifications.js";
 import { getReview, listReviews } from "../_lib/reviews.js";
-import { mutedProblem, requireUser } from "../_lib/roles.js";
+import { mutedProblem, requireRole, requireUser } from "../_lib/roles.js";
 import { currentUser } from "../_lib/session.js";
 import { getTitle, getTitlesByIds, parseId } from "../_lib/titles.js";
 import { cleanLine, cleanText, intParam, lengthProblem } from "../_lib/validate.js";
@@ -112,6 +112,11 @@ export const comments = {
     if (!TARGET_TYPES.includes(body.targetType) || !Number.isInteger(body.targetId)) return error("Укажите, к чему комментарий.");
     const target = await loadCommentTarget(env, body.targetType, body.targetId);
     if (!target) return error("Не найдено.", 404);
+    // В закрытую тему отвечают только модераторы и админы
+    if (body.targetType === "thread" && !user.isModerator) {
+      const lock = await env.DB.prepare("SELECT locked_at FROM threads WHERE id = ?").bind(body.targetId).first();
+      if (lock?.locked_at) return error("Тема закрыта, новые ответы не принимаются.", 409);
+    }
     const parsed = readBody(body.body, "Комментарий", 1, COMMENT_MAX);
     if (parsed.problem) return error(parsed.problem);
     if (await isDuplicate(env, user.id, parsed.text)) return error("Такой комментарий уже отправлен.", 409);
@@ -231,12 +236,14 @@ async function react(request, env, params, add) {
 // ==================== ОБСУЖДЕНИЯ И ТЕОРИИ ====================
 
 const THREAD_SELECT = `SELECT th.id, th.user_id, th.title_id, th.kind, th.subject, th.body, th.spoiler, th.comments_count, th.created_at,
-  th.last_activity_at, th.deleted_at, u.name AS author_name, p.username AS author_username, p.avatar_version, p.avatar_color,
-  t.title AS title_name
+  th.last_activity_at, th.deleted_at, th.category_id, th.pinned_at, th.locked_at, u.name AS author_name, u.role AS author_role,
+  p.username AS author_username, p.avatar_version, p.avatar_color, t.title AS title_name,
+  fc.slug AS category_slug, fc.title AS category_title
 FROM threads th LEFT JOIN users u ON u.id = th.user_id LEFT JOIN user_profiles p ON p.user_id = th.user_id
-LEFT JOIN titles t ON t.id = th.title_id`;
+LEFT JOIN titles t ON t.id = th.title_id LEFT JOIN forum_categories fc ON fc.id = th.category_id`;
 
 function toThread(row, viewer, full = false) {
+  const locked = Boolean(row.locked_at);
   return {
     id: row.id,
     kind: row.kind,
@@ -246,14 +253,34 @@ function toThread(row, viewer, full = false) {
     comments: row.comments_count,
     createdAt: row.created_at,
     lastActivityAt: row.last_activity_at,
+    pinned: Boolean(row.pinned_at),
+    locked,
+    category: row.category_id ? { id: row.category_id, slug: row.category_slug, title: row.category_title } : null,
     title: row.title_id ? { id: row.title_id, title: row.title_name } : null,
     author: row.user_id ? {
-      id: row.user_id, name: row.author_name, username: row.author_username, avatarColor: row.avatar_color || "violet",
+      id: row.user_id, name: row.author_name, username: row.author_username, role: row.author_role, avatarColor: row.avatar_color || "violet",
       avatar: row.avatar_version ? `/avatars/${row.user_id}?v=${row.avatar_version}` : null
     } : null,
-    canEdit: Boolean(viewer && viewer.id === row.user_id),
-    canDelete: Boolean(viewer && (viewer.id === row.user_id || viewer.isModerator))
+    // Закрытую тему автор не правит: её содержимое зафиксировал модератор
+    canEdit: Boolean(viewer && viewer.id === row.user_id && (!locked || viewer.isModerator)),
+    canDelete: Boolean(viewer && (viewer.id === row.user_id || viewer.isModerator)),
+    canModerate: Boolean(viewer?.isModerator)
   };
+}
+
+/** Категория форума для новой темы: существующая, а в категорию «только для команды» пишут модераторы и админы */
+async function threadCategory(env, user, value) {
+  if (value === undefined || value === null || value === "") {
+    const general = await env.DB.prepare("SELECT id FROM forum_categories WHERE slug = 'general'").first();
+    return { id: general?.id ?? null };
+  }
+  const id = typeof value === "string" && !/^\d+$/.test(value)
+    ? (await env.DB.prepare("SELECT id FROM forum_categories WHERE slug = ?").bind(value).first())?.id
+    : parseId(value);
+  const row = id ? await env.DB.prepare("SELECT id, staff_only FROM forum_categories WHERE id = ?").bind(id).first() : null;
+  if (!row) return { problem: error("Категория не найдена.", 404) };
+  if (row.staff_only === 1 && !user.isModerator) return { problem: error("В этой категории публикует только команда Endemion.", 403) };
+  return { id: row.id };
 }
 
 /** /api/threads — лента обсуждений (GET ?kind=&title=&q=&offset=) и новое обсуждение или теория (POST) */
@@ -273,14 +300,25 @@ export const threads = {
       where.push("th.title_id = ?");
       binds.push(titleId);
     }
+    const categorySlug = search.get("category");
+    if (categorySlug) {
+      const category = await env.DB.prepare("SELECT id FROM forum_categories WHERE slug = ?").bind(categorySlug.slice(0, 60)).first();
+      if (!category) return error("Категория не найдена.", 404);
+      where.push("th.category_id = ?");
+      binds.push(category.id);
+    }
     const query = cleanLine(search.get("q") || "").slice(0, 80);
     if (query) {
-      where.push("th.subject LIKE ? ESCAPE '\\'");
-      binds.push(`%${query.replace(/[\\%_]/g, "\\$&")}%`);
+      // Поиск по заголовку и тексту темы
+      const pattern = `%${query.replace(/[\\%_]/g, "\\$&")}%`;
+      where.push("(th.subject LIKE ? ESCAPE '\\' OR th.body LIKE ? ESCAPE '\\')");
+      binds.push(pattern, pattern);
     }
     const offset = intParam(search.get("offset"), 0, 0, 100_000);
     if (offset === null) return error("Некорректный offset.");
-    const order = search.get("sort") === "new" ? "th.id DESC" : "th.last_activity_at DESC, th.id DESC";
+    // В категории закреплённые темы идут первыми; в общей ленте закрепление не поднимает тему
+    const pinnedFirst = categorySlug ? "th.pinned_at IS NULL, " : "";
+    const order = search.get("sort") === "new" ? `${pinnedFirst}th.id DESC` : `${pinnedFirst}th.last_activity_at DESC, th.id DESC`;
     const viewer = await currentUser(env, request);
     const [list, count] = await env.DB.batch([
       env.DB.prepare(`${THREAD_SELECT} WHERE ${where.join(" AND ")} ORDER BY ${order} LIMIT 20 OFFSET ?`).bind(...binds, offset),
@@ -305,11 +343,13 @@ export const threads = {
       titleId = parseId(body.titleId);
       if (!titleId || !(await getTitle(env, titleId))) return error("Тайтл не найден.", 404);
     }
+    const category = await threadCategory(env, user, body.category);
+    if (category.problem) return category.problem;
     const limited = await takeAction(env, user.id, "thread");
     if (limited) return limited;
     const row = await env.DB.prepare(
-      "INSERT INTO threads (user_id, title_id, kind, subject, body, spoiler) VALUES (?, ?, ?, ?, ?, ?) RETURNING id"
-    ).bind(user.id, titleId, body.kind, subject, parsed.text, body.spoiler === true ? 1 : 0).first();
+      "INSERT INTO threads (user_id, title_id, kind, subject, body, spoiler, category_id) VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id"
+    ).bind(user.id, titleId, body.kind, subject, parsed.text, body.spoiler === true ? 1 : 0, category.id).first();
     const achievements = await checkAchievements(env, user.id, "thread");
     const saved = await env.DB.prepare(`${THREAD_SELECT} WHERE th.id = ?`).bind(row.id).first();
     return json({ thread: toThread(saved, user, true), achievements }, 201);
@@ -330,9 +370,10 @@ export const thread = {
     const { user, response } = await requireWriter(env, request);
     if (response) return response;
     const id = parseId(params.id);
-    const row = id ? await env.DB.prepare("SELECT user_id, deleted_at FROM threads WHERE id = ?").bind(id).first() : null;
+    const row = id ? await env.DB.prepare("SELECT user_id, deleted_at, locked_at FROM threads WHERE id = ?").bind(id).first() : null;
     if (!row || row.deleted_at) return error("Обсуждение не найдено.", 404);
     if (row.user_id !== user.id) return error("Править можно только свои обсуждения.", 403);
+    if (row.locked_at && !user.isModerator) return error("Тема закрыта модератором, править её нельзя.", 409);
     const body = await readJson(request, 40_000);
     if (!body) return error("Некорректный запрос.");
     const subject = cleanLine(body.subject);
@@ -361,6 +402,50 @@ export const thread = {
     }
     await env.DB.batch(statements);
     return json({ ok: true });
+  }
+};
+
+/**
+ * PATCH /api/threads/:id/moderation — закрепить, закрыть или перенести тему (модераторы и админы).
+ * Тело: { pinned?: boolean, locked?: boolean, category?: slug }. Каждое действие пишется в журнал модерации
+ */
+export const threadModeration = {
+  async onRequestPatch({ request, env, params }) {
+    const { user, response } = await requireRole(env, request, "moderator");
+    if (response) return response;
+    const id = parseId(params.id);
+    const row = id ? await env.DB.prepare("SELECT id, user_id, deleted_at, pinned_at, locked_at, category_id FROM threads WHERE id = ?").bind(id).first() : null;
+    if (!row || row.deleted_at) return error("Обсуждение не найдено.", 404);
+    const body = await readJson(request, 2_000);
+    if (!body) return error("Некорректный запрос.");
+    const sets = [];
+    const binds = [];
+    const actions = [];
+    for (const [key, column, on, off] of [["pinned", "pinned_at", "thread.pin", "thread.unpin"], ["locked", "locked_at", "thread.lock", "thread.unlock"]]) {
+      if (body[key] === undefined) continue;
+      if (typeof body[key] !== "boolean") return error("Некорректный запрос.");
+      if (body[key] === Boolean(row[column])) continue;
+      sets.push(body[key] ? `${column} = datetime('now')` : `${column} = NULL`);
+      actions.push(body[key] ? on : off);
+    }
+    if (body.category !== undefined) {
+      if (typeof body.category !== "string") return error("Некорректный запрос.");
+      const category = await threadCategory(env, user, body.category);
+      if (category.problem) return category.problem;
+      if (category.id !== row.category_id) {
+        sets.push("category_id = ?");
+        binds.push(category.id);
+        actions.push("thread.move");
+      }
+    }
+    if (sets.length) {
+      await env.DB.batch([
+        env.DB.prepare(`UPDATE threads SET ${sets.join(", ")} WHERE id = ?`).bind(...binds, id),
+        ...actions.map((action) => moderationStatement(env, user, { action, targetType: "thread", targetId: id }))
+      ]);
+    }
+    const saved = await env.DB.prepare(`${THREAD_SELECT} WHERE th.id = ?`).bind(id).first();
+    return json({ thread: toThread(saved, user, true) });
   }
 };
 

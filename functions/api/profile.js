@@ -361,7 +361,7 @@ export const userFollow = {
     if (result.meta.changes) {
       await notifyStatement(env, {
         userId: row.id, kind: "follow", actorId: viewer.id,
-        text: `${viewer.name} подписался(-ась) на вас`, link: viewer.username ? `/u/${viewer.username}` : ""
+        text: `${viewer.name} подписался(-ась) на вас`, link: viewer.username ? `/users/${viewer.username}` : ""
       }).run();
       await checkAchievements(env, row.id, "follow");
     }
@@ -396,6 +396,48 @@ export const userSearch = {
       users: results.map((row) => ({
         id: row.id, name: row.name, username: row.username, bio: row.bio, followers: row.followers, avatarColor: row.avatar_color,
         avatar: row.avatar_version ? `/avatars/${row.id}?v=${row.avatar_version}` : null
+      }))
+    });
+  }
+};
+
+/**
+ * GET /api/users/:username/forum — активность на форуме: число тем и ответов, последние темы и ответы.
+ * Скрыта, если профиль приватный или пользователь выключил показ активности (кроме владельца и модераторов)
+ */
+export const userForum = {
+  async onRequestGet({ request, env, params }) {
+    const { viewer, row, visible, own, response } = await loadProfile(env, request, params);
+    if (response) return response;
+    if (!visible || (!own && row.show_activity !== 1 && !viewer?.isModerator)) return error("Пользователь скрыл свою активность.", 403);
+    const [counts, topics, posts] = await env.DB.batch([
+      env.DB.prepare(
+        `SELECT (SELECT COUNT(*) FROM threads WHERE user_id = ?1 AND deleted_at IS NULL) AS topics,
+           (SELECT COUNT(*) FROM comments c JOIN threads th ON th.id = c.target_id
+            WHERE c.user_id = ?1 AND c.target_type = 'thread' AND c.deleted_at IS NULL AND th.deleted_at IS NULL) AS posts`
+      ).bind(row.id),
+      env.DB.prepare(
+        `SELECT th.id, th.subject, th.comments_count, th.created_at, fc.slug AS category_slug, fc.title AS category_title
+         FROM threads th LEFT JOIN forum_categories fc ON fc.id = th.category_id
+         WHERE th.user_id = ? AND th.deleted_at IS NULL ORDER BY th.id DESC LIMIT 5`
+      ).bind(row.id),
+      env.DB.prepare(
+        `SELECT c.id, c.body, c.spoiler, c.created_at, th.id AS thread_id, th.subject
+         FROM comments c JOIN threads th ON th.id = c.target_id
+         WHERE c.user_id = ? AND c.target_type = 'thread' AND c.deleted_at IS NULL AND th.deleted_at IS NULL
+         ORDER BY c.id DESC LIMIT 5`
+      ).bind(row.id)
+    ]);
+    return json({
+      topicsCount: counts.results[0].topics,
+      postsCount: counts.results[0].posts,
+      topics: topics.results.map((t) => ({
+        id: t.id, subject: t.subject, replies: t.comments_count, createdAt: t.created_at,
+        category: t.category_slug ? { slug: t.category_slug, title: t.category_title } : null
+      })),
+      posts: posts.results.map((p) => ({
+        id: p.id, excerpt: p.spoiler === 1 ? "" : p.body.slice(0, 200), spoiler: p.spoiler === 1, createdAt: p.created_at,
+        thread: { id: p.thread_id, subject: p.subject }
       }))
     });
   }
