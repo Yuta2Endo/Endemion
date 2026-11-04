@@ -124,8 +124,9 @@ h2,
   height: 34px;
   place-items: center;
   border-radius: 11px;
-  color: #07101b;
-  background: linear-gradient(135deg, var(--cyan), var(--pink));
+  color: #fff;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6 65%, #a855f7);
+  box-shadow: 0 0 20px rgba(139, 92, 246, 0.5), inset 0 0 0 1px rgba(255, 255, 255, 0.15);
 }
 
 .logo-id {

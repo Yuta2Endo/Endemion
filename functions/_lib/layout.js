@@ -19,7 +19,7 @@ export const NAV = [
 export const NAV_MORE = [];
 
 // Версия assets добавляется к URL, чтобы браузеры обновляли кеш при выкладке. Время сборки в base36
-const ASSET_VERSION = "mw1oalz1";
+const ASSET_VERSION = "tnyz8c";
 
 // Контуры иконок 24×24. Такие же есть в public/assets/app.js для иконок, которые рисует скрипт
 const ICONS = {
