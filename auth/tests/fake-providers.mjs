@@ -1,4 +1,4 @@
-// Заглушки Google, GitHub и VK ID на одном локальном порту для тестов входа через провайдеров.
+// Заглушки Google, GitHub, VK ID и Discord на одном локальном порту для тестов входа через провайдеров.
 // Каждая проверяет то же, что настоящий провайдер: client_id, точный redirect_uri, PKCE S256, одноразовый код,
 // у Google — секрет клиента и подписанный RS256 ID token с nonce, у VK — device_id и state при обмене кода.
 // Поведение следующего входа задаёт тест: fake.next(provider, { user, deny, error, ... })
@@ -9,6 +9,7 @@ import { createServer } from "node:http";
 export const GOOGLE = { id: "google-client.apps.test", secret: "google-secret-test" };
 export const GITHUB = { id: "github-client-test", secret: "github-secret-test" };
 export const VK = { id: "51234567" };
+export const DISCORD = { id: "1300000000000000001", secret: "discord-secret-test" };
 
 const b64u = (value) => Buffer.from(value).toString("base64url");
 
@@ -47,7 +48,7 @@ export async function startFakeProviders() {
   function authorize(provider, url, res) {
     const q = url.searchParams;
     authorizeRequests.push({ provider, params: Object.fromEntries(q) });
-    const clientId = { google: GOOGLE.id, github: GITHUB.id, vk: VK.id }[provider];
+    const clientId = { google: GOOGLE.id, github: GITHUB.id, vk: VK.id, discord: DISCORD.id }[provider];
     const problems = [];
     if (q.get("client_id") !== clientId) problems.push("client_id");
     if (q.get("redirect_uri") !== redirectUri(provider)) problems.push("redirect_uri");
@@ -109,6 +110,27 @@ export async function startFakeProviders() {
     if (path === "/google/authorize") return authorize("google", url, res);
     if (path === "/github/login/oauth/authorize") return authorize("github", url, res);
     if (path === "/vk/authorize") return authorize("vk", url, res);
+    if (path === "/discord/oauth2/authorize") return authorize("discord", url, res);
+
+    if (path === "/discord/api/oauth2/token" && req.method === "POST") {
+      const form = await readBody(req);
+      if (form.get("client_id") !== DISCORD.id || form.get("client_secret") !== DISCORD.secret) return json(res, 401, { error: "invalid_client" });
+      if (form.get("grant_type") !== "authorization_code") return json(res, 400, { error: "unsupported_grant_type" });
+      const entry = takeCode("discord", form);
+      if (!entry || entry.next.tokenError) return json(res, 400, { error: "invalid_grant" });
+      return json(res, 200, { access_token: issueAccess(entry), token_type: "Bearer", expires_in: 604800, refresh_token: "discord-refresh", scope: "identify email" });
+    }
+
+    if (path === "/discord/api/users/@me") {
+      const entry = tokens.get(String(req.headers.authorization || "").replace(/^Bearer /, ""));
+      if (!entry) return json(res, 401, { message: "401: Unauthorized", code: 0 });
+      if (entry.next.userinfoFail) return json(res, 500, { message: "Internal Server Error" });
+      const user = entry.next.user;
+      return json(res, 200, {
+        id: user.id, username: user.username, global_name: user.global_name ?? null,
+        email: user.email ?? null, verified: user.verified ?? Boolean(user.email)
+      });
+    }
 
     if (path === "/google/token" && req.method === "POST") {
       const form = await readBody(req);
@@ -199,7 +221,12 @@ export async function startFakeProviders() {
         AUTH_GITHUB_TOKEN_URL: `${base}/github/login/oauth/access_token`,
         AUTH_GITHUB_API_URL: `${base}/github/api`,
         AUTH_VK_CLIENT_ID: VK.id,
-        AUTH_VK_BASE_URL: `${base}/vk`
+        AUTH_VK_BASE_URL: `${base}/vk`,
+        AUTH_DISCORD_CLIENT_ID: DISCORD.id,
+        AUTH_DISCORD_CLIENT_SECRET: DISCORD.secret,
+        AUTH_DISCORD_AUTHORIZE_URL: `${base}/discord/oauth2/authorize`,
+        AUTH_DISCORD_TOKEN_URL: `${base}/discord/api/oauth2/token`,
+        AUTH_DISCORD_API_URL: `${base}/discord/api`
       };
     },
     stop: () => new Promise((resolve) => server.close(resolve))

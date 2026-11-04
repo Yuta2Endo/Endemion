@@ -41,13 +41,15 @@ services:
       UNISENDER_API_KEY: ${UNISENDER_API_KEY:-}
       UNISENDER_API_URL: ${UNISENDER_API_URL:-}
       MAIL_SKIP_UNSUBSCRIBE: ${MAIL_SKIP_UNSUBSCRIBE:-}
-      # Вход через Google, VK ID и GitHub: пусто — провайдер выключен
+      # Вход через Google, VK ID, GitHub и Discord: пусто — провайдер выключен
       AUTH_GOOGLE_CLIENT_ID: ${AUTH_GOOGLE_CLIENT_ID:-}
       AUTH_GOOGLE_CLIENT_SECRET: ${AUTH_GOOGLE_CLIENT_SECRET:-}
       AUTH_GITHUB_CLIENT_ID: ${AUTH_GITHUB_CLIENT_ID:-}
       AUTH_GITHUB_CLIENT_SECRET: ${AUTH_GITHUB_CLIENT_SECRET:-}
       AUTH_VK_CLIENT_ID: ${AUTH_VK_CLIENT_ID:-}
       AUTH_VK_SERVICE_TOKEN: ${AUTH_VK_SERVICE_TOKEN:-}
+      AUTH_DISCORD_CLIENT_ID: ${AUTH_DISCORD_CLIENT_ID:-}
+      AUTH_DISCORD_CLIENT_SECRET: ${AUTH_DISCORD_CLIENT_SECRET:-}
       RESEND_API_KEY: ${RESEND_API_KEY:-}
     volumes:
       # Отдельная папка: база, ключ подписи и аватары Endemion ID не смешиваются с данными сайта

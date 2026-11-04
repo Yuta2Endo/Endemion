@@ -49,7 +49,7 @@ pnpm infra:up && pnpm db:migrate && pnpm dev
 
 В рабочей среде провайдер не запустится, если нет ключа подписи, ключи cookie короче 32 символов, секрет клиента короче 32 символов, адрес клиента не `https` или содержит `*`.
 
-## Вход через Google, VK ID и GitHub
+## Вход через Google, VK ID, GitHub и Discord
 
 Провайдеры подключены к Endemion ID, а не к сайтам: кнопки есть на странице входа auth.endemion.online, поэтому они работают и для Endemion, и для Endemion Life. Сайты по-прежнему получают только `sub` Endemion ID. Провайдер включён, если в `.env` заданы его ключи; без ключей кнопки нет.
 
@@ -58,15 +58,31 @@ pnpm infra:up && pnpm db:migrate && pnpm dev
 | Google | Google Cloud Console → APIs & Services → Credentials → OAuth client ID, тип «Web application». Экран согласия — в статусе «In production» | `https://auth.endemion.online/social/callback/google` | `AUTH_GOOGLE_CLIENT_ID`, `AUTH_GOOGLE_CLIENT_SECRET` | `openid email profile` |
 | GitHub | Settings → Developer settings → OAuth Apps → New OAuth App, Homepage `https://endemion.online` | `https://auth.endemion.online/social/callback/github` | `AUTH_GITHUB_CLIENT_ID`, `AUTH_GITHUB_CLIENT_SECRET` | `user:email` |
 | VK ID | Кабинет VK ID для бизнеса (id.vk.ru) → приложение «Веб», базовый домен `auth.endemion.online`, доступ к почте | `https://auth.endemion.online/social/callback/vk` | `AUTH_VK_CLIENT_ID` (числовой ID), `AUTH_VK_SERVICE_TOKEN` (сервисный ключ, только для конфиденциального приложения) | `vkid.personal_info email` |
+| Discord | Discord Developer Portal → Applications → New Application → OAuth2 → Redirects | `https://auth.endemion.online/social/callback/discord` | `AUTH_DISCORD_CLIENT_ID`, `AUTH_DISCORD_CLIENT_SECRET` | `identify email` |
 
 Адрес ответа указывается у провайдера точно, без `*` и лишнего `/`. После правки `.env` перезапустите только `auth` (`docker compose up -d --no-deps auth`). Сайт и Life перезапускать не нужно.
 
 Как это работает:
 
 - Первый вход: пользователь подтверждает почту, username и согласие с политикой. Пароль не нужен. Почта от провайдера подставляется в форму, но подтверждённой не считается, пока пользователь не откроет письмо Endemion ID.
-- Повторный вход сразу возвращает на сайт. Аккаунт находится по постоянному номеру у провайдера (Google `sub`, GitHub `id`, VK `user_id`), а не по почте.
+- Повторный вход сразу возвращает на сайт. Аккаунт находится по постоянному номеру у провайдера (Google `sub`, GitHub `id`, VK `user_id`, Discord `id`), а не по почте.
 - Если почта уже принадлежит другому Endemion ID, аккаунты не объединяются. Пользователь входит в свой аккаунт паролем и привязывает провайдера на странице аккаунта.
-- Страница `/account` → «Способы входа»: привязать и отвязать Google, ВКонтакте и GitHub. Для этого нужен вход не раньше 10 минут назад. Последний способ входа у аккаунта без пароля не отвязывается.
+- Страница `/account` → «Способы входа»: привязать и отвязать Google, ВКонтакте, GitHub и Discord. Для этого нужен вход не раньше 10 минут назад. Последний способ входа у аккаунта без пароля не отвязывается.
+
+### Подключение и проверка на сервере
+
+Перед ключами Google, GitHub и Discord (компании США) проверьте с юристом требования 152-ФЗ о трансграничной передаче: политика конфиденциальности (`/privacy#social`) уже описывает, какие данные они получают.
+
+1. Создать приложение у провайдера, указать адрес ответа из таблицы.
+2. Вписать ключи в `/opt/endemion/.env`.
+3. Перезапустить только `auth`: `docker compose up -d --no-deps auth </dev/null`. Сайт и Life перезапускать не нужно.
+4. Проверить каждого провайдера с настоящим аккаунтом:
+   - на auth.endemion.online появилась кнопка «Войти через …»;
+   - первый вход: форма «Завершите регистрацию», после неё вход на endemion.online;
+   - повторный вход тем же аккаунтом сразу возвращает на сайт, новый аккаунт не создаётся;
+   - вход в Endemion Life тем же аккаунтом проходит без повторного вопроса;
+   - на странице «Аккаунт» → «Способы входа» провайдер привязан; отвязка и повторная привязка работают;
+   - `docker compose logs --tail 50 auth` без ошибок `social.login_failed`.
 
 ## Клиенты
 

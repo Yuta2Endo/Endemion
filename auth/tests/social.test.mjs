@@ -1,4 +1,4 @@
-// Вход через Google, GitHub и VK ID. Вместо настоящих провайдеров — локальные заглушки (fake-providers.mjs),
+// Вход через Google, GitHub, VK ID и Discord. Вместо настоящих провайдеров — локальные заглушки (fake-providers.mjs),
 // которые проверяют client_id, redirect_uri, PKCE, nonce, device_id и одноразовость кода так же, как настоящие
 
 import { test, before, after } from "node:test";
@@ -80,14 +80,15 @@ async function completeSignup(user, uid, page, values) {
 
 const lastAuthorize = (provider) => fake.authorizeRequests.filter((item) => item.provider === provider).at(-1).params;
 
-test("кнопки входа: только Google, ВКонтакте и GitHub, без Apple и Discord", async () => {
+test("кнопки входа: Google, ВКонтакте, GitHub и Discord, без Apple и X", async () => {
   const user = browser(auth.issuer);
   const start = await startLogin(site, SITE.redirect);
   const page = await user.follow(start.url.href);
   assert.match(page.text, /Войти через Google/);
   assert.match(page.text, /Войти через ВКонтакте/);
   assert.match(page.text, /Войти через GitHub/);
-  assert.doesNotMatch(page.text, /apple|discord/i);
+  assert.match(page.text, /Войти через Discord/);
+  assert.doesNotMatch(page.text, /apple|twitter|Войти через X/i);
   // Кнопки — формы POST, ссылок на начало входа нет
   assert.match(page.text, /<form method="post" action="\/interaction\/[^/"]+\/social\/google">/);
   assert.doesNotMatch(page.text, /href="[^"]*\/social\//);
@@ -178,6 +179,32 @@ test("GitHub: вход по числовому id, почта подставля
   assert.equal((await finishLogin(site, second.start, second.result.final)).claims().sub, sub);
 });
 
+test("Discord: вход по id, почта только подтверждённая, имя из global_name", async () => {
+  const user = browser(auth.issuer);
+  const first = await socialLogin(user, "discord", { user: { id: "1234567890123456789", username: "endemion_fan", global_name: "Фанат Endemion", email: "fan@discord.test", verified: false } });
+  const params = lastAuthorize("discord");
+  assert.equal(params.scope, "identify email", "только профиль и почта, без серверов и сообщений");
+  assert.equal(params.response_type, "code");
+  assert.equal(params.code_challenge_method, "S256");
+  assert.match(first.result.text, /Завершите регистрацию/);
+  assert.match(first.result.text, /name="email" type="email" value=""/, "неподтверждённая почта Discord не подставляется");
+  assert.match(first.result.text, /value="Фанат Endemion"/);
+
+  const done = await completeSignup(user, first.uid, first.result, { email: "fan@endemion.test", username: "discord_fan" });
+  assert.ok(done.final, done.text.slice(0, 300));
+  const sub = (await finishLogin(site, first.start, done.final)).claims().sub;
+  assert.equal(count("SELECT COUNT(*) AS n FROM external_identities WHERE provider = 'discord' AND provider_user_id = '1234567890123456789'"), 1);
+
+  // Имя и почта в Discord сменились, id тот же — тот же аккаунт
+  const second = await socialLogin(browser(auth.issuer), "discord", { user: { id: "1234567890123456789", username: "renamed", email: "new@discord.test", verified: true } });
+  assert.ok(second.result.final);
+  assert.equal((await finishLogin(site, second.start, second.result.final)).claims().sub, sub);
+
+  // Подтверждённая почта подставляется в форму нового аккаунта
+  const other = await socialLogin(browser(auth.issuer), "discord", { user: { id: "1234567890123456780", username: "verified_one", email: "ok@discord.test", verified: true } });
+  assert.match(other.result.text, /name="email" type="email" value="ok@discord.test"/);
+});
+
 test("VK ID: PKCE, device_id и state при обмене кода, вход по user_id", async () => {
   const user = browser(auth.issuer);
   const first = await socialLogin(user, "vk", { user: { user_id: 777001, first_name: "Иван", last_name: "Петров", email: "ivan@vk.example" } });
@@ -198,7 +225,7 @@ test("VK ID: PKCE, device_id и state при обмене кода, вход п�
 
 test("отмена у провайдера: снова форма входа с сообщением, аккаунт не создан", async () => {
   const before = accountsCount();
-  for (const [provider, name] of [["google", "Google"], ["vk", "ВКонтакте"], ["github", "GitHub"]]) {
+  for (const [provider, name] of [["google", "Google"], ["vk", "ВКонтакте"], ["github", "GitHub"], ["discord", "Discord"]]) {
     const { result } = await socialLogin(browser(auth.issuer), provider, { deny: true });
     assert.equal(result.status, 200);
     assert.match(result.text, new RegExp(`Вход через ${name} отменён`));
@@ -222,7 +249,10 @@ test("ошибки провайдеров: входа нет, сообщение
     ["github", { user: { id: 2 }, userinfoFail: true }],
     ["vk", { user: { user_id: 3 }, tokenError: true }],
     ["vk", { user: { user_id: 4 }, userinfoFail: true }],
-    ["vk", { user: { user_id: 5 }, wrongState: true }]
+    ["vk", { user: { user_id: 5 }, wrongState: true }],
+    ["discord", { user: { id: "1300000000000000099" }, tokenError: true }],
+    ["discord", { user: { id: "1300000000000000098" }, userinfoFail: true }],
+    ["discord", { user: { id: "not-a-snowflake" } }]
   ];
   for (const [provider, behaviour] of cases) {
     const { result } = await socialLogin(browser(auth.issuer), provider, behaviour);
@@ -334,8 +364,8 @@ test("привязка и отвязка провайдера в настрой�
 
   const account = await user.request("/account");
   assert.match(account.text, /Способы входа/);
-  assert.equal((account.text.match(/>Привязать</g) || []).length, 3);
-  assert.doesNotMatch(account.text, /apple|discord/i);
+  assert.equal((account.text.match(/>Привязать</g) || []).length, 4);
+  assert.doesNotMatch(account.text, /apple|twitter/i);
   const csrf = csrfFrom(account.text);
 
   assert.equal((await user.request("/account/social/github/link", { method: "POST", form: {} })).status, 403, "без токена CSRF");
