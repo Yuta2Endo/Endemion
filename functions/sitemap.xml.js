@@ -12,9 +12,19 @@ export async function onRequestGet({ request, env }) {
     ? (await env.DB.prepare("SELECT kind, ext_id, slug, refreshed_at FROM entries ORDER BY refreshed_at DESC LIMIT 40000").all()).results
     : [];
 
+  // Портал студии: опубликованные игры и публикации. Черновики в карту не попадают
+  const games = env.DB ? (await env.DB.prepare("SELECT slug, updated_at FROM games WHERE published = 1 ORDER BY position").all()).results : [];
+  const posts = env.DB
+    ? (await env.DB.prepare("SELECT slug, updated_at FROM studio_posts WHERE status IN ('published', 'archived') ORDER BY published_at DESC LIMIT 5000").all()).results
+    : [];
+
   const urls = [
     { loc: `${origin}/` },
-    ...["anime", "manga", "characters", "people", "studios", "seasons", "rankings", "community"].map((path) => ({ loc: `${origin}/${path}` })),
+    ...["games", "studio", "about", "community", "terms"].map((path) => ({ loc: `${origin}/${path}` })),
+    ...games.map((g) => ({ loc: `${origin}/games/${g.slug}`, lastmod: g.updated_at })),
+    ...posts.map((p) => ({ loc: `${origin}/studio/${p.slug}`, lastmod: p.updated_at })),
+    { loc: `${origin}/encyclopedia` },
+    ...["anime", "manga", "characters", "people", "studios", "seasons", "rankings"].map((path) => ({ loc: `${origin}/${path}` })),
     ...entries.map((row) => ({ loc: `${origin}/${row.kind}/${row.ext_id}${row.slug ? `-${row.slug}` : ""}`, lastmod: new Date(row.refreshed_at).toISOString() })),
     // Разделы читалки, открытые без входа. Pulse и профиль — личные, их в карте нет
     ...["reading", "catalog", "nexus", "oracle", "arena"].map((path) => ({ loc: `${origin}/${path}` })),

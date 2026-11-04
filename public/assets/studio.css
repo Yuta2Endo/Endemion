@@ -437,3 +437,122 @@
     margin-right: 4px;
   }
 }
+
+/* ==================== СТРАНИЦЫ ИГРЫ И ПУБЛИКАЦИИ ==================== */
+
+.studio-hero .breadcrumbs {
+  margin-bottom: 18px;
+}
+
+.studio-hero .featured-facts {
+  margin: 20px 0 28px;
+}
+
+.studio-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 8px 0 28px;
+}
+
+.studio-tabs a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 38px;
+  padding: 0 16px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--muted);
+  background: var(--panel-soft);
+  font-size: 14px;
+  font-weight: 600;
+  transition: color 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+}
+
+.studio-tabs a:hover {
+  color: var(--text);
+  border-color: var(--border-strong);
+}
+
+.studio-tabs a[aria-current="page"] {
+  color: var(--text);
+  border-color: rgba(var(--accent-rgb), 0.5);
+  background: rgba(var(--accent-rgb), 0.14);
+}
+
+.rich-text {
+  max-width: 72ch;
+  color: var(--text);
+  font-size: 16px;
+  line-height: 1.75;
+}
+
+.rich-text > * + * {
+  margin-top: 14px;
+}
+
+.rich-text h3 {
+  margin-top: 28px;
+  font-size: 20px;
+}
+
+.rich-text ul {
+  padding-left: 22px;
+}
+
+.rich-text li + li {
+  margin-top: 6px;
+}
+
+.rich-text a {
+  color: var(--accent-light);
+  text-decoration: underline;
+}
+
+.shots {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
+  gap: 16px;
+}
+
+.shots figure {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.shots img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+}
+
+.shots figcaption {
+  padding: 10px 14px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.post-page {
+  max-width: 860px;
+}
+
+.post-page > .card-meta {
+  margin: 14px 0 24px;
+}
+
+.post-image {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin-bottom: 24px;
+  border-radius: var(--radius);
+}
+
+.pager {
+  align-items: center;
+  justify-content: center;
+  margin-top: 28px;
+}

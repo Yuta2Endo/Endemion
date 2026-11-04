@@ -228,7 +228,7 @@ describe("каталог и страницы", () => {
   test("главная, каталог, сезоны, рейтинги, студии, персонаж и человек открываются", async () => {
     const guest = app.client();
     for (const [url, text] of [
-      ["/", "Популярное аниме"], ["/anime?type=tv&genre=1&year=2013&season=spring", "Атака титанов"], ["/manga", "Атака титанов"],
+      ["/encyclopedia", "Популярное аниме"], ["/anime?type=tv&genre=1&year=2013&season=spring", "Атака титанов"], ["/manga", "Атака титанов"],
       ["/seasons/spring_2013", "Весна 2013"], ["/seasons", "Аниме:"], ["/rankings", "Лучшее аниме"], ["/rankings?source=endemion", "ENDEMION"],
       ["/studios", "Wit Studio"], ["/studios/858-wit-studio", "Атака титанов"], ["/characters", "Эрен Йегер"],
       ["/characters/40882-eren-yeager", "Юки Кадзи"], ["/people/1117-tetsuro-araki", "5 ноября 1976"], ["/search?q=титан", "Атака титанов"], ["/mylist", "Мой список"]
@@ -362,7 +362,7 @@ describe("отзывы и комментарии", () => {
     assert.ok(r.data.reviews.some((review) => review.body.endsWith("Исправлено.")));
     assert.ok(r.data.score.votes >= 1);
     assert.equal((await guest.call("GET", "/api/entry-reviews")).data.reviews[0].entry.title, "Атака титанов");
-    assert.match((await guest.call("GET", "/")).text, /Последние отзывы[\s\S]*Атака титанов/);
+    assert.match((await guest.call("GET", "/encyclopedia")).text, /Последние отзывы[\s\S]*Атака титанов/);
 
     const other = await app.user("Чужой");
     const reviewId = r.data.reviews.find((review) => review.author.id === author.id).id;

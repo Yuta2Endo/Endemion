@@ -50,6 +50,8 @@ import * as ency from "../functions/api/encyclopedia.js";
 import * as encyPages from "../functions/encyclopedia.js";
 import * as universe from "../functions/api/universe.js";
 import * as adminUniverse from "../functions/api/adminUniverse.js";
+import * as studioPages from "../functions/studio.js";
+import * as media from "../functions/media.js";
 import { error } from "../functions/_lib/http.js";
 
 // Эти же пути перечислены в run_worker_first в wrangler.toml
@@ -190,8 +192,18 @@ const ROUTE_LIST = [
   ["/covers/:id", coverImage],
   ["/avatars/:id", profile.avatarImage],
   // Страницы разделов: каркас с сервера, данные подгружает скрипт раздела
-  // Временно, до главной портала (STAGE 03): / показывает главную энциклопедии
-  ["/", encyPages.home],
+  // Портал Endemion Studio (functions/studio.js): главная, игры, разработка, о студии
+  ["/", studioPages.home],
+  ["/games", studioPages.gamesPage],
+  ["/games/:slug", studioPages.gamePage],
+  ["/studio", studioPages.studioPage],
+  ["/studio/:slug", studioPages.postPage],
+  ["/about", studioPages.aboutPage],
+  ["/terms", studioPages.termsPage],
+  ["/media/games/:id/cover", media.gameCover],
+  ["/media/games/:id/shots/:mediaId", media.gameShot],
+  ["/media/posts/:id", media.postImage],
+  // Энциклопедия аниме и манги: в меню не входит (решение владельца 2026-11-04), адреса работают
   ["/encyclopedia", encyPages.home],
   ["/anime", encyPages.animeCatalog],
   ["/manga", encyPages.mangaCatalog],
