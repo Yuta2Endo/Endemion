@@ -43,7 +43,7 @@ export async function getStudio(http, id)
 ```
 
 **Параметр `http`**: функция `http(operation, url, init)`, которую передаёт слой каталога. Провайдер не делает `fetch` напрямую. `http` обрабатывает:
-- Кеширование в `catalog_cache` (TTL 15 мин для списков, 24 часа для карточек, 7 дней для жанров/студий)
+- Кеширование в `catalog_cache` (TTL 30 мин для списков, 12 часов для карточек, 24 часа для персонажей/людей, 7 дней для жанров/студий)
 - Rate limiting (4 req/s, 80 req/min для Shikimori)
 - Повторы при 429, 5xx (до 2 раз, экспоненциальная задержка)
 - Возврат устаревшей копии из кеша при недоступности источника
@@ -91,7 +91,7 @@ export async function getStudio(http, id)
 
 **PK**: `(kind, ext_id)` — без повторов. `ext_id` — это ID в источнике (Shikimori). Например, Death Note = 1535, Shingeki no Kyojin = 16498.
 
-**Связи**: `user_list`, `favorites`, `entry_reviews`, `universe_entities`, `universe_relations` ссылаются на `(kind, ext_id)` через внешний ключ.
+**Связи**: `user_list` ссылается на `(kind, ext_id)` через внешний ключ. `favorites` хранит `(target_type, ext_id)` без FK — только CHECK constraint (target_type включает не только 'anime'/'manga', но и 'character'/'person', которых нет в entries). `entry_reviews`, `universe_entities`, `universe_relations` имеют FK на `(kind, ext_id)`.
 
 ### 1.4. Ограничения текущей системы
 
@@ -224,12 +224,14 @@ export async function findByExternalId(http, source, externalId, kind)
 
 ### 2.8. Миграция существующих данных
 
-**Проблема**: `entries(kind, ext_id)` — составной PK, на него ссылаются:
+**Проблема**: `entries(kind, ext_id)` — составной PK, на него ссылаются через FK:
 - `user_list(kind, ext_id)` — списки пользователей
-- `favorites(target_type, ext_id)` где `target_type IN ('anime', 'manga')` — избранное
 - `entry_reviews(kind, ext_id)` — отзывы пользователей
 - `universe_entities(kind, ext_id)` — организации, локации, события для Universe Explorer
 - `universe_relations(kind, ext_id)` — связи вселенной
+
+**Без FK** (только CHECK constraint):
+- `favorites(target_type, ext_id)` где `target_type IN ('anime', 'manga', 'character', 'person')` — избранное. Для 'anime'/'manga' это внешний ID произведения, для 'character'/'person' — ID персонажа/человека из каталога (не из entries).
 
 **Комментарии** (`comments.target_type`, `comments.target_id`): тоже используют внешние ID для целей `'anime'` и `'manga'`, но без FK (проверка только CHECK constraint).
 
