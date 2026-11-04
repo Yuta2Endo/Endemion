@@ -3,6 +3,10 @@
 import { randomUUID } from "node:crypto";
 import { DUMMY_HASH, hashPassword, verifyPassword } from "./passwords.mjs";
 import { LOCK_AFTER, LOCK_MS } from "./limits.mjs";
+import { transaction } from "./db.mjs";
+
+// Хеш аккаунта, созданного через Google, VK ID или GitHub: не подходит ни к одному паролю (verifyPassword вернёт false)
+export const NO_PASSWORD = "!";
 
 // Те же правила, что у сайта Endemion (functions/_lib/validate.js и profiles.js), чтобы перенесённые данные проходили проверку
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -60,6 +64,10 @@ export function createAccounts(db, { issuer }) {
   );
   const loginOk = db.prepare("UPDATE accounts SET failed_logins = 0, locked_until = NULL WHERE sub = ?");
   const linkFor = db.prepare("SELECT platform_user_id FROM platform_links WHERE account_sub = ? AND platform = ?");
+  const byIdentity = db.prepare(
+    "SELECT accounts.* FROM external_identities JOIN accounts ON accounts.sub = external_identities.account_sub WHERE provider = ? AND provider_user_id = ?"
+  );
+  const insertIdentity = db.prepare("INSERT INTO external_identities (account_sub, provider, provider_user_id, email, display_name) VALUES (?, ?, ?, ?, ?)");
 
   function find(sub) {
     return bySub.get(sub) || null;
@@ -145,6 +153,69 @@ export function createAccounts(db, { issuer }) {
     return { account: find(sub) };
   }
 
+  /**
+   * Новый аккаунт для личности внешнего провайдера, без пароля. Аккаунт и связь создаются одной транзакцией.
+   * Почта не считается подтверждённой: её подтверждает только письмо Endemion ID.
+   * Занятая почта — { error, field: "email", conflict: true }: чужой аккаунт с ней не объединяется
+   */
+  function registerExternal({ email, username, displayName }, identity) {
+    const cleanEmail = normalizeEmail(email);
+    const cleanUsername = String(username ?? "").trim();
+    const cleanName = normalizeName(displayName) || cleanUsername;
+    const checks = [
+      ["email", validateEmail(cleanEmail)],
+      ["username", validateUsername(cleanUsername)],
+      ["displayName", validateDisplayName(cleanName)]
+    ];
+    for (const [field, error] of checks) if (error) return { error, field };
+    if (byEmail.get(cleanEmail)) return { error: "Аккаунт с этой почтой уже есть.", field: "email", conflict: true };
+    if (usernameTaken.get(cleanUsername, "")) return { error: "Это имя пользователя занято.", field: "username" };
+    const sub = randomUUID();
+    try {
+      transaction(db, () => {
+        insert.run(sub, cleanEmail, cleanUsername, cleanName, NO_PASSWORD);
+        insertIdentity.run(sub, identity.provider, identity.id, identity.email, identity.name);
+      });
+    } catch (err) {
+      if (!String(err.message).includes("UNIQUE")) throw err;
+      // Та же личность провайдера только что зарегистрировалась в другой вкладке
+      if (byIdentity.get(identity.provider, identity.id)) return { error: "Этот аккаунт уже зарегистрирован. Войдите заново.", field: "email" };
+      return { error: "Почта или имя пользователя уже заняты.", field: "email" };
+    }
+    return { account: find(sub) };
+  }
+
+  /** Аккаунт, к которому привязана личность провайдера, или null */
+  function findByIdentity(provider, providerUserId) {
+    return byIdentity.get(provider, providerUserId) || null;
+  }
+
+  function identities(sub) {
+    return db.prepare("SELECT provider, email, display_name, linked_at, last_login_at FROM external_identities WHERE account_sub = ?").all(sub);
+  }
+
+  /** Привязать личность к аккаунту. Ошибка, если она уже у другого аккаунта или у этого аккаунта уже есть такой провайдер */
+  function linkIdentity(sub, identity) {
+    const owner = findByIdentity(identity.provider, identity.id);
+    if (owner) return { error: owner.sub === sub ? "already" : "taken" };
+    try {
+      insertIdentity.run(sub, identity.provider, identity.id, identity.email, identity.name);
+    } catch (err) {
+      if (String(err.message).includes("UNIQUE")) return { error: "provider_linked" };
+      throw err;
+    }
+    return { ok: true };
+  }
+
+  function unlinkIdentity(sub, provider) {
+    return db.prepare("DELETE FROM external_identities WHERE account_sub = ? AND provider = ?").run(sub, provider).changes > 0;
+  }
+
+  function touchIdentity(provider, providerUserId) {
+    db.prepare("UPDATE external_identities SET last_login_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE provider = ? AND provider_user_id = ?")
+      .run(provider, providerUserId);
+  }
+
   /** Изменение профиля. Почта меняется отдельно (с подтверждением), username и имя — здесь */
   function updateProfile(sub, { username, displayName }) {
     const row = find(sub);
@@ -200,6 +271,13 @@ export function createAccounts(db, { issuer }) {
     claimsFor,
     authenticate,
     register,
+    registerExternal,
+    findByIdentity,
+    identities,
+    linkIdentity,
+    unlinkIdentity,
+    touchIdentity,
+    hasPassword: (row) => Boolean(row) && row.password_hash !== NO_PASSWORD,
     updateProfile,
     changeEmail,
     setPassword,

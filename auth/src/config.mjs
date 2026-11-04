@@ -69,6 +69,37 @@ function loadClients(env, production) {
   });
 }
 
+/**
+ * Внешние провайдеры входа: Google, GitHub, VK ID. Провайдер включён, если заданы его ключи, у выключенного — null.
+ * Адреса провайдеров подменяются только в тестах (NODE_ENV=test): там вместо Google, GitHub и VK — локальные заглушки
+ */
+function loadSocial(env) {
+  const test = env.NODE_ENV === "test";
+  const url = (name, fallback) => (test && env[name]) || fallback;
+  const pair = (idName, secretName, label) => {
+    const clientId = String(env[idName] || "").trim();
+    const clientSecret = String(env[secretName] || "").trim();
+    if (!clientId && !clientSecret) return null;
+    if (!clientId || !clientSecret) fail(`${label}: задайте и ${idName}, и ${secretName}`);
+    return { clientId, clientSecret };
+  };
+  const google = pair("AUTH_GOOGLE_CLIENT_ID", "AUTH_GOOGLE_CLIENT_SECRET", "Google");
+  const github = pair("AUTH_GITHUB_CLIENT_ID", "AUTH_GITHUB_CLIENT_SECRET", "GitHub");
+  const vkId = String(env.AUTH_VK_CLIENT_ID || "").trim();
+  if (!vkId && env.AUTH_VK_SERVICE_TOKEN) fail("VK ID: AUTH_VK_SERVICE_TOKEN задан без AUTH_VK_CLIENT_ID");
+  if (vkId && !/^\d+$/.test(vkId)) fail("AUTH_VK_CLIENT_ID — числовой ID приложения из кабинета VK ID");
+  return {
+    google: google && { ...google, issuer: url("AUTH_GOOGLE_ISSUER", "https://accounts.google.com") },
+    github: github && {
+      ...github,
+      authorizeUrl: url("AUTH_GITHUB_AUTHORIZE_URL", "https://github.com/login/oauth/authorize"),
+      tokenUrl: url("AUTH_GITHUB_TOKEN_URL", "https://github.com/login/oauth/access_token"),
+      apiUrl: url("AUTH_GITHUB_API_URL", "https://api.github.com")
+    },
+    vk: vkId ? { clientId: vkId, serviceToken: String(env.AUTH_VK_SERVICE_TOKEN || "").trim(), baseUrl: url("AUTH_VK_BASE_URL", "https://id.vk.ru") } : null
+  };
+}
+
 export function loadConfig(env = process.env) {
   const production = env.NODE_ENV === "production";
   const issuer = env.AUTH_ISSUER || "http://localhost:3001";
@@ -96,6 +127,7 @@ export function loadConfig(env = process.env) {
     cookieKeys: cookieKeys.length ? cookieKeys : ["dev-only-cookie-key-not-for-production-use"],
     jwks: loadJwks(env, production, dataDir),
     clients: loadClients(env, production),
+    social: loadSocial(env),
     // Сайты экосистемы для ссылок на страницах Auth
     links: {
       site: env.ENDEMION_URL || "https://endemion.online",

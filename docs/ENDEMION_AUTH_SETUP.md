@@ -49,6 +49,25 @@ pnpm infra:up && pnpm db:migrate && pnpm dev
 
 В рабочей среде провайдер не запустится, если нет ключа подписи, ключи cookie короче 32 символов, секрет клиента короче 32 символов, адрес клиента не `https` или содержит `*`.
 
+## Вход через Google, VK ID и GitHub
+
+Провайдеры подключены к Endemion ID, а не к сайтам: кнопки есть на странице входа auth.endemion.online, поэтому они работают и для Endemion, и для Endemion Life. Сайты по-прежнему получают только `sub` Endemion ID. Провайдер включён, если в `.env` заданы его ключи; без ключей кнопки нет.
+
+| Провайдер | Где создать приложение | Адрес ответа (redirect URI) | Переменные | Scope |
+|---|---|---|---|---|
+| Google | Google Cloud Console → APIs & Services → Credentials → OAuth client ID, тип «Web application». Экран согласия — в статусе «In production» | `https://auth.endemion.online/social/callback/google` | `AUTH_GOOGLE_CLIENT_ID`, `AUTH_GOOGLE_CLIENT_SECRET` | `openid email profile` |
+| GitHub | Settings → Developer settings → OAuth Apps → New OAuth App, Homepage `https://endemion.online` | `https://auth.endemion.online/social/callback/github` | `AUTH_GITHUB_CLIENT_ID`, `AUTH_GITHUB_CLIENT_SECRET` | `user:email` |
+| VK ID | Кабинет VK ID для бизнеса (id.vk.ru) → приложение «Веб», базовый домен `auth.endemion.online`, доступ к почте | `https://auth.endemion.online/social/callback/vk` | `AUTH_VK_CLIENT_ID` (числовой ID), `AUTH_VK_SERVICE_TOKEN` (сервисный ключ, только для конфиденциального приложения) | `vkid.personal_info email` |
+
+Адрес ответа указывается у провайдера точно, без `*` и лишнего `/`. После правки `.env` перезапустите только `auth` (`docker compose up -d --no-deps auth`). Сайт и Life перезапускать не нужно.
+
+Как это работает:
+
+- Первый вход: пользователь подтверждает почту, username и согласие с политикой. Пароль не нужен. Почта от провайдера подставляется в форму, но подтверждённой не считается, пока пользователь не откроет письмо Endemion ID.
+- Повторный вход сразу возвращает на сайт. Аккаунт находится по постоянному номеру у провайдера (Google `sub`, GitHub `id`, VK `user_id`), а не по почте.
+- Если почта уже принадлежит другому Endemion ID, аккаунты не объединяются. Пользователь входит в свой аккаунт паролем и привязывает провайдера на странице аккаунта.
+- Страница `/account` → «Способы входа»: привязать и отвязать Google, ВКонтакте и GitHub. Для этого нужен вход не раньше 10 минут назад. Последний способ входа у аккаунта без пароля не отвязывается.
+
 ## Клиенты
 
 | client_id | redirect_uri | post_logout_redirect_uri |
@@ -88,7 +107,7 @@ pnpm infra:up && pnpm db:migrate && pnpm dev
 ## Проверки
 
 ```bash
-npm run test:auth      # 20 тестов провайдера и переноса пользователей
+npm run test:auth      # 34 теста провайдера, переноса пользователей и входа через Google, VK ID, GitHub
 npm test               # тесты сайта, в том числе 8 тестов входа через Endemion ID
 npm run lint && npm run typecheck
 ```

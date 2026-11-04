@@ -10,6 +10,7 @@ import { createAdapter, cleanupExpired } from "./adapter.mjs";
 import { createAccounts, validatePassword } from "./accounts.mjs";
 import { createMailer } from "./mail.mjs";
 import { createLimiter, createAudit, LIMITS } from "./limits.mjs";
+import { createSocial, PROVIDERS, PROVIDER_NAMES, SocialError } from "./social.mjs";
 import * as views from "./views.mjs";
 import { AUTH_ROOT, REPO_ROOT } from "./config.mjs";
 
@@ -17,6 +18,12 @@ import { AUTH_ROOT, REPO_ROOT } from "./config.mjs";
 const ACCOUNT_CLIENT = "endemion-id";
 const VERIFY_TTL_MS = 24 * 60 * 60 * 1000;
 const RESET_TTL_MS = 60 * 60 * 1000;
+// Вход через провайдера: сколько ждём ответа провайдера и сколько — заполнения формы регистрации
+const SOCIAL_LOGIN_TTL_MS = 10 * 60 * 1000;
+const SOCIAL_PENDING_TTL_MS = 15 * 60 * 1000;
+const SOCIAL_COOKIE = "endemion_social";
+// Привязка и отвязка провайдеров, пароль без старого пароля: вход должен быть не раньше стольких секунд назад
+const REAUTH_SECONDS = 10 * 60;
 const AVATAR_MAX_BYTES = 2 * 1024 * 1024;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const TOKEN_RE = /^[A-Za-z0-9_-]{43}$/;
@@ -62,8 +69,13 @@ export function createApp(config, { mailer = createMailer(config.mail), log = cr
     grant_types: ["authorization_code"],
     response_types: ["code"]
   });
-  // Куда браузер может уйти после отправки формы входа: CSP form-action проверяет и перенаправления
-  const redirectOrigins = [...new Set(config.clients.flatMap((client) => [...client.redirect_uris, ...client.post_logout_redirect_uris]).map((uri) => new URL(uri).origin))];
+  const social = createSocial(config.social, { redirectBase: config.issuer });
+  // Куда браузер может уйти после отправки формы входа: CSP form-action проверяет и перенаправления.
+  // Кнопки входа через провайдеров — формы, поэтому адреса включённых провайдеров тоже здесь
+  const redirectOrigins = [...new Set([
+    ...config.clients.flatMap((client) => [...client.redirect_uris, ...client.post_logout_redirect_uris]).map((uri) => new URL(uri).origin),
+    ...social.formOrigins()
+  ])];
 
   const provider = new Provider(config.issuer, {
     adapter: createAdapter(db),
@@ -300,20 +312,116 @@ export function createApp(config, { mailer = createMailer(config.mail), log = cr
     }
   }
 
+  // ---------- вход через Google, VK ID, GitHub ----------
+
+  /** Вход в эту сессию был недавно: привязка провайдеров и пароль без старого пароля */
+  const recentLogin = (session) => Boolean(session.loginTs) && now() - session.loginTs <= REAUTH_SECONDS;
+
+  function reauthPage(ctx) {
+    html(ctx, views.noticePage({
+      title: "Подтвердите вход",
+      kind: "error",
+      text: "Для этого действия войдите ещё раз: последний вход был больше 10 минут назад.",
+      link: { href: "/account/reauth", text: "Войти ещё раз" }
+    }), 200);
+  }
+
+  /**
+   * Уйти к провайдеру. verifier и nonce остаются в базе, state — в подписанной cookie этого браузера.
+   * Ответ провайдера примется только в том же браузере и только один раз
+   */
+  async function beginSocial(ctx, id, { purpose, interactionUid = null, accountSub = null }) {
+    const start = await social.begin(id);
+    db.prepare("INSERT INTO social_logins (state_hash, provider, purpose, interaction_uid, account_sub, code_verifier, nonce, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
+      .run(sha256(start.state), id, purpose, interactionUid, accountSub, start.verifier, start.nonce, Date.now() + SOCIAL_LOGIN_TTL_MS);
+    ctx.cookies.set(SOCIAL_COOKIE, start.state, {
+      httpOnly: true, sameSite: "lax", signed: true, secure: ctx.secure, path: "/social/callback", maxAge: SOCIAL_LOGIN_TTL_MS, overwrite: true
+    });
+    ctx.status = 303;
+    ctx.redirect(start.url.href);
+  }
+
+  /**
+   * Начатый вход по state из cookie. Запись удаляется сразу: второй раз тот же ответ не примется.
+   * Ответ с ошибкой без state (некоторые провайдеры так отвечают на отмену) только закрывает вход этого браузера:
+   * он ничего не выдаёт и не привязывает, поэтому подделать его безопасно
+   */
+  function takeSocialLogin(ctx, id) {
+    const state = ctx.cookies.get(SOCIAL_COOKIE, { signed: true });
+    ctx.cookies.set(SOCIAL_COOKIE, null, { path: "/social/callback", signed: true, overwrite: true });
+    const query = new URLSearchParams(ctx.querystring);
+    const fromUrl = query.getAll("state");
+    const errorOnly = fromUrl.length === 0 && query.has("error");
+    if (!state || !TOKEN_RE.test(state) || !(errorOnly || (fromUrl.length === 1 && fromUrl[0] === state))) return null;
+    const row = db.prepare("DELETE FROM social_logins WHERE state_hash = ? RETURNING provider, purpose, interaction_uid, account_sub, code_verifier, nonce, expires_at")
+      .get(sha256(state));
+    if (!row || Number(row.expires_at) < Date.now() || row.provider !== id) return null;
+    return {
+      state,
+      purpose: String(row.purpose),
+      interaction_uid: row.interaction_uid === null ? null : String(row.interaction_uid),
+      account_sub: row.account_sub === null ? null : String(row.account_sub),
+      code_verifier: String(row.code_verifier),
+      nonce: row.nonce === null ? null : String(row.nonce)
+    };
+  }
+
+  /** Личность провайдера, которая ждёт завершения входа в interaction uid */
+  function findPending(token, uid) {
+    if (!TOKEN_RE.test(String(token || ""))) return null;
+    return db.prepare("SELECT * FROM social_pending WHERE token_hash = ? AND interaction_uid = ? AND expires_at > ?").get(sha256(token), uid, Date.now()) || null;
+  }
+
+  const deletePending = (token) => db.prepare("DELETE FROM social_pending WHERE token_hash = ?").run(sha256(token));
+
+  function socialFailed(ctx, row, id, err) {
+    const code = err instanceof SocialError ? err.code : "provider";
+    const cancelled = code === "cancelled";
+    audit(cancelled ? "social.cancel" : "social.login_failed", { sub: row.account_sub, ip: ctx.ip, detail: `${id}: ${err.message}` });
+    if (!cancelled) log("warn", "social login failed", { provider: id, code, error: err.message });
+    const name = PROVIDER_NAMES[id];
+    if (row.purpose === "link") {
+      return backToAccount(ctx, { error: cancelled ? `Привязка ${name} отменена.` : `Не удалось привязать ${name}. Попробуйте ещё раз.` });
+    }
+    ctx.status = 303;
+    ctx.redirect(`/interaction/${encodeURIComponent(row.interaction_uid)}?${new URLSearchParams({ social: cancelled ? "cancelled" : "failed", provider: id })}`);
+  }
+
+  /** Вход в существующий аккаунт через привязанного провайдера */
+  async function socialSignIn(ctx, account, provider, providerUserId, clientId) {
+    if (account.status !== "active") {
+      audit("social.blocked", { sub: account.sub, ip: ctx.ip, detail: provider });
+      return html(ctx, views.errorPage({ text: "Аккаунт заблокирован. Напишите в поддержку Endemion." }), 403);
+    }
+    accounts.touchIdentity(provider, providerUserId);
+    audit("social.login", { sub: account.sub, ip: ctx.ip, detail: `${provider} ${clientId}` });
+    await finishInteraction(ctx, { login: { accountId: account.sub, remember: true, amr: ["fed"] } }, false);
+  }
+
+  function socialNotice(query) {
+    const name = PROVIDER_NAMES[query.provider];
+    if (!name) return {};
+    if (query.social === "cancelled") return { notice: `Вход через ${name} отменён.` };
+    if (query.social === "failed") return { error: `Не удалось войти через ${name}. Попробуйте ещё раз или войдите другим способом.` };
+    return {};
+  }
+
   // ---------- маршруты ----------
 
-  async function startAccountLogin(ctx, screen) {
+  async function startAccountLogin(ctx, screen, { reauth = false } = {}) {
     const url = new URL("/auth", config.issuer);
     url.search = new URLSearchParams({
       client_id: ACCOUNT_CLIENT,
       redirect_uri: `${config.issuer}/account/callback`,
       response_type: "code",
       scope: "openid",
-      state: newToken(),
+      // Ответ этому клиенту никто не обменивает, state только подсказывает странице аккаунта, что вход был повторным
+      state: `${reauth ? "reauth." : ""}${newToken()}`,
       // Код этого клиента никто не обменивает: verifier не сохраняется, PKCE нужен только по правилам провайдера
       code_challenge: createHash("sha256").update(newToken()).digest("base64url"),
       code_challenge_method: "S256",
-      ...(screen ? { screen } : {})
+      ...(screen ? { screen } : {}),
+      ...(reauth ? { prompt: "login" } : {})
     }).toString();
     ctx.status = 303;
     ctx.redirect(url.href);
@@ -374,24 +482,157 @@ export function createApp(config, { mailer = createMailer(config.mail), log = cr
 
     "GET /account/callback": async (ctx) => {
       if (ctx.query.error) return html(ctx, views.errorPage({ text: "Вход не завершён. Попробуйте ещё раз." }), 400);
-      ctx.redirect("/account");
+      ctx.redirect(String(ctx.query.state || "").startsWith("reauth.") ? "/account?done=reauth" : "/account");
     },
+
+    // Повторный вход перед привязкой провайдера или паролем без старого пароля
+    "GET /account/reauth": async (ctx) => startAccountLogin(ctx, null, { reauth: true }),
 
     "GET /interaction/:uid": async (ctx, { uid }) => {
       const details = await interactionDetails(ctx);
       if (!details || details.uid !== uid) return expiredInteraction(ctx);
       if (details.prompt.name === "consent") return autoConsent(ctx, details);
       const clientPlatform = platformByClient.get(details.params.client_id);
-      if (details.params.screen === "register") {
-        return html(ctx, views.registerPage({ uid, clientPlatform, privacyUrl: config.links.privacy }));
+      const providers = socialButtons();
+      // После отмены или ошибки у провайдера — форма входа с сообщением, даже если вход начинался с регистрации
+      if (details.params.screen === "register" && !ctx.query.social) {
+        return html(ctx, views.registerPage({ uid, clientPlatform, privacyUrl: config.links.privacy, providers }));
       }
-      html(ctx, views.loginPage({ uid, clientPlatform, mailEnabled: mailer.enabled, login: details.params.login_hint || "" }));
+      html(ctx, views.loginPage({ uid, clientPlatform, mailEnabled: mailer.enabled, login: details.params.login_hint || "", providers, ...socialNotice(ctx.query) }));
     },
 
     "GET /interaction/:uid/register": async (ctx, { uid }) => {
       const details = await interactionDetails(ctx);
       if (!details || details.uid !== uid) return expiredInteraction(ctx);
-      html(ctx, views.registerPage({ uid, clientPlatform: platformByClient.get(details.params.client_id), privacyUrl: config.links.privacy }));
+      html(ctx, views.registerPage({ uid, clientPlatform: platformByClient.get(details.params.client_id), privacyUrl: config.links.privacy, providers: socialButtons() }));
+    },
+
+    // Кнопка «Войти через …»: форма POST, общий обработчик уже проверил Origin
+    "POST /interaction/:uid/social/:provider": async (ctx, { uid, provider }) => {
+      if (!social.enabled.includes(provider)) ctx.throw(404, "Такого способа входа нет.");
+      const details = await interactionDetails(ctx);
+      if (!details || details.uid !== uid || details.prompt.name !== "login") return expiredInteraction(ctx);
+      const ipKey = `social-ip:${ctx.ip}`;
+      if (limiter.exceeded(ipKey, LIMITS.socialIp)) {
+        return html(ctx, views.loginPage({ uid, clientPlatform: platformByClient.get(details.params.client_id), mailEnabled: mailer.enabled, providers: socialButtons(), error: "Слишком много попыток входа. Подождите 15 минут." }), 429);
+      }
+      limiter.record(ipKey);
+      try {
+        await beginSocial(ctx, provider, { purpose: "login", interactionUid: uid });
+      } catch (err) {
+        // Не открылись настройки провайдера (discovery Google): пользователь остаётся на форме входа
+        log("warn", "social start failed", { provider, error: err.message });
+        ctx.status = 303;
+        ctx.redirect(`/interaction/${encodeURIComponent(uid)}?${new URLSearchParams({ social: "failed", provider })}`);
+      }
+    },
+
+    // Ответ провайдера. Здесь нет cookie входа сайта (у неё путь /interaction/<uid>), поэтому найденная
+    // личность провайдера сохраняется, и браузер уходит завершать вход на /interaction/<uid>/social
+    "GET /social/callback/:provider": async (ctx, { provider }) => {
+      if (!social.enabled.includes(provider)) ctx.throw(404, "Такого способа входа нет.");
+      const row = takeSocialLogin(ctx, provider);
+      if (!row) {
+        audit("social.state_mismatch", { ip: ctx.ip, detail: provider });
+        return html(ctx, views.errorPage({ title: "Вход не завершён", text: `Ответ ${PROVIDER_NAMES[provider]} не подходит к этому входу или устарел. Вернитесь на сайт и начните вход заново.` }), 400);
+      }
+      const query = new URLSearchParams(ctx.querystring);
+      if (!query.has("state")) {
+        const error = String(query.get("error"));
+        return socialFailed(ctx, row, provider, new SocialError(error === "access_denied" ? "cancelled" : "provider", `${error} (без state)`));
+      }
+      let identity;
+      try {
+        identity = await social.finish(provider, query, { state: row.state, verifier: row.code_verifier, nonce: row.nonce });
+      } catch (err) {
+        return socialFailed(ctx, row, provider, err);
+      }
+
+      if (row.purpose === "link") {
+        const current = await currentSession(ctx);
+        // Привязка только к тому аккаунту, который её начал: вышли или вошли в другой — ничего не привязывается
+        if (!current || current.account.sub !== row.account_sub) {
+          audit("social.link_session_changed", { sub: row.account_sub, ip: ctx.ip, detail: provider });
+          return html(ctx, views.errorPage({ text: "Привязка не завершена: за это время вы вышли или вошли в другой аккаунт." }), 403);
+        }
+        const result = accounts.linkIdentity(current.account.sub, { provider, ...identity });
+        const name = PROVIDER_NAMES[provider];
+        if (result.error) {
+          audit("social.link_rejected", { sub: current.account.sub, ip: ctx.ip, detail: `${provider}: ${result.error}` });
+          const text = {
+            taken: `Этот аккаунт ${name} уже привязан к другому Endemion ID. Войдите в тот Endemion ID и отвяжите его там.`,
+            already: `Этот аккаунт ${name} уже привязан.`,
+            provider_linked: `К Endemion ID уже привязан другой аккаунт ${name}. Сначала отвяжите его.`
+          }[result.error];
+          return backToAccount(ctx, { error: text });
+        }
+        audit("social.link", { sub: current.account.sub, ip: ctx.ip, detail: provider });
+        return backToAccount(ctx, { done: "linked" });
+      }
+
+      const token = newToken();
+      db.prepare("INSERT INTO social_pending (token_hash, interaction_uid, provider, provider_user_id, email, name, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?)")
+        .run(sha256(token), row.interaction_uid, provider, identity.id, identity.email, identity.name, Date.now() + SOCIAL_PENDING_TTL_MS);
+      ctx.status = 303;
+      ctx.redirect(`/interaction/${encodeURIComponent(row.interaction_uid)}/social?t=${token}`);
+    },
+
+    // Завершение входа через провайдера: привязанный аккаунт — сразу на сайт, иначе форма регистрации.
+    // Токен из адреса бесполезен в другом браузере: без cookie этого входа interactionDetails вернёт null
+    "GET /interaction/:uid/social": async (ctx, { uid }) => {
+      const details = await interactionDetails(ctx);
+      if (!details || details.uid !== uid || details.prompt.name !== "login") return expiredInteraction(ctx);
+      const token = String(ctx.query.t || "");
+      const pending = findPending(token, uid);
+      if (!pending) return expiredInteraction(ctx);
+      const account = accounts.findByIdentity(pending.provider, pending.provider_user_id);
+      if (account) {
+        deletePending(token);
+        return socialSignIn(ctx, account, pending.provider, pending.provider_user_id, details.params.client_id);
+      }
+      html(ctx, views.socialCompletePage({
+        uid, token,
+        providerName: PROVIDER_NAMES[pending.provider],
+        clientPlatform: platformByClient.get(details.params.client_id),
+        values: { email: pending.email || "", displayName: pending.name || "" },
+        privacyUrl: config.links.privacy
+      }));
+    },
+
+    "POST /interaction/:uid/social": async (ctx, { uid }) => {
+      const details = await interactionDetails(ctx);
+      if (!details || details.uid !== uid || details.prompt.name !== "login") return expiredInteraction(ctx);
+      const form = await readForm(ctx);
+      const pending = findPending(form.token, uid);
+      if (!pending) return expiredInteraction(ctx);
+      const providerName = PROVIDER_NAMES[pending.provider];
+      const clientPlatform = platformByClient.get(details.params.client_id);
+      const values = { email: form.email, username: form.username, displayName: form.displayName, consent: form.consent === "1" };
+      const page = (errors, error, status) => html(ctx, views.socialCompletePage({ uid, token: form.token, providerName, clientPlatform, values, errors, error, privacyUrl: config.links.privacy }), status);
+
+      // Та же личность могла зарегистрироваться в другой вкладке
+      const existing = accounts.findByIdentity(pending.provider, pending.provider_user_id);
+      if (existing) {
+        deletePending(form.token);
+        return socialSignIn(ctx, existing, pending.provider, pending.provider_user_id, details.params.client_id);
+      }
+      const ipKey = `register-ip:${ctx.ip}`;
+      if (limiter.exceeded(ipKey, LIMITS.registerIp)) return page({}, "Слишком много регистраций с вашего адреса. Подождите 15 минут.", 429);
+      if (!values.consent) return page({ consent: "Нужно согласие с политикой конфиденциальности." }, null, 400);
+      limiter.record(ipKey);
+
+      const result = accounts.registerExternal(values, { provider: pending.provider, id: pending.provider_user_id, email: pending.email, name: pending.name });
+      if (result.conflict) {
+        // Аккаунты не объединяются по совпавшей почте: владелец входит в свой аккаунт и привязывает провайдера сам
+        audit("social.email_conflict", { ip: ctx.ip, detail: pending.provider });
+        return page({ email: result.error }, `Аккаунт Endemion ID с этой почтой уже есть. Если он ваш, войдите в него паролем и привяжите ${providerName} на странице аккаунта. Или укажите другую почту.`, 409);
+      }
+      if (result.error) return page({ [result.field]: result.error }, null, 400);
+      deletePending(form.token);
+      accounts.touchIdentity(pending.provider, pending.provider_user_id);
+      audit("social.signup", { sub: result.account.sub, ip: ctx.ip, detail: `${pending.provider} ${details.params.client_id}` });
+      sendVerification(result.account);
+      await finishInteraction(ctx, { login: { accountId: result.account.sub, remember: true, amr: ["fed"] } }, false);
     },
 
     "POST /interaction/:uid/login": async (ctx, { uid }) => {
@@ -513,15 +754,29 @@ export function createApp(config, { mailer = createMailer(config.mail), log = cr
     "GET /account": async (ctx) => {
       const current = await currentSession(ctx);
       if (!current) return ctx.redirect("/login");
-      const notice = { saved: "Изменения сохранены.", password: "Пароль изменён. Остальные сессии завершены.", email: "Почта изменена. Мы отправили письмо для подтверждения.", sent: "Письмо отправлено.", avatar: "Аватар обновлён." }[ctx.query.done];
+      const notice = {
+        saved: "Изменения сохранены.",
+        password: "Пароль сохранён. Остальные сессии завершены.",
+        email: "Почта изменена. Мы отправили письмо для подтверждения.",
+        sent: "Письмо отправлено.",
+        avatar: "Аватар обновлён.",
+        linked: "Способ входа привязан.",
+        unlinked: "Способ входа отвязан.",
+        reauth: "Вход подтверждён. Теперь можно изменить способы входа."
+      }[ctx.query.done];
+      const linked = new Map(accounts.identities(current.account.sub).map((item) => [item.provider, item]));
       html(ctx, views.accountPage({
         account: current.account,
         avatarUrl: accounts.avatarUrl(current.account),
         csrf: csrfFor(current.session),
         notice,
-        error: ctx.query.error ? String(ctx.query.error).slice(0, 200) : null,
+        error: ctx.query.error ? String(ctx.query.error).slice(0, 300) : null,
         links: config.links,
-        mailEnabled: mailer.enabled
+        mailEnabled: mailer.enabled,
+        hasPassword: accounts.hasPassword(current.account),
+        // Отключённый в настройках, но привязанный раньше провайдер показывается: его можно отвязать
+        loginMethods: PROVIDERS.filter((id) => social.enabled.includes(id) || linked.has(id))
+          .map((id) => ({ id, name: PROVIDER_NAMES[id], enabled: social.enabled.includes(id), identity: linked.get(id) || null }))
       }));
     },
 
@@ -532,8 +787,11 @@ export function createApp(config, { mailer = createMailer(config.mail), log = cr
       backToAccount(ctx, { done: "saved" });
     }),
 
-    "POST /account/email": accountAction(async (ctx, { account }, form) => {
-      if (!(await accounts.checkPassword(account.sub, form.password))) return backToAccount(ctx, { error: "Неверный текущий пароль." });
+    "POST /account/email": accountAction(async (ctx, { account, session }, form) => {
+      // У аккаунта без пароля (вход через провайдера) вместо пароля — недавний вход
+      if (!accounts.hasPassword(account)) {
+        if (!recentLogin(session)) return reauthPage(ctx);
+      } else if (!(await accounts.checkPassword(account.sub, form.password))) return backToAccount(ctx, { error: "Неверный текущий пароль." });
       const result = accounts.changeEmail(account.sub, form.email);
       if (result.error) return backToAccount(ctx, { error: result.error });
       audit("email.change", { sub: account.sub, ip: ctx.ip });
@@ -550,12 +808,44 @@ export function createApp(config, { mailer = createMailer(config.mail), log = cr
     }),
 
     "POST /account/password": accountAction(async (ctx, { account, session }, form) => {
-      if (!(await accounts.checkPassword(account.sub, form.currentPassword))) return backToAccount(ctx, { error: "Неверный текущий пароль." });
+      const firstPassword = !accounts.hasPassword(account);
+      if (firstPassword) {
+        if (!recentLogin(session)) return reauthPage(ctx);
+      } else if (!(await accounts.checkPassword(account.sub, form.currentPassword))) return backToAccount(ctx, { error: "Неверный текущий пароль." });
       const result = await accounts.setPassword(account.sub, String(form.newPassword || ""));
       if (result.error) return backToAccount(ctx, { error: result.error });
       revokeAll(account.sub, session.jti);
-      audit("password.change", { sub: account.sub, ip: ctx.ip });
+      audit(firstPassword ? "password.set" : "password.change", { sub: account.sub, ip: ctx.ip });
       backToAccount(ctx, { done: "password" });
+    }),
+
+    // Привязка провайдера: форма на странице аккаунта (CSRF), вход не старше 10 минут
+    "POST /account/social/:provider/link": accountAction(async (ctx, { account, session }, _form, { provider }) => {
+      if (!social.enabled.includes(provider)) ctx.throw(404, "Такого способа входа нет.");
+      if (!recentLogin(session)) return reauthPage(ctx);
+      if (accounts.identities(account.sub).some((item) => item.provider === provider)) {
+        return backToAccount(ctx, { error: `${PROVIDER_NAMES[provider]} уже привязан. Чтобы привязать другой аккаунт, сначала отвяжите этот.` });
+      }
+      try {
+        await beginSocial(ctx, provider, { purpose: "link", accountSub: account.sub });
+      } catch (err) {
+        log("warn", "social start failed", { provider, error: err.message });
+        backToAccount(ctx, { error: `${PROVIDER_NAMES[provider]} сейчас недоступен. Попробуйте позже.` });
+      }
+    }),
+
+    "POST /account/social/:provider/unlink": accountAction(async (ctx, { account, session }, _form, { provider }) => {
+      if (!PROVIDERS.includes(provider)) ctx.throw(404, "Такого способа входа нет.");
+      if (!recentLogin(session)) return reauthPage(ctx);
+      const linked = accounts.identities(account.sub);
+      if (!linked.some((item) => item.provider === provider)) return backToAccount(ctx, { done: "unlinked" });
+      // Последний способ входа не отвязывается: без него в аккаунт будет не попасть
+      if (!accounts.hasPassword(account) && linked.length <= 1) {
+        return backToAccount(ctx, { error: `Это единственный способ входа. Сначала задайте пароль или привяжите другой способ, потом отвяжите ${PROVIDER_NAMES[provider]}.` });
+      }
+      accounts.unlinkIdentity(account.sub, provider);
+      audit("social.unlink", { sub: account.sub, ip: ctx.ip, detail: provider });
+      backToAccount(ctx, { done: "unlinked" });
     }),
 
     "POST /account/avatar": async (ctx) => {
@@ -613,6 +903,11 @@ export function createApp(config, { mailer = createMailer(config.mail), log = cr
     // Выход: страница подтверждения провайдера (end_session), там же выход со всех сайтов
     "GET /logout": async (ctx) => ctx.redirect("/session/end")
   };
+
+  /** Кнопки входа: только провайдеры, для которых заданы ключи */
+  function socialButtons() {
+    return social.enabled.map((id) => ({ id, name: PROVIDER_NAMES[id] }));
+  }
 
   function backToAccount(ctx, params) {
     ctx.status = 303;
@@ -691,6 +986,8 @@ export function createApp(config, { mailer = createMailer(config.mail), log = cr
     cleanupExpired(db);
     limiter.cleanup();
     db.prepare("DELETE FROM auth_tokens WHERE expires_at < ?").run(Date.now());
+    db.prepare("DELETE FROM social_logins WHERE expires_at < ?").run(Date.now());
+    db.prepare("DELETE FROM social_pending WHERE expires_at < ?").run(Date.now());
   }
 
   return { provider, db, accounts, mailer, audit, cleanup, revokeAll, close: () => db.close() };

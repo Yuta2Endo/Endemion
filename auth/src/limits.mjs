@@ -8,6 +8,7 @@ export const LIMITS = {
   loginIp: 30,
   loginAccount: 10,
   registerIp: 10,
+  socialIp: 30,
   mailAddress: 3,
   mailIp: 20
 };

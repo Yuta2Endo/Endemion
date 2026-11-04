@@ -77,8 +77,30 @@ function authLayout({ title, clientPlatform, heading, description, content }) {
   });
 }
 
+// Значки провайдеров прямо в разметке: CSP не пускает картинки с чужих адресов, а встроенный SVG — не скрипт и не стиль
+const PROVIDER_ICONS = {
+  google: `<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false"><path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.5a5.6 5.6 0 0 1-2.4 3.6v3h3.9c2.2-2.1 3.5-5.1 3.5-8.8z"/><path fill="#34A853" d="M12 24c3.2 0 6-1.1 7.9-2.9l-3.9-3c-1 .7-2.4 1.2-4 1.2-3.1 0-5.7-2.1-6.6-4.9H1.4v3.1A12 12 0 0 0 12 24z"/><path fill="#FBBC05" d="M5.4 14.4a7.2 7.2 0 0 1 0-4.7V6.6h-4a12 12 0 0 0 0 10.8l4-3z"/><path fill="#EA4335" d="M12 4.8c1.8 0 3.3.6 4.6 1.8l3.4-3.4A12 12 0 0 0 1.4 6.6l4 3.1C6.3 6.9 8.9 4.8 12 4.8z"/></svg>`,
+  vk: `<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false"><rect width="24" height="24" rx="6" fill="#0077FF"/><path fill="#fff" d="M12.8 17.3c-5.1 0-8-3.5-8.1-9.3h2.6c.1 4.3 2 6.1 3.4 6.4V8h2.4v3.7c1.5-.2 3-1.8 3.5-3.7h2.4a7.1 7.1 0 0 1-3.2 4.6 7.4 7.4 0 0 1 3.8 4.7h-2.6c-.6-1.8-2-3.2-3.9-3.4v3.4h-.3z"/></svg>`,
+  github: `<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false"><path fill="currentColor" d="M12 .5a11.5 11.5 0 0 0-3.6 22.4c.6.1.8-.3.8-.6v-2c-3.2.7-3.9-1.5-3.9-1.5-.5-1.3-1.3-1.7-1.3-1.7-1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.7-1.6-2.6-.3-5.3-1.3-5.3-5.7 0-1.3.5-2.3 1.2-3.1-.1-.3-.5-1.5.1-3.1 0 0 1-.3 3.2 1.2a11 11 0 0 1 5.8 0C17.3 4.8 18.3 5 18.3 5c.6 1.6.2 2.8.1 3.1.8.8 1.2 1.9 1.2 3.1 0 4.4-2.7 5.4-5.3 5.7.4.4.8 1.1.8 2.2v3.2c0 .3.2.7.8.6A11.5 11.5 0 0 0 12 .5z"/></svg>`
+};
+
+/**
+ * Кнопки «Войти через …». Каждая — форма POST: вход у провайдера не начнётся по ссылке с чужого сайта
+ * @param {string} uid
+ * @param {{ id: string, name: string }[]} providers
+ */
+function socialButtons(uid, providers) {
+  if (!providers?.length) return "";
+  return `<div class="social-divider"><span>или</span></div>
+      <div class="social-buttons">
+        ${providers.map((provider) => `<form method="post" action="/interaction/${escapeHtml(uid)}/social/${escapeHtml(provider.id)}">
+          <button class="social-button social-${escapeHtml(provider.id)}" type="submit">${PROVIDER_ICONS[provider.id] || ""}<span>Войти через ${escapeHtml(provider.name)}</span></button>
+        </form>`).join("\n        ")}
+      </div>`;
+}
+
 /** @param {Record<string, any>} options */
-export function loginPage({ uid, clientPlatform, login = "", error, notice, mailEnabled }) {
+export function loginPage({ uid, clientPlatform, login = "", error, notice, mailEnabled, providers = [] }) {
   return authLayout({
     title: "Вход",
     clientPlatform,
@@ -91,12 +113,13 @@ export function loginPage({ uid, clientPlatform, login = "", error, notice, mail
         ${mailEnabled ? `<a class="inline-link" href="/forgot-password">Забыли пароль?</a>` : ""}
         <button class="main-button" type="submit">Войти</button>
       </form>
+      ${socialButtons(uid, providers)}
       <p class="switch-link">Нет аккаунта? <a href="/interaction/${escapeHtml(uid)}/register">Создать Endemion ID</a></p>`
   });
 }
 
 /** @param {Record<string, any>} options */
-export function registerPage({ uid, clientPlatform, values = {}, errors = {}, error, privacyUrl }) {
+export function registerPage({ uid, clientPlatform, values = {}, errors = {}, error, privacyUrl, providers = [] }) {
   return authLayout({
     title: "Регистрация",
     clientPlatform,
@@ -115,7 +138,35 @@ export function registerPage({ uid, clientPlatform, values = {}, errors = {}, er
         ${errors.consent ? `<small class="field-error">${escapeHtml(errors.consent)}</small>` : ""}
         <button class="main-button" type="submit">Создать аккаунт</button>
       </form>
+      ${socialButtons(uid, providers)}
       <p class="switch-link">Уже есть аккаунт? <a href="/interaction/${escapeHtml(uid)}">Войти</a></p>`
+  });
+}
+
+/**
+ * Первый вход через провайдера: почта, username и согласие. Пароль не нужен
+ * @param {Record<string, any>} options
+ */
+export function socialCompletePage({ uid, token, providerName, clientPlatform, values = {}, errors = {}, error, privacyUrl }) {
+  return authLayout({
+    title: "Завершите регистрацию",
+    clientPlatform,
+    heading: "Завершите регистрацию",
+    description: `Вы вошли через ${providerName}. Осталось выбрать имя пользователя и указать почту — на неё придёт письмо для подтверждения.`,
+    content: `${message(error)}
+      <form method="post" action="/interaction/${escapeHtml(uid)}/social" novalidate>
+        <input type="hidden" name="token" value="${escapeHtml(token)}">
+        ${field({ name: "email", label: "Почта", type: "email", value: values.email, autocomplete: "email", error: errors.email, extra: 'maxlength="254" autofocus' })}
+        ${field({ name: "username", label: "Имя пользователя", value: values.username, autocomplete: "username", error: errors.username, hint: "Латинские буквы, цифры и _, от 3 до 24 символов. Будет в адресе профиля.", extra: 'minlength="3" maxlength="24" pattern="[A-Za-z0-9_]{3,24}"' })}
+        ${field({ name: "displayName", label: "Отображаемое имя", value: values.displayName, autocomplete: "nickname", required: false, error: errors.displayName, hint: "Как вас видят другие. Можно не заполнять.", extra: 'maxlength="40"' })}
+        <label class="consent${errors.consent ? " field-invalid" : ""}">
+          <input type="checkbox" name="consent" value="1"${values.consent ? " checked" : ""} required>
+          <span>Я согласен(на) с <a href="${escapeHtml(privacyUrl)}" target="_blank" rel="noopener">политикой конфиденциальности</a> и обработкой моих данных.</span>
+        </label>
+        ${errors.consent ? `<small class="field-error">${escapeHtml(errors.consent)}</small>` : ""}
+        <button class="main-button" type="submit">Создать Endemion ID</button>
+      </form>
+      <p class="switch-link">Уже есть Endemion ID? <a href="/interaction/${escapeHtml(uid)}">Войдите в него</a> и привяжите ${escapeHtml(providerName)} на странице аккаунта.</p>`
   });
 }
 
@@ -199,8 +250,44 @@ function accountNav(active) {
   return `<nav class="tabs" aria-label="Разделы аккаунта">${item("/account", "Профиль")}${item("/sessions", "Сессии")}${item("/logout", "Выйти")}</nav>`;
 }
 
+/**
+ * Пароль и внешние провайдеры: что привязано, кнопки привязать и отвязать
+ * @param {{ id: string, name: string, enabled: boolean, identity: Record<string, any> | null }[]} methods
+ */
+function loginMethodsPanel(methods, hasPassword, csrf) {
+  const rows = methods.map((method) => {
+    const identity = method.identity;
+    const who = identity ? [identity.display_name, identity.email].filter(Boolean).join(" · ") : "";
+    const action = identity
+      ? `<form method="post" action="/account/social/${escapeHtml(method.id)}/unlink">${csrfInput(csrf)}<button class="danger-button" type="submit">Отвязать</button></form>`
+      : method.enabled
+        ? `<form method="post" action="/account/social/${escapeHtml(method.id)}/link">${csrfInput(csrf)}<button class="secondary-button" type="submit">Привязать</button></form>`
+        : "";
+    return `<li class="method-row">
+          <div class="method-name">${PROVIDER_ICONS[method.id] || ""}<div>
+            <strong>${escapeHtml(method.name)}</strong>
+            <p class="muted">${identity ? `Привязан ${escapeHtml(formatDate(identity.linked_at))}${who ? ` · ${escapeHtml(who)}` : ""}` : "Не привязан"}</p>
+          </div></div>
+          ${action}
+        </li>`;
+  }).join("");
+  return `<section class="id-panel" aria-labelledby="methodsTitle">
+          <h2 id="methodsTitle">Способы входа</h2>
+          <p class="form-description">Входите в Endemion и Endemion Life любым из них. Аккаунты объединяются только здесь, по вашему действию: совпадение почты их не связывает. Перед привязкой и отвязкой нужен вход не раньше 10 минут назад.</p>
+          <ul class="method-list">
+            <li class="method-row">
+              <div class="method-name"><span class="method-icon" aria-hidden="true">✱</span><div>
+                <strong>Пароль</strong>
+                <p class="muted">${hasPassword ? "Задан" : "Не задан — задайте его ниже, чтобы входить и без провайдера"}</p>
+              </div></div>
+            </li>
+            ${rows}
+          </ul>
+        </section>`;
+}
+
 /** @param {Record<string, any>} options */
-export function accountPage({ account, avatarUrl, csrf, notice, error, links, mailEnabled }) {
+export function accountPage({ account, avatarUrl, csrf, notice, error, links, mailEnabled, hasPassword = true, loginMethods = [] }) {
   const verified = Boolean(account.email_verified_at);
   return layout({
     title: "Аккаунт",
@@ -243,20 +330,26 @@ export function accountPage({ account, avatarUrl, csrf, notice, error, links, ma
           <noscript><p class="form-description">Для загрузки аватара нужен JavaScript.</p></noscript>
         </form>
 
+        ${loginMethods.length ? loginMethodsPanel(loginMethods, hasPassword, csrf) : ""}
+
         <form class="id-panel" method="post" action="/account/email" novalidate>
           ${csrfInput(csrf)}
           <h2>Почта</h2>
           ${field({ name: "email", label: "Новая почта", type: "email", autocomplete: "email", extra: 'maxlength="254"' })}
-          ${field({ name: "password", label: "Текущий пароль", type: "password", autocomplete: "current-password", extra: 'maxlength="128"' })}
+          ${hasPassword
+            ? field({ name: "password", label: "Текущий пароль", type: "password", autocomplete: "current-password", extra: 'maxlength="128"' })
+            : `<p class="form-description">Пароля нет: вместо него нужен вход не раньше 10 минут назад.</p>`}
           <button class="main-button" type="submit">Сменить почту</button>
         </form>
 
         <form class="id-panel" method="post" action="/account/password" novalidate>
           ${csrfInput(csrf)}
           <h2>Пароль</h2>
-          ${field({ name: "currentPassword", label: "Текущий пароль", type: "password", autocomplete: "current-password", extra: 'maxlength="128"' })}
+          ${hasPassword
+            ? field({ name: "currentPassword", label: "Текущий пароль", type: "password", autocomplete: "current-password", extra: 'maxlength="128"' })
+            : `<p class="form-description">Вы входите через внешний сервис. Пароль позволит входить и без него.</p>`}
           ${field({ name: "newPassword", label: "Новый пароль", type: "password", autocomplete: "new-password", hint: "Не короче 8 символов. Остальные сессии завершатся.", extra: 'minlength="8" maxlength="128"' })}
-          <button class="main-button" type="submit">Сменить пароль</button>
+          <button class="main-button" type="submit">${hasPassword ? "Сменить пароль" : "Задать пароль"}</button>
         </form>
       </div>
     </section>`
