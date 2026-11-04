@@ -21,26 +21,28 @@
 
 ### 1.2. Интерфейс провайдера
 
-Shikimori провайдер экспортирует:
+Shikimori провайдер (`shikimori.js`) экспортирует (сверено с кодом):
 ```javascript
 export const name = "shikimori";
 export const label = "Shikimori";
 export const BASE = "https://shikimori.io";
-export const rateLimit = { requests: 4, per: 1000, burst: 80, perMinute: 60000 };
 
-// Функции провайдера, вызываемые слоем каталога:
-export async function listEntries(http, kind, filters, page, limit)
-export async function getEntry(http, kind, id)
-export async function getGenres(http, kind)
-export async function searchAll(http, text)
+export async function listEntries(http, kind, filters)        // GraphQL, страница каталога
+export async function getEntry(http, kind, id)                // GraphQL, карточка целиком
+export async function genres(http, kind)
+export async function home(http, { censored, year, excludeGenres })
+export async function search(http, { query, limit, censored })
 export async function listCharacters(http, { search, page, limit })
 export async function popularCharacters(http, kind)
-export async function getCharacter(http, id)
+export async function getCharacter(http, id)                  // REST: связанные произведения и сэйю
 export async function listPeople(http, { search, role, page, limit })
 export async function getPerson(http, id)
 export async function listStudios(http)
-export async function getStudio(http, id)
+export async function ping(http)
 ```
+
+Лимит запросов задан не в провайдере, а в `index.js`: `new RateGate({ perSecond: 4, perMinute: 80, maxWaitMs: 8000 })`,
+одна очередь на весь сервер. Для нескольких источников нужна своя очередь у каждого.
 
 **Параметр `http`**: функция `http(operation, url, init)`, которую передаёт слой каталога. Провайдер не делает `fetch` напрямую. `http` обрабатывает:
 - Кеширование в `catalog_cache` (TTL 30 мин для списков, 12 часов для карточек, 24 часа для персонажей/людей, 7 дней для жанров/студий)
@@ -235,7 +237,12 @@ export async function findByExternalId(http, source, externalId, kind)
 
 **Комментарии** (`comments.target_type`, `comments.target_id`): тоже используют внешние ID для целей `'anime'` и `'manga'`, но без FK (проверка только CHECK constraint).
 
-**План миграции**:
+**Открытый вопрос: менять ли ключ.** Перенос всех таблиц на новый внутренний `entries.id` затрагивает
+списки, отзывы и Universe Explorer на рабочей базе. Если Shikimori ID совпадает с MAL ID (проверяется),
+есть вариант проще: оставить `(kind, ext_id)` номером Endemion и добавить таблицу сопоставления с другими
+источниками, не трогая существующие таблицы. Выбор — в плане, после проверки.
+
+**План миграции (если ключ меняется)**:
 1. Добавить `entries.id INTEGER` (внутренний ID), заполнить `id = rowid`
 2. Создать `external_ids`, заполнить из `(kind, ext_id)` с `source='shikimori'`
 3. Добавить FK-столбцы во все зависимые таблицы: `user_list.entry_id`, `favorites.entry_id` и т.д.
@@ -290,10 +297,13 @@ export async function findByExternalId(http, source, externalId, kind)
 
 ### 3.2. Приоритеты для первой интеграции
 
+Предварительно, до проверки условий использования (раздел 3):
+
 **Высокий приоритет**:
-1. **AniList**: GraphQL, активно поддерживается, много данных, cross-reference на MAL
-2. **Kitsu**: JSON API, открытые данные
-3. **Jikan (MAL)**: неофициальный REST API для MyAnimeList, но широко используется
+1. **AniList**: GraphQL, возможно сопоставление с MAL
+2. **Kitsu**: JSON API
+3. **MyAnimeList**: официальный API v2 или Jikan. Jikan неофициален и получает данные с сайта MAL:
+   допустимость зависит от условий MAL, это решается после проверки
 
 **Средний приоритет**:
 4. **MyAnimeList API v2**: официальный, но требует client ID, модерация заявки
@@ -305,17 +315,14 @@ export async function findByExternalId(http, source, externalId, kind)
 
 ### 3.3. Cross-reference между источниками
 
-**MyAnimeList ID** — de facto стандарт: Shikimori использует MAL ID как свой `ext_id` для большинства произведений.
+> **Не проверено.** Пункты ниже — гипотезы. Их проверяет исследование источников (раздел 3),
+> до его результатов на них нельзя опираться.
 
-Проверка (примеры):
-- Death Note: MAL 1535 = Shikimori 1535 = AniList idMal 1535
-- Shingeki no Kyojin: MAL 16498 = Shikimori 16498 = AniList idMal 16498
-
-**AniList**: в GraphQL-ответе есть `idMal` для большинства записей → автоматическое сопоставление.
-
-**Kitsu**: есть mappings API (`/api/edge/mappings`) для связи с MAL, AniList, AniDB.
-
-**AniDB**: свои ID (aid), но есть сторонние таблицы сопоставления AniDB ↔ MAL.
+- Гипотеза: Shikimori использует номера MyAnimeList как свои (Death Note — 1535, Shingeki no Kyojin — 16498).
+  Если это так, текущий `ext_id` уже совпадает с MAL ID, и сопоставление с другими источниками идёт через него.
+- Гипотеза: AniList отдаёт `idMal` в типе `Media`.
+- Гипотеза: у Kitsu есть сопоставления с MAL, AniList, AniDB.
+- AniDB: свои номера (aid), источник сопоставления с MAL не определён.
 
 **Стратегия**:
 1. MAL ID как основной cross-reference
