@@ -630,6 +630,33 @@
   margin-top: 24px;
 }
 
+/* Кнопка «Путешествие по вселенной» в шапке произведения: открывает Universe Explorer */
+.ux-hero {
+  margin-top: 12px;
+}
+
+.ux-hero-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 20px;
+  border: 1px solid rgba(var(--accent-rgb), 0.55);
+  border-radius: 999px;
+  color: #fff;
+  background:
+    radial-gradient(circle at 20% 0%, rgba(182, 156, 255, 0.35), transparent 60%),
+    linear-gradient(135deg, rgba(var(--accent-rgb), 0.35), rgba(79, 124, 255, 0.2));
+  box-shadow: 0 0 24px rgba(var(--accent-rgb), 0.25);
+  font-weight: 800;
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.ux-hero-btn:hover {
+  border-color: var(--accent-light);
+  box-shadow: 0 0 32px rgba(var(--accent-rgb), 0.45);
+}
+
 /* Панель списка: статус, оценка, прогресс */
 .list-panel {
   display: grid;

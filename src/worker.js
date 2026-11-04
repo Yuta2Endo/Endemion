@@ -48,6 +48,8 @@ import * as adminPlatform from "../functions/api/adminPlatform.js";
 import * as site from "../functions/site.js";
 import * as ency from "../functions/api/encyclopedia.js";
 import * as encyPages from "../functions/encyclopedia.js";
+import * as universe from "../functions/api/universe.js";
+import * as adminUniverse from "../functions/api/adminUniverse.js";
 import { error } from "../functions/_lib/http.js";
 
 // Эти же пути перечислены в run_worker_first в wrangler.toml
@@ -173,6 +175,15 @@ const ROUTE_LIST = [
   ["/api/admin/catalog/cache", ency.adminCatalogCache],
   ["/api/admin/catalog/errors", ency.adminCatalogErrors],
   ["/api/admin/entry-reviews", ency.adminReviews],
+  // Universe Explorer: карта вселенной, хронология и режим спойлеров (functions/api/universe.js)
+  ["/api/universe/:kind/:id", universe.graph],
+  ["/api/universe/:kind/:id/timeline", universe.timeline],
+  ["/api/universe/:kind/:id/settings", universe.settings],
+  ["/api/admin/universe/entities/:entityId", adminUniverse.adminUniverseEntity],
+  ["/api/admin/universe/relations/:relationId", adminUniverse.adminUniverseRelation],
+  ["/api/admin/universe/:kind/:id", adminUniverse.adminUniverse],
+  ["/api/admin/universe/:kind/:id/entities", adminUniverse.adminUniverseEntities],
+  ["/api/admin/universe/:kind/:id/relations", adminUniverse.adminUniverseRelations],
   ["/title/:id", titlePage],
   ["/read/:id/:chapter", readerPage],
   ["/pages/:id/:chapter/:page", pageImage],

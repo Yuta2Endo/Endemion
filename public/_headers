@@ -9,11 +9,18 @@
   Strict-Transport-Security: max-age=31536000
   Content-Security-Policy: default-src 'self'; script-src 'self' https://challenges.cloudflare.com https://static.cloudflareinsights.com https://mc.yandex.ru https://yastatic.net; style-src 'self'; img-src 'self' data: https://shikimori.io https://mc.yandex.ru; connect-src 'self' https://cloudflareinsights.com https://mc.yandex.ru; frame-src https://challenges.cloudflare.com blob: https://mc.yandex.ru; child-src blob: https://mc.yandex.ru; worker-src 'self' blob:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'
 
+# Шрифты и картинки оформления меняются редко
+/assets/*
+  Cache-Control: public, max-age=86400
+
+# Скрипты и стили браузер проверяет при каждом открытии (ответ 304 по ETag, если файл не менялся).
+# Скрипты подключают друг друга (import "./app.js") без ?v=: долгий кеш оставил бы после выкладки старый app.js
+# рядом с новыми скриптами страниц
 /assets/*.js
-  Cache-Control: public, max-age=31536000, immutable
+  Cache-Control: no-cache
 
 /assets/*.css
-  Cache-Control: public, max-age=31536000, immutable
+  Cache-Control: no-cache
 
 # Service worker браузер должен проверять при каждом открытии сайта, иначе обновление сайта дойдёт с опозданием
 /sw.js

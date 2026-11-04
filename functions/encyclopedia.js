@@ -394,12 +394,26 @@ function entryPage(kind) {
             <a class="primary-btn" href="/auth?next=${e(encodeURIComponent(path))}">＋ Добавить в список</a>
             <a class="ghost-btn" href="#reviews">Отзывы</a>
           </div>
+          <div class="entry-actions ux-hero">
+            <a class="ux-hero-btn" href="#universe" data-universe-open>✦ Путешествие по вселенной</a>
+          </div>
         </div>
       </section>
 
       <div class="entry-layout">
         <div class="entry-main">
           ${entry.description ? `<section class="section prose" aria-labelledby="aboutTitle"><h2 id="aboutTitle">Описание</h2>${bbcodeToHtml(entry.description)}</section>` : ""}
+          <section class="section ux" id="universe" aria-labelledby="universeTitle">
+            <div class="section-head"><div>
+              <h2 id="universeTitle">Universe Explorer</h2>
+              <p class="section-text">Карта связей вселенной: персонажи, создатели, студии и связанные произведения из каталога,
+                организации, локации и события с указанием источника. Спойлеры скрыты по вашему прогрессу в списке.</p>
+            </div></div>
+            <div id="universeRoot" data-kind="${kind}" data-id="${entry.id}">
+              <button class="primary-btn" type="button" data-universe-open>Открыть карту вселенной</button>
+              <noscript><p class="muted">Карта вселенной работает со включённым JavaScript.</p></noscript>
+            </div>
+          </section>
           ${main.length || supporting.length ? `<section class="section" aria-labelledby="charsTitle">
             <h2 id="charsTitle">Персонажи</h2>
             ${main.length ? `<p class="filter-sub">Главные роли</p><div class="p-grid">${main.map((item) => personCard(item, { note: "Главная роль" })).join("")}</div>` : ""}

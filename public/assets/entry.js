@@ -318,8 +318,50 @@ async function initEntry(user) {
       askLogin("Чтобы вести свой список, войдите в профиль.");
     });
   }
+  initUniverse(user);
   mountReviews(kind, id, user);
   mountComments(document.querySelector("#commentsBody"), { targetType: kind, targetId: id, placeholder: "Что думаете об этом произведении?" });
+}
+
+// ==================== UNIVERSE EXPLORER ====================
+
+/**
+ * Карта вселенной загружается только когда зритель её открывает: кнопкой в шапке или в разделе,
+ * или по ссылке с #universe. До этого на странице нет ни скрипта карты, ни запроса к /api/universe
+ */
+function initUniverse(user) {
+  const box = document.querySelector("#universeRoot");
+  if (!box) return;
+  let opened = false;
+  const open = async () => {
+    if (opened) return;
+    opened = true;
+    box.setAttribute("aria-busy", "true");
+    try {
+      if (!document.querySelector('link[href^="/assets/universe.css"]')) {
+        const style = el("link");
+        style.rel = "stylesheet";
+        style.href = "/assets/universe.css";
+        document.head.append(style);
+      }
+      const { mountUniverse } = await import("./universe.js");
+      mountUniverse(box, { kind: box.dataset.kind, id: Number(box.dataset.id), signedIn: Boolean(user) });
+    } catch {
+      opened = false;
+      box.replaceChildren(errorBox("Скрипт карты не загрузился. Проверьте интернет.", open));
+    } finally {
+      box.removeAttribute("aria-busy");
+    }
+  };
+  for (const node of document.querySelectorAll("[data-universe-open]")) {
+    node.addEventListener("click", (event) => {
+      event.preventDefault();
+      document.querySelector("#universe")?.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+      open();
+    });
+  }
+  if (location.hash === "#universe") open();
+  window.addEventListener("hashchange", () => location.hash === "#universe" && open());
 }
 
 async function initPerson(user) {

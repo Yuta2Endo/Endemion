@@ -2,7 +2,7 @@
 // Всё идёт с сервера в первую очередь: кеш нужен только на случай, когда сети нет. Так после обновления сайта
 // новая страница никогда не получит старый скрипт. Личные данные (API, профиль, админка) не кешируются вовсе
 
-const VERSION = "v2";
+const VERSION = "v3";
 const CACHE = `endemion-${VERSION}`;
 const OFFLINE_URL = "/offline";
 const PRECACHE = [OFFLINE_URL, "/assets/base.css", "/assets/account.css", "/assets/ui.css", "/favicon.svg", "/icons/icon-192.png"];
@@ -20,10 +20,14 @@ self.addEventListener("activate", (event) => {
   );
 });
 
-/** Оформление сайта: с сервера, а без сети — сохранённая копия */
+/**
+ * Оформление сайта: с сервера, а без сети — сохранённая копия.
+ * cache: "no-cache" — браузер сверяется с сервером, даже если файл лежит в его кеше как immutable
+ * (так отдавались /assets/*.js и *.css с 4 ноября 2026 до перехода на no-cache)
+ */
 async function networkFirst(event) {
   try {
-    const response = await fetch(event.request);
+    const response = await fetch(new Request(event.request, { cache: "no-cache" }));
     if (response.ok && response.type === "basic") {
       const copy = response.clone();
       event.waitUntil(caches.open(CACHE).then((cache) => cache.put(event.request, copy)));

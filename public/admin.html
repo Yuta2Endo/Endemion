@@ -31,6 +31,7 @@
         <h1 id="adminHeading">Админка</h1>
         <a href="#dashboard" data-section="dashboard" data-admin-only>Сводка</a>
         <a href="#catalog" data-section="catalog" data-admin-only>Каталог</a>
+        <a href="#universe" data-section="universe" data-admin-only>Вселенные</a>
         <a href="#reviews" data-section="reviews">Отзывы</a>
         <a href="#titles" data-section="titles" data-admin-only>Тайтлы</a>
         <a href="#taxonomy" data-section="taxonomy" data-admin-only>Жанры и авторы</a>
@@ -366,6 +367,27 @@
           </section>
         </div>
 
+        <!-- ==================== ВСЕЛЕННЫЕ ==================== -->
+        <div class="admin-main" data-panel="universe" data-admin-only hidden>
+          <section class="admin-panel" aria-labelledby="universeHeading">
+            <h2 id="universeHeading">Вселенные произведений</h2>
+            <p class="panel-description">
+              Карта вселенной на странице произведения строится из каталога: персонажи, создатели, студии, связанные произведения.
+              Здесь добавляются организации, локации, события и связи, которых в каталоге нет. У каждой записи нужен источник.
+              Ничего не придумывайте: если данных нет, карта покажет только каталог.
+            </p>
+            <form class="admin-filters" id="universeForm" novalidate>
+              <div class="field"><label for="universeKind">Раздел</label>
+                <select id="universeKind"><option value="anime">Аниме</option><option value="manga">Манга</option></select></div>
+              <div class="field"><label for="universeId">Номер</label><input id="universeId" type="text" inputmode="numeric" maxlength="9" placeholder="16498"></div>
+              <button class="secondary-button" type="submit">Открыть</button>
+            </form>
+            <p class="admin-hint">Номер из адреса страницы: для /anime/16498-shingeki-no-kyojin — 16498.</p>
+            <p class="form-message" id="universeMessage" role="status" aria-live="polite"></p>
+            <div id="universeEditor"></div>
+          </section>
+        </div>
+
         <!-- ==================== ОТЗЫВЫ О ПРОИЗВЕДЕНИЯХ ==================== -->
         <div class="admin-main" data-panel="reviews" hidden>
           <section class="admin-panel" aria-labelledby="entryReviewsHeading">
@@ -531,6 +553,7 @@
                 <option value="complaints">Жалобы</option>
                 <option value="users">Пользователи</option>
                 <option value="catalog">Каталог</option>
+                <option value="universe">Вселенные</option>
               </select>
             </div>
           </div>
