@@ -411,7 +411,7 @@ export const categoryPage = {
       ${pages > 1 ? `<nav class="btn-row pager" aria-label="Страницы">${page > 1 ? pageLink(page - 1, "← Назад") : ""}<span class="muted">Страница ${page} из ${pages}</span>${page < pages ? pageLink(page + 1, "Дальше →") : ""}</nav>` : ""}
     </div>`;
     return renderPage(request, {
-      title: `${category.title} — форум`, path: base, active: "community", body, styles: ["ency.css", ...STYLES],
+      title: `${category.title} — форум`, path: base, active: "community", body, styles: STYLES,
       scripts: ["forum-category.js"], description: category.description || `Форум Endemion: ${category.title}.`,
       noindex: Boolean(query) || page > 1,
       mainAttrs: `data-category="${e(category.slug)}" data-staff-only="${category.staffOnly ? 1 : 0}"`

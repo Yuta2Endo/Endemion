@@ -507,6 +507,9 @@
   margin-bottom: 8px;
   font-size: clamp(32px, 5vw, 48px);
   letter-spacing: -0.04em;
+  /* «Политика конфиденциальности» не помещается в узкий экран одним словом */
+  overflow-wrap: break-word;
+  hyphens: auto;
 }
 
 .doc h2 {

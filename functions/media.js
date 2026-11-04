@@ -3,7 +3,7 @@
 // Ключи: games/<id>/cover/<версия>, games/<id>/media/<mediaId>, posts/<id>/<версия>
 
 import { notFound } from "./_lib/html.js";
-import { parseId } from "./_lib/titles.js";
+import { parseId } from "./_lib/validate.js";
 
 const IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/avif"]);
 

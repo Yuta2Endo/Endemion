@@ -1,4 +1,4 @@
-// ENDEMION ID: свой профиль (настройки, приватность, аватар, любимые жанры, история, достижения)
+// ENDEMION ID: свой профиль (настройки, приватность, аватар, достижения)
 // и публичные профили других читателей (/api/users/:username), подписки.
 // Каждый экспорт — маршрут в формате Pages Functions, адреса перечислены в src/worker.js
 
@@ -8,13 +8,12 @@ import { error, json, readJson } from "../_lib/http.js";
 import { notifyStatement } from "../_lib/notifications.js";
 import { takeAction } from "../_lib/limits.js";
 import {
-  AVATAR_COLORS, avatarKey, canSeeProfile, favoriteGenres, MAX_AVATAR_BYTES, profileByUserId, profileByUsername,
-  readingStats, toProfile, toSettings
+  AVATAR_COLORS, avatarKey, canSeeProfile, communityStats, MAX_AVATAR_BYTES, profileByUserId, profileByUsername,
+  toProfile, toSettings
 } from "../_lib/profiles.js";
 import { requireUser } from "../_lib/roles.js";
 import { currentUser } from "../_lib/session.js";
-import { getTitlesByIds, parseId } from "../_lib/titles.js";
-import { cleanText, intParam, lengthProblem, STATUSES, USERNAME } from "../_lib/validate.js";
+import { cleanText, intParam, lengthProblem, parseId, USERNAME } from "../_lib/validate.js";
 import { notFound } from "../_lib/html.js";
 
 // Имена профилей, которые нельзя занять: они похожи на служебные адреса или на представителей сайта
@@ -28,7 +27,7 @@ export const meProfile = {
     const { user, response } = await requireUser(env, request);
     if (response) return response;
     const row = await profileByUserId(env, user.id);
-    return json({ profile: toProfile(row), settings: toSettings(row), genres: await favoriteGenres(env, user.id) });
+    return json({ profile: toProfile(row), settings: toSettings(row) });
   },
 
   async onRequestPatch({ request, env }) {
@@ -63,7 +62,7 @@ export const meProfile = {
       binds.push(body.avatarColor);
     }
     const flags = {
-      isPublic: "is_public", showLibrary: "show_library", showActivity: "show_activity"
+      isPublic: "is_public", showActivity: "show_activity"
     };
     for (const [key, column] of Object.entries(flags)) {
       if (!(key in body)) continue;
@@ -74,7 +73,7 @@ export const meProfile = {
     if ("notify" in body) {
       const notify = body.notify;
       if (!notify || typeof notify !== "object") return error("Некорректные настройки уведомлений.");
-      const columns = { chapters: "notify_chapters", replies: "notify_replies", follows: "notify_follows", achievements: "notify_achievements" };
+      const columns = { replies: "notify_replies", follows: "notify_follows", achievements: "notify_achievements" };
       for (const [key, column] of Object.entries(columns)) {
         if (!(key in notify)) continue;
         if (typeof notify[key] !== "boolean") return error("Некорректные настройки уведомлений.");
@@ -94,26 +93,6 @@ export const meProfile = {
     }
     const row = await profileByUserId(env, user.id);
     return json({ profile: toProfile(row), settings: toSettings(row) });
-  }
-};
-
-/** PUT /api/me/genres — любимые жанры (до 10). Учитываются в Oracle и на главной */
-export const meGenres = {
-  async onRequestPut({ request, env }) {
-    const { user, response } = await requireUser(env, request);
-    if (response) return response;
-    const body = await readJson(request);
-    if (!body || !Array.isArray(body.genres) || body.genres.length > 10) return error("Выберите не больше 10 жанров.");
-    const names = [...new Set(body.genres.filter((name) => typeof name === "string"))];
-    const { results } = names.length
-      ? await env.DB.prepare(`SELECT id, name FROM genres WHERE name IN (${names.map(() => "?").join(", ")})`).bind(...names).all()
-      : { results: [] };
-    if (results.length !== names.length) return error("Неизвестный жанр.");
-    await env.DB.batch([
-      env.DB.prepare("DELETE FROM user_genres WHERE user_id = ?").bind(user.id),
-      ...results.map((genre) => env.DB.prepare("INSERT INTO user_genres (user_id, genre_id) VALUES (?, ?)").bind(user.id, genre.id))
-    ]);
-    return json({ genres: await favoriteGenres(env, user.id) });
   }
 };
 
@@ -213,30 +192,6 @@ async function endemionAvatar(env, request, row) {
   });
 }
 
-/** /api/me/history — история просмотра страниц тайтлов: список и очистка */
-export const meHistory = {
-  async onRequestGet({ request, env }) {
-    const { user, response } = await requireUser(env, request);
-    if (response) return response;
-    const { results } = await env.DB.prepare(
-      "SELECT title_id, viewed_at FROM view_history WHERE user_id = ? ORDER BY viewed_at DESC LIMIT 60"
-    ).bind(user.id).all();
-    const titles = await getTitlesByIds(env, results.map((row) => row.title_id));
-    const viewed = new Map(results.map((row) => [row.title_id, row.viewed_at]));
-    return json({ items: titles.map((title) => ({ title, viewedAt: viewed.get(title.id) })) });
-  },
-
-  async onRequestDelete({ request, env }) {
-    const { user, response } = await requireUser(env, request);
-    if (response) return response;
-    const body = await readJson(request);
-    const titleId = body && body.titleId !== undefined ? parseId(body.titleId) : null;
-    if (titleId) await env.DB.prepare("DELETE FROM view_history WHERE user_id = ? AND title_id = ?").bind(user.id, titleId).run();
-    else await env.DB.prepare("DELETE FROM view_history WHERE user_id = ?").bind(user.id).run();
-    return json({ ok: true });
-  }
-};
-
 /** GET /api/me/achievements — все достижения с отметкой полученных */
 export const meAchievements = {
   async onRequestGet({ request, env }) {
@@ -269,58 +224,15 @@ export const userProfile = {
       // Приватный профиль: только имя и аватар
       return json({ profile: { ...profile, bio: "" }, private: true, own, following: Boolean(follow) });
     }
-    const [stats, achievements, genres] = await Promise.all([
-      readingStats(env, row.id), listAchievements(env, row.id), favoriteGenres(env, row.id)
-    ]);
-    const showLibrary = own || row.show_library === 1 || viewer?.isModerator;
-    const [favorites, reading] = showLibrary ? await Promise.all([
-      shelfTitles(env, row.id, "favorite = 1", 12),
-      shelfTitles(env, row.id, "status = 'reading'", 12)
-    ]) : [[], []];
+    const [stats, achievements] = await Promise.all([communityStats(env, row.id), listAchievements(env, row.id)]);
     return json({
       profile,
       private: false,
       own,
       following: Boolean(follow),
       stats,
-      genres,
       achievements: achievements.filter((item) => item.earnedAt),
-      achievementsTotal: achievements.length,
-      favorites,
-      reading,
-      libraryHidden: !showLibrary
-    });
-  }
-};
-
-async function shelfTitles(env, userId, condition, limit) {
-  const { results } = await env.DB.prepare(
-    `SELECT title_id, chapter, status FROM library WHERE user_id = ? AND ${condition} ORDER BY updated_at DESC LIMIT ?`
-  ).bind(userId, limit).all();
-  const titles = await getTitlesByIds(env, results.map((row) => row.title_id));
-  const byId = new Map(results.map((row) => [row.title_id, row]));
-  return titles.map((title) => ({ title, chapter: byId.get(title.id).chapter, status: byId.get(title.id).status }));
-}
-
-/** GET /api/users/:username/library?status= — полка читателя, если он её не скрыл */
-export const userLibrary = {
-  async onRequestGet({ request, env, params }) {
-    const { viewer, row, visible, own, response } = await loadProfile(env, request, params);
-    if (response) return response;
-    if (!visible || (!own && row.show_library !== 1 && !viewer?.isModerator)) return error("Читатель скрыл свою полку.", 403);
-    const status = new URL(request.url).searchParams.get("status") || "";
-    if (status && status !== "favorites" && !STATUSES.includes(status)) return error("Неизвестный статус.");
-    const condition = status === "favorites" ? "favorite = 1" : status ? "status = ?" : "1 = 1";
-    const { results } = await env.DB.prepare(
-      `SELECT title_id, chapter, status, favorite FROM library WHERE user_id = ? AND ${condition} ORDER BY updated_at DESC LIMIT 200`
-    ).bind(...(status && status !== "favorites" ? [row.id, status] : [row.id])).all();
-    const titles = await getTitlesByIds(env, results.map((item) => item.title_id));
-    const byId = new Map(results.map((item) => [item.title_id, item]));
-    return json({
-      items: titles.map((title) => {
-        const item = byId.get(title.id);
-        return { title, chapter: item.chapter, status: item.status, favorite: item.favorite === 1 };
-      })
+      achievementsTotal: achievements.length
     });
   }
 };

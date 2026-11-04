@@ -2,7 +2,6 @@
 // Сервер (`npm start`) применяет их и сам; перед миграцией рабочей базы делается резервная копия
 
 import { mkdirSync } from "node:fs";
-import { backfillSearch } from "../functions/_lib/titles.js";
 import { backupDatabase } from "./backup.mjs";
 import { DATA_DIR, DB_FILE, MIGRATIONS_DIR } from "./config.mjs";
 import { openDatabase } from "./d1.mjs";
@@ -18,6 +17,4 @@ if (!pending.length) {
   if (applied > 0) console.log(`Резервная копия перед миграциями: ${await backupDatabase(db.raw)}`);
   applyMigrations(db.raw, MIGRATIONS_DIR, pending);
 }
-const filled = await backfillSearch({ DB: db });
-if (filled) console.log(`Строки поиска заполнены у ${filled} тайтлов.`);
 db.close();

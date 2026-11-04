@@ -1,28 +1,16 @@
-// Публичный профиль читателя /users/:username: описание, статистика, достижения, полка, подписка, подписчики, жалоба
+// Публичный профиль участника /users/:username: описание, активность на форуме, достижения, подписка, подписчики, жалоба
 
-import {
-  api, avatar, button, el, errorBox, formatDate, getLibrary, getMe, initHeader, link, loginUrl, remoteImage, reportContent,
-  stateBox, STATUS_LABELS, titleCard, toast, toggleFavorite
-} from "./app.js";
-import { entryCardNode, LIST_STATUSES } from "./ency-lib.js";
+import { api, avatar, button, el, errorBox, formatDate, initHeader, link, loginUrl, reportContent, stateBox, toast } from "./app.js";
 
 const root = document.querySelector("#userPage");
 const username = document.querySelector("main").dataset.username;
 
 let viewer = null;
-let library = new Map();
 
 function statBox(value, label) {
   const box = el("div", "stat-box");
   box.append(el("strong", null, String(value ?? "—")), el("span", null, label));
   return box;
-}
-
-function cards(items) {
-  return items.map((item) => titleCard(item.title, {
-    library: viewer ? library.get(item.title.id) : { chapter: item.chapter, status: item.status },
-    onFavorite: toggleFavorite
-  }));
 }
 
 function followButton(data) {
@@ -86,68 +74,20 @@ function render(data) {
   root.replaceChildren(hero);
 
   if (data.private) {
-    root.append(stateBox({ icon: "🔒", title: "Профиль скрыт", text: "Читатель сделал профиль приватным. Его полка и статистика не видны." }));
+    root.append(stateBox({ icon: "🔒", title: "Профиль скрыт", text: "Участник сделал профиль приватным. Его активность и статистика не видны." }));
     return;
   }
 
   const stats = el("div", "stat-grid section");
   const followers = statBox(data.stats.followers, "подписчиков");
   followers.querySelector("strong").dataset.followers = "";
-  stats.append(
-    statBox(data.stats.chapters, "глав прочитано"),
-    statBox(data.stats.completed, "тайтлов дочитано"),
-    statBox(data.stats.reading, "читает сейчас"),
-    statBox(data.stats.reviews, "оценок"),
-    statBox(data.stats.comments, "комментариев"),
-    followers,
-    statBox(data.stats.following, "подписок")
-  );
+  stats.append(statBox(data.stats.topics, "тем"), statBox(data.stats.posts, "ответов"), followers, statBox(data.stats.following, "подписок"));
   root.append(stats);
-
-  root.append(forumBlock());
-  root.append(encyclopediaBlock());
 
   const split = el("div", "split section");
   const left = el("div", "stack");
   const right = el("aside", "stack");
-
-  if (data.libraryHidden) {
-    left.append(stateBox({ icon: "📚", text: "Читатель скрыл свою полку." }));
-  } else {
-    for (const [key, label, items] of [["reading", "Читает сейчас", data.reading], ["favorites", "Избранное", data.favorites]]) {
-      const section = el("section");
-      section.append(el("h2", "section-head", label));
-      const grid = el("div", "cards");
-      grid.append(...(items.length ? cards(items) : [el("p", "muted small", "Пусто.")]));
-      section.append(grid);
-      left.append(section);
-      section.dataset.shelf = key;
-    }
-    const shelf = el("section");
-    const chips = el("div", "chips");
-    const grid = el("div", "cards section");
-    const load = async (status) => {
-      chips.querySelectorAll("button").forEach((chip) => chip.setAttribute("aria-pressed", String(chip.dataset.status === status)));
-      const result = await api(`/api/users/${encodeURIComponent(username)}/library?status=${status}`);
-      if (!result.ok) return grid.replaceChildren(errorBox(result.data?.error || "Полка не загрузилась."));
-      grid.replaceChildren(...(result.data.items.length ? cards(result.data.items) : [el("p", "muted small", "Пусто.")]));
-    };
-    for (const [status, label] of Object.entries(STATUS_LABELS)) {
-      const chip = button(label, "chip", () => load(status), { pressed: false });
-      chip.dataset.status = status;
-      chips.append(chip);
-    }
-    shelf.append(el("h2", "section-head", "Вся полка"), chips, grid);
-    left.append(shelf);
-    load("completed");
-  }
-
-  const genres = el("section", "panel");
-  genres.append(el("h2", null, "Любимые жанры"));
-  const chips = el("div", "chips");
-  const names = [...new Set([...data.genres, ...data.stats.topGenres.map((genre) => genre.name)])].slice(0, 10);
-  chips.append(...(names.length ? names.map((name) => link(`/catalog?genre=${encodeURIComponent(name)}`, "tag", name)) : [el("p", "muted small", "Пока не понятно.")]));
-  genres.append(chips);
+  left.append(forumBlock());
 
   const achievements = el("section", "panel");
   achievements.append(el("h2", null, `Достижения · ${data.achievements.length} из ${data.achievementsTotal}`));
@@ -165,82 +105,53 @@ function render(data) {
   followChips.append(button("Подписчики", "chip", () => showFollows("followers")), button("Подписки", "chip", () => showFollows("following")));
   follows.append(el("h2", null, "Связи"), followChips);
 
-  const collections = el("section", "panel");
-  collections.append(el("h2", null, "Подборки"));
-  api(`/api/collections?user=${encodeURIComponent(username)}`).then((result) => {
-    const list = result.ok ? result.data.collections : [];
-    if (!list.length) return collections.append(el("p", "muted small", "Публичных подборок нет."));
-    for (const collection of list) {
-      const row = el("p");
-      row.append(link(`/collection/${collection.id}`, null, collection.name), el("span", "muted small", ` · ${collection.size} тайтлов`));
-      collections.append(row);
-    }
-  });
-
-  right.append(genres, achievements, collections, follows);
+  right.append(achievements, follows);
   split.append(left, right);
   root.append(split);
 }
 
-const FAVORITE_PATHS = { anime: "/anime", manga: "/manga", character: "/characters", person: "/people" };
-
-/** Списки энциклопедии: статистика аниме и манги, последние записи и избранное. Загружается отдельно */
-function encyclopediaBlock() {
-  const section = el("section", "section");
-  section.append(el("h2", "section-head", "Аниме и манга"));
-  const box = el("div");
-  box.append(el("p", "muted small", "Загружаем списки…"));
+/** Активность на форуме: последние темы и ответы. Загружается отдельно, сервер учитывает приватность */
+function forumBlock() {
+  const section = el("section", "panel");
+  section.append(el("h2", null, "Форум"));
+  const box = el("div", "stack");
+  box.append(el("p", "muted small", "Загружаем активность…"));
   section.append(box);
-  api(`/api/users/${encodeURIComponent(username)}/encyclopedia`).then(async (result) => {
-    if (result.status === 403) return box.replaceChildren(el("p", "muted small", "Пользователь скрыл свои списки."));
-    if (!result.ok) return box.replaceChildren(errorBox(result.data?.error || "Списки не загрузились."));
-    const { stats, favorites } = result.data;
+  api(`/api/users/${encodeURIComponent(username)}/forum`).then((result) => {
+    if (result.status === 403) return box.replaceChildren(el("p", "muted small", "Участник скрыл свою активность."));
+    if (!result.ok) return box.replaceChildren(errorBox(result.data?.error || "Активность не загрузилась."));
+    const { topics, posts } = result.data;
     const parts = [];
-    for (const kind of ["anime", "manga"]) {
-      const s = stats[kind];
-      if (!s.total) continue;
-      const grid = el("div", "stat-grid");
-      grid.append(statBox(s.total, kind === "anime" ? "аниме в списке" : "манги в списке"));
-      for (const [key, label] of Object.entries(LIST_STATUSES[kind])) if (s.statuses[key]) grid.append(statBox(s.statuses[key], label.toLowerCase()));
-      grid.append(statBox(s.units, kind === "anime" ? "эпизодов" : "глав"));
-      if (kind === "anime") grid.append(statBox(s.hours, "часов"));
-      if (s.meanScore) grid.append(statBox(s.meanScore, "средняя оценка"));
-      const recent = await api(`/api/users/${encodeURIComponent(username)}/mylist?kind=${kind}`);
-      const rail = el("div", "e-rail");
-      if (recent.ok) {
-        rail.append(...recent.data.items.slice(0, 12).map((item) => entryCardNode(item.entry, {
-          extra: el("p", "e-role", `${LIST_STATUSES[kind][item.status]}${item.score ? ` · ★ ${item.score}` : ""}`)
-        })));
+    if (topics.length) {
+      const list = el("div", "stack");
+      for (const topic of topics) {
+        const row = el("p");
+        row.append(link(`/community/thread/${topic.id}`, null, topic.subject), el("span", "muted small", ` · ${formatDate(topic.createdAt)}`));
+        list.append(row);
       }
-      parts.push(el("p", "filter-sub", kind === "anime" ? "Аниме" : "Манга"), grid, rail);
+      parts.push(el("h3", null, "Последние темы"), list);
     }
-    if (favorites.length) {
-      const grid = el("div", "fav-grid");
-      for (const item of favorites.slice(0, 18)) {
-        const card = el("article", "p-card");
-        const photo = link(`${FAVORITE_PATHS[item.type]}/${item.id}`, "p-photo", null);
-        photo.tabIndex = -1;
-        photo.setAttribute("aria-hidden", "true");
-        photo.append(remoteImage(item.image, ""));
-        const name = el("h3", "p-name");
-        name.append(link(`${FAVORITE_PATHS[item.type]}/${item.id}`, null, item.name));
-        card.append(photo, name);
-        grid.append(card);
+    if (posts.length) {
+      const list = el("div", "stack");
+      for (const post of posts) {
+        const row = el("div");
+        const head = el("p");
+        head.append(link(`/community/thread/${post.thread.id}#comment-${post.id}`, null, post.thread.subject), el("span", "muted small", ` · ${formatDate(post.createdAt)}`));
+        row.append(head, el("p", "muted small", post.spoiler ? "Ответ скрыт под спойлером." : post.excerpt));
+        list.append(row);
       }
-      parts.push(el("p", "filter-sub", "Избранное"), grid);
+      parts.push(el("h3", null, "Последние ответы"), list);
     }
-    box.replaceChildren(...(parts.length ? parts : [el("p", "muted small", "Списки пока пусты.")]));
+    box.replaceChildren(...(parts.length ? parts : [el("p", "muted small", "Тем и ответов пока нет.")]));
   });
   return section;
 }
 
 async function init() {
   viewer = await initHeader();
-  if (viewer) library = await getLibrary();
-  await getMe();
   const result = await api(`/api/users/${encodeURIComponent(username)}`);
   if (result.status === 404) {
-    root.replaceChildren(stateBox({ icon: "🔭", title: "Профиль не найден", text: "Возможно, читатель сменил имя профиля или удалил аккаунт.", action: { href: "/community#readers", text: "Найти читателей" } }));
+    root.replaceChildren(stateBox({ icon: "🔭", title: "Профиль не найден", text: "Возможно, участник сменил имя профиля или удалил аккаунт.", action: { href: "/community#readers", text: "Найти участников" } }));
     return;
   }
   if (!result.ok) {
@@ -251,42 +162,3 @@ async function init() {
 }
 
 init();
-
-/** Активность на форуме: число тем и ответов, последние темы и ответы. Загружается отдельно, сервер учитывает приватность */
-function forumBlock() {
-  const section = el("section", "section");
-  section.append(el("h2", "section-head", "Форум"));
-  const box = el("div");
-  box.append(el("p", "muted small", "Загружаем активность…"));
-  section.append(box);
-  api(`/api/users/${encodeURIComponent(username)}/forum`).then((result) => {
-    if (result.status === 403) return box.replaceChildren(el("p", "muted small", "Пользователь скрыл свою активность."));
-    if (!result.ok) return box.replaceChildren(errorBox(result.data?.error || "Активность не загрузилась."));
-    const { topicsCount, postsCount, topics, posts } = result.data;
-    const stats = el("div", "stat-grid");
-    stats.append(statBox(topicsCount, "тем"), statBox(postsCount, "ответов"));
-    const parts = [stats];
-    if (topics.length) {
-      const list = el("div", "stack section");
-      for (const topic of topics) {
-        const row = el("p");
-        row.append(link(`/community/thread/${topic.id}`, null, topic.subject), el("span", "muted small", ` · ${formatDate(topic.createdAt)}`));
-        list.append(row);
-      }
-      parts.push(el("p", "filter-sub", "Последние темы"), list);
-    }
-    if (posts.length) {
-      const list = el("div", "stack section");
-      for (const post of posts) {
-        const row = el("div");
-        const head = el("p");
-        head.append(link(`/community/thread/${post.thread.id}#comment-${post.id}`, null, post.thread.subject), el("span", "muted small", ` · ${formatDate(post.createdAt)}`));
-        row.append(head, el("p", "muted small", post.spoiler ? "Ответ скрыт под спойлером." : post.excerpt));
-        list.append(row);
-      }
-      parts.push(el("p", "filter-sub", "Последние ответы"), list);
-    }
-    box.replaceChildren(...parts);
-  });
-  return section;
-}

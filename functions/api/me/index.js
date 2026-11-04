@@ -4,7 +4,7 @@ import { verifyPassword } from "../../_lib/crypto.js";
 import { accountUrl, reauthUrl, recentlyAuthenticated } from "../../_lib/endemionId.js";
 import { error, json, readJson } from "../../_lib/http.js";
 import { unreadCount } from "../../_lib/notifications.js";
-import { readingStats } from "../../_lib/profiles.js";
+import { communityStats } from "../../_lib/profiles.js";
 import { currentUser, destroySession } from "../../_lib/session.js";
 import { deleteUserStatements } from "../../_lib/users.js";
 import { normalizeName, validateName } from "../../_lib/validate.js";
@@ -13,7 +13,7 @@ import { normalizeName, validateName } from "../../_lib/validate.js";
 export async function onRequestGet({ request, env }) {
   const user = await currentUser(env, request);
   if (!user) return json({ user: null });
-  const [stats, unread] = await Promise.all([readingStats(env, user.id), unreadCount(env, user.id)]);
+  const [stats, unread] = await Promise.all([communityStats(env, user.id), unreadCount(env, user.id)]);
   return json({ user, stats, unread });
 }
 

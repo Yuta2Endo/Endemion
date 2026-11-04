@@ -1,5 +1,5 @@
 // ENDEMION ID: профили пользователей. Адрес публичного профиля — /users/<username>.
-// Приватный профиль видят только владелец и модераторы; полку и активность можно скрыть отдельно
+// Приватный профиль видят только владелец и модераторы; активность на форуме можно скрыть отдельно
 
 import { USERNAME } from "./validate.js";
 
@@ -57,7 +57,6 @@ export function toProfile(row) {
     avatarColor: row.avatar_color,
     createdAt: row.created_at,
     isPublic: row.is_public === 1,
-    showLibrary: row.show_library === 1,
     showActivity: row.show_activity === 1
   };
 }
@@ -68,10 +67,8 @@ export function toSettings(row) {
     bio: row.bio,
     avatarColor: row.avatar_color,
     isPublic: row.is_public === 1,
-    showLibrary: row.show_library === 1,
     showActivity: row.show_activity === 1,
     notify: {
-      chapters: row.notify_chapters === 1,
       replies: row.notify_replies === 1,
       follows: row.notify_follows === 1,
       achievements: row.notify_achievements === 1
@@ -79,47 +76,17 @@ export function toSettings(row) {
   };
 }
 
-/** Статистика чтения: полка по статусам, главы, оценки, комментарии, подписки */
-export async function readingStats(env, userId) {
-  const row = await env.DB.prepare(
+/** Активность в сообществе: темы, ответы, подписки, достижения */
+export async function communityStats(env, userId) {
+  return env.DB.prepare(
     `SELECT
-       (SELECT COUNT(*) FROM library WHERE user_id = ?1) AS library,
-       (SELECT COALESCE(SUM(favorite), 0) FROM library WHERE user_id = ?1) AS favorites,
-       (SELECT COUNT(*) FROM library WHERE user_id = ?1 AND status = 'reading') AS reading,
-       (SELECT COUNT(*) FROM library WHERE user_id = ?1 AND status = 'planned') AS planned,
-       (SELECT COUNT(*) FROM library WHERE user_id = ?1 AND status = 'completed') AS completed,
-       (SELECT COUNT(*) FROM library WHERE user_id = ?1 AND status = 'on_hold') AS on_hold,
-       (SELECT COUNT(*) FROM library WHERE user_id = ?1 AND status = 'dropped') AS dropped,
-       (SELECT COALESCE(SUM(chapter), 0) FROM library WHERE user_id = ?1) AS chapters,
-       (SELECT COUNT(*) FROM reviews WHERE user_id = ?1) AS reviews,
-       (SELECT ROUND(AVG(score), 1) FROM reviews WHERE user_id = ?1) AS average_score,
-       (SELECT COUNT(*) FROM comments WHERE user_id = ?1 AND deleted_at IS NULL) AS comments,
+       (SELECT COUNT(*) FROM threads WHERE user_id = ?1 AND deleted_at IS NULL) AS topics,
+       (SELECT COUNT(*) FROM comments WHERE user_id = ?1 AND target_type = 'thread' AND deleted_at IS NULL) AS posts,
        (SELECT COUNT(*) FROM follows WHERE followee_id = ?1) AS followers,
        (SELECT COUNT(*) FROM follows WHERE follower_id = ?1) AS following,
-       (SELECT COUNT(*) FROM user_achievements WHERE user_id = ?1) AS achievements`
+       (SELECT COUNT(*) FROM user_achievements ua JOIN achievements a ON a.id = ua.achievement_id
+          WHERE ua.user_id = ?1 AND a.code IN ('voice_10', 'theorist', 'followed_5')) AS achievements`
   ).bind(userId).first();
-  const { results: genres } = await env.DB.prepare(
-    `SELECT g.name, COUNT(*) AS n FROM library l JOIN title_genres tg ON tg.title_id = l.title_id JOIN genres g ON g.id = tg.genre_id
-     WHERE l.user_id = ? AND (l.status IS NULL OR l.status <> 'dropped') GROUP BY g.id ORDER BY n DESC, g.name LIMIT 6`
-  ).bind(userId).all();
-  const { results: types } = await env.DB.prepare(
-    "SELECT t.type, COUNT(*) AS n FROM library l JOIN titles t ON t.id = l.title_id WHERE l.user_id = ? GROUP BY t.type"
-  ).bind(userId).all();
-  return {
-    ...row,
-    onHold: row.on_hold,
-    averageScore: row.average_score,
-    topGenres: genres.map((genre) => ({ name: genre.name, count: genre.n })),
-    types: Object.fromEntries(types.map((type) => [type.type, type.n]))
-  };
-}
-
-/** Любимые жанры, которые пользователь выбрал сам */
-export async function favoriteGenres(env, userId) {
-  const { results } = await env.DB.prepare(
-    "SELECT g.name FROM user_genres ug JOIN genres g ON g.id = ug.genre_id WHERE ug.user_id = ? ORDER BY g.name"
-  ).bind(userId).all();
-  return results.map((row) => row.name);
 }
 
 /** Может ли viewer видеть профиль owner целиком */

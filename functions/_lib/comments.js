@@ -1,59 +1,20 @@
-// Комментарии ENDEMION COMMUNITY: у тайтла, обсуждения, подборки или отзыва. Ответы — одним уровнем вложенности:
+// Ответы в темах форума ENDEMION COMMUNITY. Ответы на ответы — одним уровнем вложенности:
 // root_id — корневой комментарий ветки, parent_id — на какой именно комментарий ответ (для «ответ @имя»).
 // Удалённый комментарий остаётся заглушкой без текста, чтобы ветка не рассыпалась
 
-import { getCharacter, getEntry, getPerson, getSettings, isHidden } from "./catalog/index.js";
 import { commentLink } from "./moderation.js";
 
-export const TARGET_TYPES = ["title", "thread", "collection", "review", "anime", "manga", "character", "person", "entry_review"];
+// Комментарии к разделам, удалённым 2026-11-04 (тайтлы, подборки, энциклопедия), остались в базе, но сайт их не показывает
+export const TARGET_TYPES = ["thread"];
 export const REACTIONS = { like: "👍", fire: "🔥", heart: "❤️", laugh: "😂", wow: "😮", sad: "😢" };
 export const COMMENT_MAX = 3000;
 export const PAGE = 20;
 
 /** Существует ли цель и можно ли её комментировать. Возвращает { ownerId, label } или null */
 export async function loadCommentTarget(env, type, id) {
-  switch (type) {
-    case "title": {
-      const row = await env.DB.prepare("SELECT id, title FROM titles WHERE id = ?").bind(id).first();
-      return row ? { ownerId: null, label: `«${row.title}»` } : null;
-    }
-    case "thread": {
-      const row = await env.DB.prepare("SELECT user_id, subject FROM threads WHERE id = ? AND deleted_at IS NULL").bind(id).first();
-      return row ? { ownerId: row.user_id, label: `«${row.subject}»` } : null;
-    }
-    case "collection": {
-      const row = await env.DB.prepare("SELECT user_id, name FROM collections WHERE id = ? AND hidden_at IS NULL AND is_public = 1").bind(id).first();
-      return row ? { ownerId: row.user_id, label: `подборке «${row.name}»` } : null;
-    }
-    case "review": {
-      const row = await env.DB.prepare(
-        "SELECT r.user_id, t.title FROM reviews r JOIN titles t ON t.id = r.title_id WHERE r.id = ? AND r.hidden_at IS NULL"
-      ).bind(id).first();
-      return row ? { ownerId: row.user_id, label: `отзыву на «${row.title}»` } : null;
-    }
-    // Произведения, персонажи и люди энциклопедии: проверяются по источнику каталога (с кешем)
-    case "anime":
-    case "manga": {
-      const entry = await getEntry(env, type, id);
-      return entry && !isHidden(entry, await getSettings(env)) ? { ownerId: null, label: `«${entry.title}»` } : null;
-    }
-    case "character": {
-      const character = await getCharacter(env, id);
-      return character ? { ownerId: null, label: `персонажу «${character.name}»` } : null;
-    }
-    case "person": {
-      const person = await getPerson(env, id);
-      return person ? { ownerId: null, label: `странице «${person.name}»` } : null;
-    }
-    case "entry_review": {
-      const row = await env.DB.prepare(
-        "SELECT r.user_id, e.title FROM entry_reviews r JOIN entries e ON e.kind = r.kind AND e.ext_id = r.ext_id WHERE r.id = ? AND r.hidden_at IS NULL"
-      ).bind(id).first();
-      return row ? { ownerId: row.user_id, label: `отзыву на «${row.title}»` } : null;
-    }
-    default:
-      return null;
-  }
+  if (type !== "thread") return null;
+  const row = await env.DB.prepare("SELECT user_id, subject FROM threads WHERE id = ? AND deleted_at IS NULL").bind(id).first();
+  return row ? { ownerId: row.user_id, label: `«${row.subject}»` } : null;
 }
 
 const COMMENT_SELECT = `SELECT c.id, c.user_id, c.target_type, c.target_id, c.parent_id, c.root_id, c.body, c.spoiler, c.created_at,

@@ -10,8 +10,7 @@ export const SECURITY_HEADERS = {
   "Content-Security-Policy":
     // Яндекс Метрика (mc.yandex.ru) загружается только после согласия посетителя, см. public/assets/app.js
     "default-src 'self'; script-src 'self' https://challenges.cloudflare.com https://static.cloudflareinsights.com https://mc.yandex.ru https://yastatic.net; " +
-    // Постеры и фото каталога энциклопедии загружаются с Shikimori (functions/_lib/catalog/shikimori.js)
-    "style-src 'self'; img-src 'self' data: https://shikimori.io https://mc.yandex.ru; connect-src 'self' https://cloudflareinsights.com https://mc.yandex.ru; " +
+    "style-src 'self'; img-src 'self' data: https://mc.yandex.ru; connect-src 'self' https://cloudflareinsights.com https://mc.yandex.ru; " +
     // worker-src задан явно: иначе браузер берёт его из child-src, и service worker (/sw.js) с этого сайта блокируется
     "frame-src https://challenges.cloudflare.com blob: https://mc.yandex.ru; child-src blob: https://mc.yandex.ru; worker-src 'self' blob:; " +
     "frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'"

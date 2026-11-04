@@ -3,8 +3,8 @@
 import { requireAdmin } from "../../../_lib/admin.js";
 import { audit } from "../../../_lib/audit.js";
 import { COMPLAINT_COLUMNS, COMPLAINT_STATUSES, toComplaint } from "../../../_lib/complaints.js";
+import { parseId } from "../../../_lib/validate.js";
 import { error, json, readJson } from "../../../_lib/http.js";
-import { parseId } from "../../../_lib/titles.js";
 
 export async function onRequestPut({ request, env, params }) {
   const { user, response } = await requireAdmin(env, request);

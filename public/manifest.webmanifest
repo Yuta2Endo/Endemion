@@ -1,8 +1,8 @@
 {
   "id": "/",
-  "name": "Endemion — манга, манхва и маньхуа",
+  "name": "Endemion — Create. Play. Connect.",
   "short_name": "Endemion",
-  "description": "Каталог манги, манхвы и маньхуа на русском: читалка, избранное и прогресс по главам.",
+  "description": "Независимая игровая студия Endemion: игры, новости разработки и сообщество игроков.",
   "lang": "ru",
   "dir": "ltr",
   "start_url": "/",

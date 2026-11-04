@@ -26,14 +26,25 @@ test("страницы портала отвечают 200, неизвестны
   assert.match(missing.text, /<meta name="robots" content="noindex/);
 });
 
-test("в меню нет энциклопедии, но её адреса и прежние разделы работают", async () => {
+test("удалённые разделы ведут на главную (301), их API больше нет", async () => {
   const guest = app.client();
   const home = await guest.call("GET", "/");
   for (const href of ["/games", "/community", "/studio", "/about"]) assert.match(home.text, new RegExp(`href="${href}"`), href);
-  assert.doesNotMatch(home.text, /href="\/encyclopedia"/);
-  for (const path of ["/encyclopedia", "/anime", "/manga", "/reading", "/catalog"]) {
-    assert.equal((await guest.call("GET", path)).status, 200, path);
+  assert.doesNotMatch(home.text, /href="\/(encyclopedia|anime|manga|reading|catalog|pulse|arena)"/);
+  for (const path of ["/encyclopedia", "/anime", "/anime/5-name", "/manga", "/characters/1", "/search?q=x", "/mylist",
+    "/reading", "/catalog", "/title/1", "/read/1/1", "/nexus", "/oracle", "/pulse", "/arena", "/collection/1"]) {
+    const r = await guest.call("GET", path);
+    assert.equal(r.status, 301, path);
+    assert.equal(r.headers.get("location"), "/", path);
   }
+  for (const path of ["/api/titles", "/api/catalog/anime", "/api/search?q=x", "/api/library", "/api/polls", "/api/collections", "/api/universe/anime/1"]) {
+    assert.equal((await guest.call("GET", path)).status, 404, path);
+  }
+  // Портал, форум, уведомления и служебные файлы на месте
+  for (const path of ["/community", "/notifications", "/sitemap.xml", "/robots.txt"]) assert.equal((await guest.call("GET", path)).status, 200, path);
+  const sitemap = (await guest.call("GET", "/sitemap.xml")).text;
+  assert.match(sitemap, /\/games\/endemion-life/);
+  assert.doesNotMatch(sitemap, /\/(anime|manga|title|reading|catalog)\b/);
 });
 
 test("главная: приветствие, игры из каталога, ссылка на Endemion Life, без ссылок на магазины", async () => {
@@ -105,6 +116,7 @@ test("HTML-страницы отдаются с заголовками безо�
     const { headers } = await app.client().call("GET", path);
     assert.match(headers.get("content-security-policy") || "", /default-src 'self'/, path);
     assert.match(headers.get("content-security-policy") || "", /script-src 'self'(?! 'unsafe-inline')/, path);
+    assert.doesNotMatch(headers.get("content-security-policy") || "", /shikimori/, path);
     assert.equal(headers.get("x-frame-options"), "DENY", path);
     assert.equal(headers.get("x-content-type-options"), "nosniff", path);
   }

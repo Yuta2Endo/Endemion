@@ -72,4 +72,10 @@ export function intParam(value, fallback, min, max) {
   return Number.isInteger(number) && number >= min && number <= max ? number : null;
 }
 
+/** Положительный целый номер из адреса или тела запроса, иначе null */
+export function parseId(value) {
+  const id = Number(value);
+  return Number.isInteger(id) && id > 0 ? id : null;
+}
+
 export const USERNAME = /^[a-zA-Z0-9_]{3,24}$/;

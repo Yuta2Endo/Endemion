@@ -1,5 +1,5 @@
-// Админка в браузере: разделы, поиск по тайтлам, пользователи с подтверждением паролем и журнал.
-// Администратора и тайтлы создаёт global-setup
+// Админка в браузере: разделы портала, пользователи с подтверждением паролем и журнал.
+// Администратора создаёт global-setup
 
 import { expect, test } from "@playwright/test";
 import { apiClient, BASE, state } from "./helpers.mjs";
@@ -10,34 +10,20 @@ test.beforeEach(async ({ context }, testInfo) => {
   await context.addCookies([{ name, value, url: BASE }]);
 });
 
-test("разделы и поиск по тайтлам", async ({ page }) => {
+test("разделы портала и журнал", async ({ page }) => {
   await page.goto("/admin");
   await expect(page.locator("#dashboardHeading")).toBeVisible();
   await expect(page.locator("#stats .admin-stat")).toHaveCount(6);
+  for (const name of ["Тайтлы", "Каталог", "Вселенные", "Голосования", "Подборки"]) {
+    await expect(page.locator(".admin-menu").getByRole("link", { name, exact: true })).toHaveCount(0);
+  }
 
-  await page.locator(".admin-menu").getByRole("link", { name: "Тайтлы" }).click();
-  await expect(page).toHaveURL(/#titles$/);
-  await expect(page.locator("#titleList")).toContainText("E2E манга");
-  await expect(page.locator("#titleList")).toContainText("E2E манхва");
-
-  await page.locator("#titleSearch").fill("МАНХВА");
-  await expect(page.locator("#titleList")).not.toContainText("E2E манга");
-  await page.locator("#titleSearch").fill("");
-  await page.locator("#titleTypeFilter").selectOption("manga");
-  await expect(page.locator("#titleList")).not.toContainText("E2E манхва");
-
-  await page.locator("#titleList").getByText("E2E манга").click();
-  await expect(page).toHaveURL(new RegExp(`#titles/${state().manga}$`));
-  await expect(page.locator("#titleFormHeading")).toHaveText("E2E манга");
-  await expect(page.locator("#chapterList .admin-chapter")).toHaveCount(2);
-
-  // После обновления страницы открыт тот же тайтл
-  await page.reload();
-  await expect(page.locator("#titleFormHeading")).toHaveText("E2E манга");
+  await page.locator(".admin-menu").getByRole("link", { name: "Игры" }).click();
+  await expect(page).toHaveURL(/#games$/);
+  await expect(page.locator("#gamesContent")).toContainText("Endemion Life");
 
   await page.locator(".admin-menu").getByRole("link", { name: "Журнал" }).click();
-  await expect(page.locator("#auditList")).toContainText("Создание тайтла");
-  await expect(page.locator("#auditList")).toContainText("E2E манга");
+  await expect(page.locator("#auditList")).toBeVisible();
 });
 
 test("пользователи: права через окно с паролем", async ({ page }) => {

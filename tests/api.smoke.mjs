@@ -42,12 +42,7 @@ const password = "correct-horse-1";
 
 console.log(`API ${BASE}`);
 
-let r = await call("GET", "/api/titles");
-check("каталог из D1", r.status === 200 && Array.isArray(r.data.titles), JSON.stringify(r.data));
-// Тайтл, читалка и библиотека проверяются на первом тайтле каталога; при пустом каталоге эти проверки пропускаются
-const first = r.data.titles?.[0];
-
-r = await call("GET", "/api/me");
+let r = await call("GET", "/api/me");
 check("гость получает user: null", r.status === 200 && r.data.user === null);
 
 r = await call("POST", "/api/auth/register", { name: "Тест", email, password, consent: true }, { origin: "https://evil.example" });
@@ -69,69 +64,31 @@ check("повторная регистрация той же почты", r.stat
 r = await call("GET", "/api/me");
 check("сессия работает", r.status === 200 && r.data.user && r.data.user.email === email);
 
-r = await call("PUT", "/api/library/999", { favorite: true });
-check("несуществующий тайтл", r.status === 404);
+// Форум: тема в «Общем обсуждении», ответ, гость не пишет, удалённые разделы ведут на главную
+r = await call("GET", "/api/threads?category=general");
+check("лента форума", r.status === 200 && Array.isArray(r.data.threads), JSON.stringify(r.data));
 
-r = await call("GET", "/api/positions/1", undefined, { withCookie: false });
-check("место в главе только для вошедших", r.status === 401);
-r = await call("GET", "/api/titles?tab=favorites", undefined, { withCookie: false });
-check("подборка «Избранное» только для вошедших", r.status === 401);
-r = await call("GET", "/api/titles?tab=favorites");
-check("подборка «Избранное» у вошедшего", r.status === 200 && Array.isArray(r.data.titles));
+r = await call("POST", "/api/threads", { kind: "discussion", category: "general", subject: "Проверка API", body: "Тема из смоук-теста." }, { withCookie: false });
+check("гость не создаёт тему", r.status === 401);
 
-if (first) {
-  const { id, chapters } = first;
-  r = await call("GET", `/api/titles/${id}`);
-  check("один тайтл", r.status === 200 && r.data.title?.id === id);
+r = await call("POST", "/api/threads", { kind: "discussion", category: "general", subject: "Проверка API", body: "Тема из смоук-теста." });
+check("тема создана", r.status === 201 && r.data.thread?.category?.slug === "general", JSON.stringify(r.data));
+const threadId = r.data?.thread?.id;
 
-  let page = await fetch(`${BASE}/read/${id}/1`);
-  let text = await page.text();
-  check("читалка открывается", page.status === 200 && text.includes('id="reader"') && text.includes(`/pages/${id}/1/1`));
-  page = await fetch(`${BASE}/read/${id}/${chapters + 1}`);
-  check("читалка: несуществующая глава", page.status === 404);
-  page = await fetch(`${BASE}/pages/${id}/1/1`);
-  text = await page.text();
-  check("страница главы — SVG", page.status === 200 && (page.headers.get("content-type") || "").startsWith("image/svg+xml") && text.startsWith("<svg"));
-  page = await fetch(`${BASE}/pages/${id}/1/99`);
-  check("страница за пределами главы", page.status === 404);
-
-  r = await call("PUT", `/api/library/${id}`, { favorite: true });
-  check("добавить в избранное", r.status === 200 && r.data.item.favorite === true);
-
-  r = await call("PUT", `/api/library/${id}`, { chapter: 3 });
-  check("прогресс ставит статус «читаю»", r.status === 200 && r.data.item.status === "reading" && r.data.item.chapter === 3);
-
-  r = await call("PUT", `/api/library/${id}`, { chapter: chapters + 1 });
-  check("глава больше вышедших отклонена", r.status === 400);
-
-  // Дочитал завершённый тайтл до конца — статус «прочитано»
-  if (first.status === "completed") {
-    r = await call("PUT", `/api/library/${id}`, { chapter: chapters });
-    check("последняя глава завершённого тайтла — «прочитано»", r.status === 200 && r.data.item.status === "completed");
-    r = await call("PUT", `/api/library/${id}`, { chapter: 3, status: "reading" });
-    check("можно вернуть статус «читаю»", r.status === 200 && r.data.item.status === "reading");
-  }
-
-  r = await call("GET", "/api/library");
-  check("библиотека", r.status === 200 && r.data.items.length === 1 && r.data.items[0].chapter === 3);
-
-  r = await call("PUT", `/api/positions/${id}`, { chapter: 1, page: 2 });
-  check("место в главе сохранено", r.status === 200);
-  r = await call("PUT", `/api/positions/${id}`, { chapter: 1, page: 999 });
-  check("страница за пределами главы отклонена", r.status === 400);
-  r = await call("PUT", `/api/positions/${id}`, { chapter: chapters + 1, page: 1 });
-  check("несуществующая глава отклонена", r.status === 400);
-  r = await call("GET", `/api/positions/${id}`);
-  check("место в главе читается", r.data?.position?.chapter === 1 && r.data.position.page === 2);
-  r = await call("DELETE", `/api/positions/${id}`, { chapter: 1 });
-  check("место в главе удалено", r.status === 200);
-  r = await call("GET", `/api/positions/${id}`);
-  check("после дочитывания места нет", r.status === 200 && r.data.position === null);
-} else {
-  console.log("  --  каталог пуст: проверки тайтла, читалки и библиотеки пропущены");
-  r = await call("GET", "/api/library");
-  check("библиотека пуста", r.status === 200 && r.data.items.length === 0);
+if (threadId) {
+  r = await call("POST", "/api/comments", { targetType: "thread", targetId: threadId, body: "Ответ из смоук-теста." });
+  check("ответ в теме", r.status === 201);
+  r = await call("GET", `/api/threads/${threadId}`);
+  check("счётчик ответов", r.status === 200 && r.data.thread.comments === 1);
+  r = await call("DELETE", `/api/threads/${threadId}`);
+  check("своя тема удаляется", r.status === 200);
 }
+
+r = await call("POST", "/api/comments", { targetType: "title", targetId: 1, body: "Комментарий к тайтлу" });
+check("комментарии к тайтлам больше не принимаются", r.status === 400);
+
+const retired = await fetch(`${BASE}/encyclopedia`, { redirect: "manual" });
+check("энциклопедия ведёт на главную", retired.status === 301 && retired.headers.get("location") === "/");
 
 r = await call("PATCH", "/api/me", { name: "  Новое   имя  " });
 check("смена имени", r.status === 200 && r.data.user.name === "Новое имя");

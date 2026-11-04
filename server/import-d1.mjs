@@ -33,5 +33,5 @@ try {
 
 const count = (table) => db.prepare(`SELECT COUNT(*) AS n FROM ${table}`).get().n;
 console.log(`База перенесена в ${DB_FILE}`);
-console.log(`Пользователей: ${count("users")}, тайтлов: ${count("titles")}, глав: ${count("chapters")}, миграций: ${count("d1_migrations")}`);
+console.log(`Пользователей: ${count("users")}, тем форума: ${count("threads")}, миграций: ${count("d1_migrations")}`);
 db.close();

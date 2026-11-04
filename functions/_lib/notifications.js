@@ -1,8 +1,7 @@
-// Уведомления ENDEMION PULSE: новые главы тайтлов с полки, ответы, подписчики, достижения, решения модераторов.
+// Уведомления: ответы на форуме, подписчики, достижения, решения модераторов.
 // Настройки получателя (user_profiles.notify_*) проверяются при создании: выключенный вид не записывается вовсе
 
 const PREFERENCE = {
-  chapter: "notify_chapters",
   reply: "notify_replies",
   follow: "notify_follows",
   achievement: "notify_achievements"
@@ -26,18 +25,6 @@ export function notifyStatement(env, { userId, kind, text, link = "", titleId = 
 
 export async function notify(env, options) {
   await notifyStatement(env, options).run();
-}
-
-/**
- * Уведомления о новой главе всем, у кого тайтл на полке (кроме брошенных). Вызывается при добавлении главы в админке
- */
-export function chapterNotificationStatement(env, title, number) {
-  return env.DB.prepare(
-    `INSERT INTO notifications (user_id, kind, title_id, text, link)
-     SELECT l.user_id, 'chapter', ?, ?, ?
-     FROM library l LEFT JOIN user_profiles p ON p.user_id = l.user_id
-     WHERE l.title_id = ? AND (l.status IS NULL OR l.status <> 'dropped') AND COALESCE(p.notify_chapters, 1) = 1`
-  ).bind(title.id, `Вышла глава ${number}: «${title.title}»`, `/read/${title.id}/${number}`, title.id);
 }
 
 export async function listNotifications(env, userId, { limit = 30, before = null, unreadOnly = false } = {}) {

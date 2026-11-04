@@ -4,18 +4,14 @@ const KEEP_DAYS = 365;
 
 /** Группы для фильтра журнала: действие попадает в группу по началу кода */
 export const AUDIT_GROUPS = {
-  titles: ["title.", "cover."],
-  chapters: ["chapter.", "pages."],
   complaints: ["complaint."],
   users: ["user."],
-  catalog: ["catalog."],
-  universe: ["universe."],
   studio: ["game.", "post.", "forum.", "settings."]
 };
 
 /**
- * Запись в журнал. Ошибка записи не отменяет уже сделанное действие: иначе администратор увидел бы ошибку,
- * повторил действие и, например, удалил бы следующую главу
+ * Запись в журнал. Ошибка записи не отменяет уже сделанное действие: иначе администратор увидел бы ошибку
+ * и повторил действие ещё раз
  */
 export async function audit(env, actor, action, target) {
   try {

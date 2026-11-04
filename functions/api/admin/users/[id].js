@@ -5,7 +5,7 @@
 import { confirmPassword, requireAdmin } from "../../../_lib/admin.js";
 import { audit, userLabel } from "../../../_lib/audit.js";
 import { error, json, readJson } from "../../../_lib/http.js";
-import { parseId } from "../../../_lib/titles.js";
+import { parseId } from "../../../_lib/validate.js";
 import { deleteUserStatements, getAdminUser } from "../../../_lib/users.js";
 
 const ACTIONS = new Set(["block", "unblock", "logout", "grantAdmin", "revokeAdmin"]);

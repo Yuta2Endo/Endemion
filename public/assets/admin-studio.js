@@ -97,7 +97,7 @@ function submitRow(text, ...extra) {
   return row;
 }
 
-/** Файл картинки на сервер: тело запроса — сам файл, как у обложек тайтлов */
+/** Файл картинки на сервер: тело запроса — сам файл */
 async function upload(url, method, file) {
   if (!IMAGE_TYPES.includes(file.type)) return { ok: false, data: { error: "Нужна картинка JPEG, PNG, WebP или AVIF." } };
   if (file.size > MAX_IMAGE_BYTES) return { ok: false, data: { error: "Картинка должна быть не больше 5 МБ." } };

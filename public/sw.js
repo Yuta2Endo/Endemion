@@ -2,7 +2,7 @@
 // Всё идёт с сервера в первую очередь: кеш нужен только на случай, когда сети нет. Так после обновления сайта
 // новая страница никогда не получит старый скрипт. Личные данные (API, профиль, админка) не кешируются вовсе
 
-const VERSION = "v3";
+const VERSION = "v4";
 const CACHE = `endemion-${VERSION}`;
 const OFFLINE_URL = "/offline";
 const PRECACHE = [OFFLINE_URL, "/assets/base.css", "/assets/account.css", "/assets/ui.css", "/favicon.svg", "/icons/icon-192.png"];

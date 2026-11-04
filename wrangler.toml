@@ -22,8 +22,7 @@ database_name = "endemion"
 database_id = "d823a847-a9d6-40a1-95fa-c71d1de67566"
 migrations_dir = "migrations"
 
-# Картинки страниц глав (<тайтл>/<глава>/<версия>/<страница>) и обложки (covers/<тайтл>/<версия>).
-# Тип файла — в Content-Type объекта
+# Картинки сайта: аватары, обложки и скриншоты игр, картинки публикаций. Тип файла — в Content-Type объекта
 [[r2_buckets]]
 binding = "PAGES"
 bucket_name = "endemion-pages"

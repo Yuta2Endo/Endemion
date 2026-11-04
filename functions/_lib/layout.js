@@ -18,12 +18,8 @@ export const NAV = [
 
 export const NAV_MORE = [];
 
-// Разделы энциклопедии: на их страницах в шапке есть поиск по каталогу, а в подвале — указание источника данных
-const ENCYCLOPEDIA_KEYS = new Set(["encyclopedia", "anime", "manga", "characters", "people", "studios", "seasons", "rankings", "mylist", "search"]);
-export const isEncyclopedia = (active) => ENCYCLOPEDIA_KEYS.has(active);
-
 // Версия assets добавляется к URL, чтобы браузеры обновляли кеш при выкладке. Время сборки в base36
-const ASSET_VERSION = "mw1hsbrl";
+const ASSET_VERSION = "mw1oalz1";
 
 // Контуры иконок 24×24. Такие же есть в public/assets/app.js для иконок, которые рисует скрипт
 const ICONS = {
@@ -40,35 +36,21 @@ export function svgIcon(name, className = "") {
 
 export function siteHeader(active) {
   const item = ([href, label, key]) => `<a href="${href}"${key === active ? ' aria-current="page"' : ""}>${e(label)}</a>`;
-  const encyclopedia = isEncyclopedia(active);
   return `<header class="header">
     <div class="container nav">
       <a class="logo" href="/" aria-label="ENDEMION — на главную"><span class="logo-mark" aria-hidden="true">E</span><span class="logo-text">ENDEMION</span></a>
       <nav class="nav-links" id="navLinks" aria-label="Разделы">${NAV.map(item).join("")}</nav>
       <div class="nav-actions">
-        ${encyclopedia ? `<a class="icon-btn" id="searchToggle" href="/search" aria-label="Поиск: аниме, манга, персонажи, люди, студии" aria-keyshortcuts="/">${svgIcon("search")}</a>` : ""}
-        <a class="icon-btn" id="notifyButton" href="/pulse#notifications" aria-label="Уведомления" hidden>${svgIcon("bell")}<span class="badge-count" id="notifyCount" hidden></span></a>
+        <a class="icon-btn" id="notifyButton" href="/notifications" aria-label="Уведомления" hidden>${svgIcon("bell")}<span class="badge-count" id="notifyCount" hidden></span></a>
         <a class="ghost-btn register-btn" id="registerButton" href="/auth?mode=register" hidden>Регистрация</a>
         <a class="profile-btn" id="accountButton" href="/auth">Войти</a>
         <button class="icon-btn menu-toggle" type="button" aria-controls="navLinks" aria-expanded="false" aria-label="Меню">${svgIcon("menu", "icon-open")}${svgIcon("close", "icon-close")}</button>
       </div>
     </div>
-    ${encyclopedia ? `<div class="search-panel" id="searchPanel" hidden>
-      <div class="container">
-        <form class="search-box search-panel-form" action="/search" method="get" role="search">
-          ${svgIcon("search")}
-          <label class="visually-hidden" for="globalSearch">Поиск по энциклопедии</label>
-          <input id="globalSearch" name="q" type="search" placeholder="Аниме, манга, персонаж, автор или студия…" autocomplete="off" maxlength="100"
-            aria-controls="searchResults" aria-autocomplete="list">
-          <button class="primary-btn" type="submit">Найти</button>
-        </form>
-        <div class="search-results" id="searchResults" aria-live="polite"></div>
-      </div>
-    </div>` : ""}
   </header>`;
 }
 
-export function siteFooter(active = null) {
+export function siteFooter() {
   const year = new Date().getUTCFullYear();
   return `<footer class="footer">
     <div class="container footer-grid">
@@ -99,8 +81,6 @@ export function siteFooter(active = null) {
     </div>
     <div class="container footer-bottom">
       <p>© ${year} Endemion. Все права защищены.</p>
-      ${isEncyclopedia(active) ? `<p class="footer-source">Данные каталога, описания и изображения — <a href="https://shikimori.io" rel="noopener">Shikimori</a>.
-        Оценки, списки и отзывы — пользователей ENDEMION.</p>` : ""}
     </div>
   </footer>`;
 }
@@ -151,7 +131,7 @@ export function renderPage(request, {
   <main id="main"${mainClass ? ` class="${mainClass}"` : ""}${mainAttrs ? ` ${mainAttrs}` : ""}>
 ${body}
   </main>
-  ${siteFooter(active)}
+  ${siteFooter()}
 </body>
 </html>`;
   return html(page, status, { "Cache-Control": cache, ...(noindex ? { "X-Robots-Tag": "noindex" } : {}) });

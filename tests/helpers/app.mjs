@@ -1,5 +1,5 @@
 // Приложение для интеграционных тестов: тот же src/worker.js, что на сайте, но база — временный файл SQLite
-// с миграциями и демо-данными, картинки — временная папка. Сервер и сеть не нужны
+// с миграциями (игры и категории форума из 0020), картинки — временная папка. Сервер и сеть не нужны
 
 import { mkdtempSync, rmSync } from "node:fs";
 import os from "node:os";
@@ -9,7 +9,7 @@ import { createAssets } from "../../server/assets.mjs";
 import { MIGRATIONS_DIR, PUBLIC_DIR } from "../../server/config.mjs";
 import { openDatabase } from "../../server/d1.mjs";
 import { applyMigrations, pendingMigrations } from "../../server/migrate.mjs";
-import { seed, seedAdmin } from "../../server/seed.mjs";
+import { seedAdmin } from "../../server/seed.mjs";
 import { createStorage } from "../../server/storage.mjs";
 
 export const BASE = "http://127.0.0.1:9999";
@@ -17,8 +17,8 @@ export const PASSWORD = "correct-horse-1";
 
 let ipCounter = 0;
 
-/** extraEnv — дополнительные настройки, например CATALOG_FETCH: поддельный источник каталога вместо сети */
-export async function createApp({ withSeed = true, extraEnv = {} } = {}) {
+/** extraEnv — дополнительные настройки окружения сайта */
+export async function createApp({ extraEnv = {} } = {}) {
   const dir = mkdtempSync(path.join(os.tmpdir(), "endemion-test-"));
   const db = openDatabase(path.join(dir, "test.sqlite"));
   // Миграции пишут в консоль о каждом файле: в тестах это шум
@@ -36,7 +36,6 @@ export async function createApp({ withSeed = true, extraEnv = {} } = {}) {
     MAIL_DEV_MODE: "1",
     ...extraEnv
   };
-  if (withSeed) await seed(env, { log: () => {} });
 
   const background = [];
   const ctx = { waitUntil: (promise) => background.push(promise), passThroughOnException() {} };
@@ -85,16 +84,11 @@ export async function createApp({ withSeed = true, extraEnv = {} } = {}) {
     return Object.assign(c, { id: r.data.user.id, email, name });
   }
 
-  async function titleByName(name) {
-    return db.prepare("SELECT id FROM titles WHERE title = ?").bind(name).first().then((row) => row.id);
-  }
-
   return {
     env,
     db,
     client,
     user,
-    titleByName,
     seedAdmin: (email, password) => seedAdmin(env, email, password, { log: () => {} }),
     async close() {
       await Promise.allSettled(background);

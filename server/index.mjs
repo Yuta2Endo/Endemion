@@ -6,7 +6,6 @@ import { mkdirSync } from "node:fs";
 import { createServer } from "node:http";
 import { Readable, Transform } from "node:stream";
 import worker from "../src/worker.js";
-import { backfillSearch } from "../functions/_lib/titles.js";
 import { createAssets } from "./assets.mjs";
 import { backupDatabase, startScheduledBackups } from "./backup.mjs";
 import { DATA_DIR, DB_FILE, FILES_DIR, MIGRATIONS_DIR, PUBLIC_DIR } from "./config.mjs";
@@ -18,17 +17,15 @@ const PORT = Number(process.env.PORT || 3000);
 const HOST = process.env.HOST || "0.0.0.0";
 // За обратным прокси (Caddy) IP посетителя берётся из X-Forwarded-For. Без прокси этот заголовок подделать может кто угодно
 const TRUST_PROXY = process.env.TRUST_PROXY === "1";
-// Самая большая загрузка — страница главы до 15 МБ
-const MAX_BODY_BYTES = 20 * 1024 * 1024;
+// Самая большая загрузка — картинка игры или публикации до 5 МБ, с запасом
+const MAX_BODY_BYTES = 10 * 1024 * 1024;
 // Переменные, которые видит код сайта. Секреты хранилища S3 сюда не попадают
 const WORKER_VARS = [
   "TURNSTILE_SITE_KEY", "TURNSTILE_SECRET_KEY",
   "MAIL_FROM", "UNISENDER_API_KEY", "UNISENDER_API_URL", "MAIL_SKIP_UNSUBSCRIBE", "RESEND_API_KEY", "MAIL_DEV_MODE",
   "WEB_ANALYTICS_TOKEN", "YANDEX_METRIKA_ID",
   // Вход через Endemion ID (auth.endemion.online), см. functions/_lib/endemionId.js
-  "ENDEMION_ID", "ENDEMION_ID_ISSUER", "ENDEMION_ID_CLIENT_ID", "ENDEMION_ID_CLIENT_SECRET", "ENDEMION_ID_TOKEN_KEY", "ENDEMION_LIFE_URL",
-  // Источник каталога энциклопедии, см. functions/_lib/catalog/index.js
-  "CATALOG_PROVIDER", "CATALOG_USER_AGENT"
+  "ENDEMION_ID", "ENDEMION_ID_ISSUER", "ENDEMION_ID_CLIENT_ID", "ENDEMION_ID_CLIENT_SECRET", "ENDEMION_ID_TOKEN_KEY", "ENDEMION_LIFE_URL"
 ];
 
 /**
@@ -57,8 +54,6 @@ if (pending.length) {
   if (applied > 0) console.log(`Резервная копия перед миграциями: ${await backupDatabase(db.raw)}`);
   applyMigrations(db.raw, MIGRATIONS_DIR, pending);
 }
-// Строки поиска по названию, автору и жанру у тайтлов, добавленных до миграции 0016
-await backfillSearch({ DB: db });
 
 const env = {
   DB: db,
@@ -171,7 +166,7 @@ const server = createServer(async (req, res) => {
   }
 });
 
-// Медленный клиент не держит соединение бесконечно, но загрузка большой страницы главы успевает пройти
+// Медленный клиент не держит соединение бесконечно, но загрузка большой картинки успевает пройти
 server.requestTimeout = 5 * 60 * 1000;
 server.headersTimeout = 30 * 1000;
 

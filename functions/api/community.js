@@ -1,4 +1,4 @@
-// ENDEMION COMMUNITY: отзывы и оценки, комментарии с ответами, реакции, обсуждения и теории, подборки, жалобы.
+// ENDEMION COMMUNITY: темы форума, ответы с реакциями, закрепление и закрытие тем, жалобы.
 // Каждый экспорт — маршрут, адреса перечислены в src/worker.js.
 // Защита от спама: лимиты частоты (functions/_lib/limits.js), проверка ссылок и повторов, запрет для заглушённых модератором
 
@@ -10,11 +10,9 @@ import { error, json, readJson } from "../_lib/http.js";
 import { isDuplicate, spamProblem, takeAction } from "../_lib/limits.js";
 import { commentLink, REPORT_REASONS, REPORT_TARGETS, loadTarget, moderationStatement } from "../_lib/moderation.js";
 import { notifyStatement } from "../_lib/notifications.js";
-import { getReview, listReviews } from "../_lib/reviews.js";
 import { mutedProblem, requireRole, requireUser } from "../_lib/roles.js";
 import { currentUser } from "../_lib/session.js";
-import { getTitle, getTitlesByIds, parseId } from "../_lib/titles.js";
-import { cleanLine, cleanText, intParam, lengthProblem } from "../_lib/validate.js";
+import { cleanLine, cleanText, intParam, lengthProblem, parseId } from "../_lib/validate.js";
 
 /** Вошедший пользователь, который может писать, или ответ с ошибкой */
 async function requireWriter(env, request) {
@@ -31,55 +29,6 @@ function readBody(value, label, min, max) {
   const problem = lengthProblem(text, label, min, max) || spamProblem(text);
   return problem ? { problem } : { text };
 }
-
-// ==================== ОТЗЫВЫ ====================
-
-/** /api/titles/:id/reviews — отзывы тайтла (GET) и своя оценка с отзывом (PUT, DELETE) */
-export const titleReviews = {
-  async onRequestGet({ request, env, params }) {
-    const id = parseId(params.id);
-    if (!id || !(await getTitle(env, id))) return error("Тайтл не найден.", 404);
-    const offset = intParam(new URL(request.url).searchParams.get("offset"), 0, 0, 100_000);
-    if (offset === null) return error("Некорректный offset.");
-    const viewer = await currentUser(env, request);
-    return json(await listReviews(env, viewer, id, { offset }));
-  },
-
-  async onRequestPut({ request, env, params }) {
-    const { user, response } = await requireWriter(env, request);
-    if (response) return response;
-    const id = parseId(params.id);
-    if (!id || !(await getTitle(env, id))) return error("Тайтл не найден.", 404);
-    const body = await readJson(request, 20_000);
-    if (!body) return error("Некорректный запрос.");
-    if (!Number.isInteger(body.score) || body.score < 1 || body.score > 10) return error("Оценка: целое число от 1 до 10.");
-    const parsed = readBody(body.body ?? "", "Отзыв", 0, 5000);
-    if (parsed.problem) return error(parsed.problem);
-    if (typeof (body.spoiler ?? false) !== "boolean") return error("Некорректная пометка спойлера.");
-    const limited = await takeAction(env, user.id, "review");
-    if (limited) return limited;
-
-    // Скрытый модератором отзыв автор может исправить, но снова виден он станет только после проверки
-    await env.DB.prepare(
-      `INSERT INTO reviews (user_id, title_id, score, body, spoiler) VALUES (?, ?, ?, ?, ?)
-       ON CONFLICT (user_id, title_id) DO UPDATE SET score = excluded.score, body = excluded.body, spoiler = excluded.spoiler,
-         updated_at = datetime('now')`
-    ).bind(user.id, id, body.score, parsed.text, body.spoiler ? 1 : 0).run();
-    const achievements = await checkAchievements(env, user.id, "review");
-    const result = await listReviews(env, user, id);
-    return json({ review: result.mine, summary: result.summary, achievements });
-  },
-
-  async onRequestDelete({ request, env, params }) {
-    const { user, response } = await requireUser(env, request);
-    if (response) return response;
-    const id = parseId(params.id);
-    if (!id) return error("Тайтл не найден.", 404);
-    await env.DB.prepare("DELETE FROM reviews WHERE user_id = ? AND title_id = ?").bind(user.id, id).run();
-    const result = await listReviews(env, user, id);
-    return json({ ok: true, summary: result.summary });
-  }
-};
 
 // ==================== КОММЕНТАРИИ ====================
 
@@ -235,12 +184,12 @@ async function react(request, env, params, add) {
 
 // ==================== ОБСУЖДЕНИЯ И ТЕОРИИ ====================
 
-const THREAD_SELECT = `SELECT th.id, th.user_id, th.title_id, th.kind, th.subject, th.body, th.spoiler, th.comments_count, th.created_at,
+const THREAD_SELECT = `SELECT th.id, th.user_id, th.kind, th.subject, th.body, th.spoiler, th.comments_count, th.created_at,
   th.last_activity_at, th.deleted_at, th.category_id, th.pinned_at, th.locked_at, u.name AS author_name, u.role AS author_role,
-  p.username AS author_username, p.avatar_version, p.avatar_color, t.title AS title_name,
+  p.username AS author_username, p.avatar_version, p.avatar_color,
   fc.slug AS category_slug, fc.title AS category_title
 FROM threads th LEFT JOIN users u ON u.id = th.user_id LEFT JOIN user_profiles p ON p.user_id = th.user_id
-LEFT JOIN titles t ON t.id = th.title_id LEFT JOIN forum_categories fc ON fc.id = th.category_id`;
+LEFT JOIN forum_categories fc ON fc.id = th.category_id`;
 
 function toThread(row, viewer, full = false) {
   const locked = Boolean(row.locked_at);
@@ -256,7 +205,6 @@ function toThread(row, viewer, full = false) {
     pinned: Boolean(row.pinned_at),
     locked,
     category: row.category_id ? { id: row.category_id, slug: row.category_slug, title: row.category_title } : null,
-    title: row.title_id ? { id: row.title_id, title: row.title_name } : null,
     author: row.user_id ? {
       id: row.user_id, name: row.author_name, username: row.author_username, role: row.author_role, avatarColor: row.avatar_color || "violet",
       avatar: row.avatar_version ? `/avatars/${row.user_id}?v=${row.avatar_version}` : null
@@ -283,7 +231,7 @@ async function threadCategory(env, user, value) {
   return { id: row.id };
 }
 
-/** /api/threads — лента обсуждений (GET ?kind=&title=&q=&offset=) и новое обсуждение или теория (POST) */
+/** /api/threads — лента обсуждений (GET ?kind=&category=&q=&offset=) и новое обсуждение или теория (POST) */
 export const threads = {
   async onRequestGet({ request, env }) {
     const search = new URL(request.url).searchParams;
@@ -294,11 +242,6 @@ export const threads = {
       if (!["discussion", "theory"].includes(kind)) return error("Неизвестный вид обсуждения.");
       where.push("th.kind = ?");
       binds.push(kind);
-    }
-    const titleId = search.get("title") ? parseId(search.get("title")) : null;
-    if (titleId) {
-      where.push("th.title_id = ?");
-      binds.push(titleId);
     }
     const categorySlug = search.get("category");
     if (categorySlug) {
@@ -338,18 +281,13 @@ export const threads = {
     if (subjectProblem) return error(subjectProblem);
     const parsed = readBody(body.body, "Текст", 1, 10_000);
     if (parsed.problem) return error(parsed.problem);
-    let titleId = null;
-    if (body.titleId !== undefined && body.titleId !== null) {
-      titleId = parseId(body.titleId);
-      if (!titleId || !(await getTitle(env, titleId))) return error("Тайтл не найден.", 404);
-    }
     const category = await threadCategory(env, user, body.category);
     if (category.problem) return category.problem;
     const limited = await takeAction(env, user.id, "thread");
     if (limited) return limited;
     const row = await env.DB.prepare(
-      "INSERT INTO threads (user_id, title_id, kind, subject, body, spoiler, category_id) VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id"
-    ).bind(user.id, titleId, body.kind, subject, parsed.text, body.spoiler === true ? 1 : 0, category.id).first();
+      "INSERT INTO threads (user_id, kind, subject, body, spoiler, category_id) VALUES (?, ?, ?, ?, ?, ?) RETURNING id"
+    ).bind(user.id, body.kind, subject, parsed.text, body.spoiler === true ? 1 : 0, category.id).first();
     const achievements = await checkAchievements(env, user.id, "thread");
     const saved = await env.DB.prepare(`${THREAD_SELECT} WHERE th.id = ?`).bind(row.id).first();
     return json({ thread: toThread(saved, user, true), achievements }, 201);
@@ -449,196 +387,9 @@ export const threadModeration = {
   }
 };
 
-// ==================== ПОДБОРКИ ====================
-
-const COLLECTION_SELECT = `SELECT c.id, c.user_id, c.name, c.description, c.is_public, c.featured, c.hidden_at, c.created_at, c.updated_at,
-  u.name AS author_name, p.username AS author_username,
-  (SELECT COUNT(*) FROM collection_items ci WHERE ci.collection_id = c.id) AS size
-FROM collections c JOIN users u ON u.id = c.user_id LEFT JOIN user_profiles p ON p.user_id = c.user_id`;
-
-function toCollection(row, viewer) {
-  return {
-    id: row.id,
-    name: row.name,
-    description: row.description,
-    isPublic: row.is_public === 1,
-    featured: row.featured === 1,
-    hidden: row.hidden_at !== null,
-    size: row.size,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-    author: { id: row.user_id, name: row.author_name, username: row.author_username },
-    canEdit: Boolean(viewer && viewer.id === row.user_id)
-  };
-}
-
-/** Подборка, которую viewer может видеть, или null */
-async function visibleCollection(env, viewer, id) {
-  const row = id ? await env.DB.prepare(`${COLLECTION_SELECT} WHERE c.id = ?`).bind(id).first() : null;
-  if (!row) return null;
-  const own = viewer?.id === row.user_id;
-  if (!own && !viewer?.isModerator && (row.is_public !== 1 || row.hidden_at)) return null;
-  return row;
-}
-
-function parseCollection(body) {
-  const name = cleanLine(body.name);
-  const nameProblem = lengthProblem(name, "Название подборки", 2, 80) || spamProblem(name);
-  if (nameProblem) return { problem: nameProblem };
-  const description = cleanText(body.description ?? "");
-  const problem = lengthProblem(description, "Описание", 0, 1000) || spamProblem(description);
-  if (problem) return { problem };
-  if (typeof (body.isPublic ?? true) !== "boolean") return { problem: "Некорректная настройка видимости." };
-  return { collection: { name, description, isPublic: body.isPublic !== false } };
-}
-
-/** /api/collections — подборки (GET ?user=username | ?mine=1 | ?title=id) и новая подборка (POST) */
-export const collections = {
-  async onRequestGet({ request, env }) {
-    const search = new URL(request.url).searchParams;
-    const viewer = await currentUser(env, request);
-    const where = [];
-    const binds = [];
-    if (search.get("mine") === "1") {
-      if (!viewer) return error("Войдите в профиль.", 401);
-      where.push("c.user_id = ?");
-      binds.push(viewer.id);
-    } else {
-      where.push("c.is_public = 1 AND c.hidden_at IS NULL");
-      const username = search.get("user");
-      if (username) {
-        where.push("p.username = ?");
-        binds.push(username);
-      }
-    }
-    const titleId = search.get("title") ? parseId(search.get("title")) : null;
-    if (titleId) {
-      where.push("EXISTS (SELECT 1 FROM collection_items ci WHERE ci.collection_id = c.id AND ci.title_id = ?)");
-      binds.push(titleId);
-    }
-    const offset = intParam(search.get("offset"), 0, 0, 100_000);
-    if (offset === null) return error("Некорректный offset.");
-    const { results } = await env.DB.prepare(
-      `${COLLECTION_SELECT} WHERE ${where.join(" AND ")} ORDER BY c.featured DESC, c.updated_at DESC LIMIT 24 OFFSET ?`
-    ).bind(...binds, offset).all();
-    const previews = await Promise.all(results.map((row) =>
-      env.DB.prepare("SELECT title_id FROM collection_items WHERE collection_id = ? ORDER BY position, added_at LIMIT 4").bind(row.id).all()));
-    const ids = previews.flatMap((preview) => preview.results.map((item) => item.title_id));
-    const titles = new Map((await getTitlesByIds(env, ids)).map((title) => [title.id, title]));
-    return json({
-      collections: results.map((row, i) => ({
-        ...toCollection(row, viewer),
-        preview: previews[i].results.map((item) => titles.get(item.title_id)).filter(Boolean)
-          .map((title) => ({ id: title.id, title: title.title, symbol: title.symbol, poster: title.poster, cover: title.cover }))
-      }))
-    });
-  },
-
-  async onRequestPost({ request, env }) {
-    const { user, response } = await requireWriter(env, request);
-    if (response) return response;
-    const body = await readJson(request);
-    if (!body) return error("Некорректный запрос.");
-    const { collection: parsed, problem } = parseCollection(body);
-    if (problem) return error(problem);
-    const limited = await takeAction(env, user.id, "collection");
-    if (limited) return limited;
-    const row = await env.DB.prepare("INSERT INTO collections (user_id, name, description, is_public) VALUES (?, ?, ?, ?) RETURNING id")
-      .bind(user.id, parsed.name, parsed.description, parsed.isPublic ? 1 : 0).first();
-    const saved = await env.DB.prepare(`${COLLECTION_SELECT} WHERE c.id = ?`).bind(row.id).first();
-    return json({ collection: toCollection(saved, user) }, 201);
-  }
-};
-
-/** /api/collections/:id — подборка с тайтлами (GET), правка (PATCH) и удаление (DELETE) владельцем */
-export const collection = {
-  async onRequestGet({ request, env, params }) {
-    const viewer = await currentUser(env, request);
-    const row = await visibleCollection(env, viewer, parseId(params.id));
-    if (!row) return error("Подборка не найдена.", 404);
-    const { results } = await env.DB.prepare(
-      "SELECT title_id, note FROM collection_items WHERE collection_id = ? ORDER BY position, added_at"
-    ).bind(row.id).all();
-    const titles = await getTitlesByIds(env, results.map((item) => item.title_id));
-    const notes = new Map(results.map((item) => [item.title_id, item.note]));
-    return json({ collection: toCollection(row, viewer), items: titles.map((title) => ({ title, note: notes.get(title.id) })) });
-  },
-
-  async onRequestPatch({ request, env, params }) {
-    const { user, response } = await requireWriter(env, request);
-    if (response) return response;
-    const id = parseId(params.id);
-    const row = id ? await env.DB.prepare("SELECT user_id FROM collections WHERE id = ?").bind(id).first() : null;
-    if (!row) return error("Подборка не найдена.", 404);
-    if (row.user_id !== user.id) return error("Это чужая подборка.", 403);
-    const body = await readJson(request);
-    if (!body) return error("Некорректный запрос.");
-    const { collection: parsed, problem } = parseCollection(body);
-    if (problem) return error(problem);
-    await env.DB.prepare("UPDATE collections SET name = ?, description = ?, is_public = ?, updated_at = datetime('now') WHERE id = ?")
-      .bind(parsed.name, parsed.description, parsed.isPublic ? 1 : 0, id).run();
-    const saved = await env.DB.prepare(`${COLLECTION_SELECT} WHERE c.id = ?`).bind(id).first();
-    return json({ collection: toCollection(saved, user) });
-  },
-
-  async onRequestDelete({ request, env, params }) {
-    const { user, response } = await requireUser(env, request);
-    if (response) return response;
-    const id = parseId(params.id);
-    const row = id ? await env.DB.prepare("SELECT user_id FROM collections WHERE id = ?").bind(id).first() : null;
-    if (!row) return error("Подборка не найдена.", 404);
-    if (row.user_id !== user.id) return error("Это чужая подборка.", 403);
-    await env.DB.prepare("DELETE FROM collections WHERE id = ?").bind(id).run();
-    return json({ ok: true });
-  }
-};
-
-/** /api/collections/:id/items — добавить тайтл (PUT { titleId, note }) или убрать (DELETE { titleId }) */
-export const collectionItems = {
-  async onRequestPut({ request, env, params }) {
-    const { user, response } = await requireUser(env, request);
-    if (response) return response;
-    const id = parseId(params.id);
-    const row = id ? await env.DB.prepare("SELECT user_id FROM collections WHERE id = ?").bind(id).first() : null;
-    if (!row) return error("Подборка не найдена.", 404);
-    if (row.user_id !== user.id) return error("Это чужая подборка.", 403);
-    const body = await readJson(request);
-    const titleId = body ? parseId(body.titleId) : null;
-    if (!titleId || !(await getTitle(env, titleId))) return error("Тайтл не найден.", 404);
-    const note = cleanLine(body.note ?? "");
-    const problem = lengthProblem(note, "Заметка", 0, 300) || spamProblem(note);
-    if (problem) return error(problem);
-    const size = await env.DB.prepare("SELECT COUNT(*) AS n FROM collection_items WHERE collection_id = ?").bind(id).first();
-    if (size.n >= 100) return error("В подборке не больше 100 тайтлов.", 409);
-    await env.DB.batch([
-      env.DB.prepare(
-        `INSERT INTO collection_items (collection_id, title_id, note, position) VALUES (?, ?, ?, ?)
-         ON CONFLICT (collection_id, title_id) DO UPDATE SET note = excluded.note`
-      ).bind(id, titleId, note, size.n),
-      env.DB.prepare("UPDATE collections SET updated_at = datetime('now') WHERE id = ?").bind(id)
-    ]);
-    const achievements = await checkAchievements(env, user.id, "collection");
-    return json({ ok: true, achievements });
-  },
-
-  async onRequestDelete({ request, env, params }) {
-    const { user, response } = await requireUser(env, request);
-    if (response) return response;
-    const id = parseId(params.id);
-    const row = id ? await env.DB.prepare("SELECT user_id FROM collections WHERE id = ?").bind(id).first() : null;
-    if (!row) return error("Подборка не найдена.", 404);
-    if (row.user_id !== user.id) return error("Это чужая подборка.", 403);
-    const body = await readJson(request);
-    const titleId = body ? parseId(body.titleId) : null;
-    if (!titleId) return error("Тайтл не найден.", 404);
-    await env.DB.prepare("DELETE FROM collection_items WHERE collection_id = ? AND title_id = ?").bind(id, titleId).run();
-    return json({ ok: true });
-  }
-};
-
 // ==================== ЖАЛОБЫ ====================
 
-/** POST /api/reports — пожаловаться на комментарий, отзыв, обсуждение, подборку, профиль или турнир */
+/** POST /api/reports — пожаловаться на ответ, тему форума или профиль */
 export const reports = {
   async onRequestPost({ request, env }) {
     const { user, response } = await requireUser(env, request);
@@ -662,13 +413,3 @@ export const reports = {
   }
 };
 
-/** GET /api/reviews/:id — один отзыв (для страницы с комментариями к нему) */
-export const review = {
-  async onRequestGet({ request, env, params }) {
-    const viewer = await currentUser(env, request);
-    const id = parseId(params.id);
-    const found = id ? await getReview(env, viewer, id) : null;
-    if (!found || (found.hidden && !viewer?.isModerator)) return error("Отзыв не найден.", 404);
-    return json({ review: found });
-  }
-};

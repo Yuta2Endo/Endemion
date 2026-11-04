@@ -6,8 +6,9 @@ import {
   CONTENT_LABELS, contentStatements, loadTarget, moderationNotice, moderationStatement, REPORT_REASONS, REPORT_TARGETS
 } from "../_lib/moderation.js";
 import { requireRole } from "../_lib/roles.js";
-import { parseId } from "../_lib/titles.js";
-import { cleanText, intParam, lengthProblem } from "../_lib/validate.js";
+import { cleanText, intParam, lengthProblem, parseId } from "../_lib/validate.js";
+
+const TYPES = REPORT_TARGETS.map(() => "?").join(", ");
 
 /** GET /api/moderation/reports?status=open — жалобы, сгруппированные по цели, с текстом контента */
 export const moderationReports = {
@@ -24,9 +25,11 @@ export const moderationReports = {
       `SELECT r.target_type, r.target_id, COUNT(*) AS reports, MIN(r.created_at) AS first_at, MAX(r.created_at) AS last_at,
          json_group_array(json_object('id', r.id, 'reason', r.reason, 'details', r.details, 'reporter', u.name, 'createdAt', r.created_at)) AS items
        FROM reports r LEFT JOIN users u ON u.id = r.reporter_id
-       WHERE r.status = ? GROUP BY r.target_type, r.target_id ORDER BY reports DESC, first_at LIMIT 30 OFFSET ?`
-    ).bind(status, offset).all();
-    const count = await env.DB.prepare("SELECT COUNT(DISTINCT target_type || ':' || target_id) AS n FROM reports WHERE status = 'open'").first();
+       WHERE r.status = ? AND r.target_type IN (${TYPES}) GROUP BY r.target_type, r.target_id ORDER BY reports DESC, first_at LIMIT 30 OFFSET ?`
+    ).bind(status, ...REPORT_TARGETS, offset).all();
+    const count = await env.DB.prepare(
+      `SELECT COUNT(DISTINCT target_type || ':' || target_id) AS n FROM reports WHERE status = 'open' AND target_type IN (${TYPES})`
+    ).bind(...REPORT_TARGETS).first();
 
     const groups = await Promise.all(results.map(async (row) => {
       const target = await loadTarget(env, row.target_type, row.target_id);
@@ -151,7 +154,7 @@ export const moderationComments = {
       `SELECT c.id, c.body, c.target_type, c.target_id, c.created_at, c.user_id, u.name, p.username,
          (SELECT COUNT(*) FROM reports r WHERE r.target_type = 'comment' AND r.target_id = c.id AND r.status = 'open') AS reports
        FROM comments c LEFT JOIN users u ON u.id = c.user_id LEFT JOIN user_profiles p ON p.user_id = c.user_id
-       WHERE c.deleted_at IS NULL ORDER BY c.id DESC LIMIT 50 OFFSET ?`
+       WHERE c.deleted_at IS NULL AND c.target_type = 'thread' ORDER BY c.id DESC LIMIT 50 OFFSET ?`
     ).bind(offset).all();
     return json({
       comments: results.map((row) => ({

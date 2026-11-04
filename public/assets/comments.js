@@ -1,5 +1,5 @@
 // Комментарии ENDEMION COMMUNITY: список с ответами, форма, реакции, правка, удаление и жалобы.
-// Используется на странице тайтла, в обсуждениях, подборках и отзывах: mountComments(контейнер, { targetType, targetId })
+// Используется в темах форума: mountComments(контейнер, { targetType: "thread", targetId })
 
 import {
   announceAchievements, api, askLogin, avatar, button, el, errorBox, getMe, lineSkeletons, link, reportContent,

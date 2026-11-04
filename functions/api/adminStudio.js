@@ -7,8 +7,7 @@ import { error, json, readJson } from "../_lib/http.js";
 import {
   FORUM_SECTIONS, GAME_STATUSES, getGame, getPost, getSettings, listGameMedia, listGames, listPosts, POST_KINDS, POST_STATUSES, SLUG, toCategory
 } from "../_lib/studio.js";
-import { parseId } from "../_lib/titles.js";
-import { cleanLine, cleanText, intParam, lengthProblem } from "../_lib/validate.js";
+import { cleanLine, cleanText, intParam, lengthProblem, parseId } from "../_lib/validate.js";
 import { gameCoverKey, gameShotKey, postImageKey } from "../media.js";
 
 const MAX_SHOTS = 20;

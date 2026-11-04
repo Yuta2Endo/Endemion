@@ -1,4 +1,4 @@
-// GET /api/admin/stats — сводка для первого экрана админки: пользователи, каталог, жалобы и объём файлов в R2
+// GET /api/admin/stats — сводка для первого экрана админки: пользователи, игры и публикации, жалобы, объём файлов в хранилище
 
 import { requireAdmin } from "../../_lib/admin.js";
 import { json } from "../../_lib/http.js";
@@ -35,9 +35,8 @@ export async function onRequestGet({ request, env }) {
        FROM users`
     ),
     env.DB.prepare(
-      `SELECT (SELECT COUNT(*) FROM titles) AS titles, (SELECT COUNT(*) FROM chapters) AS chapters,
-         (SELECT COUNT(*) FROM chapters WHERE pages IS NOT NULL) AS uploaded,
-         (SELECT COALESCE(SUM(pages), 0) FROM chapters) AS pages`
+      `SELECT (SELECT COUNT(*) FROM games) AS games, (SELECT COUNT(*) FROM games WHERE published = 1) AS publishedGames,
+         (SELECT COUNT(*) FROM studio_posts) AS posts, (SELECT COUNT(*) FROM studio_posts WHERE status = 'draft') AS drafts`
     ),
     env.DB.prepare("SELECT COALESCE(SUM(status = 'new'), 0) AS fresh, COUNT(*) AS total FROM complaints")
   ]);

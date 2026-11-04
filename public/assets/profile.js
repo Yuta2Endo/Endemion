@@ -1,9 +1,7 @@
-// ENDEMION ID — свой профиль: статистика чтения, любимые жанры, полка по статусам, достижения,
+// ENDEMION ID — свой профиль: активность на форуме, достижения,
 // настройки профиля, аватар, приватность, смена пароля, выход и удаление аккаунта
 
-import {
-  api, avatar, button, el, errorBox, formatDate, getConfig, getMe, initHeader, loginUrl, stateBox, titleCard, toggleFavorite, toast
-} from "./app.js";
+import { api, avatar, el, errorBox, formatDate, getConfig, getMe, initHeader, link, loginUrl } from "./app.js";
 
 const $ = (selector) => document.querySelector(selector);
 const COLORS = ["violet", "blue", "pink", "teal", "amber", "crimson"];
@@ -12,10 +10,6 @@ const MAX_AVATAR = 2 * 1024 * 1024;
 let me = null;
 let profile = null;
 let settings = null;
-let favoriteGenres = [];
-let allGenres = [];
-let libraryFilter = "reading";
-let library = new Map();
 
 function setMessage(node, text, success = false) {
   node.textContent = text;
@@ -53,64 +47,17 @@ async function renderOverview() {
   const stats = (await api("/api/me")).data?.stats;
   if (!stats) return $("#stats").replaceChildren(errorBox("Статистика не загрузилась.", renderOverview));
   $("#stats").replaceChildren(
-    statBox(stats.chapters, "глав прочитано"),
-    statBox(stats.completed, "тайтлов дочитано"),
-    statBox(stats.reading, "читаю сейчас"),
-    statBox(stats.planned, "в планах"),
-    statBox(stats.favorites, "в избранном"),
-    statBox(stats.reviews, `оценок${stats.averageScore ? ` · ср. ${stats.averageScore}` : ""}`),
-    statBox(stats.comments, "комментариев"),
+    statBox(stats.topics, "тем"),
+    statBox(stats.posts, "ответов"),
     statBox(`${stats.followers} / ${stats.following}`, "подписчики / подписки"),
     statBox(stats.achievements, "достижений")
   );
-
-  const bars = $("#genreBars");
-  if (!stats.topGenres.length) {
-    bars.replaceChildren(el("p", "muted small", "Добавьте тайтлы на полку — здесь появятся жанры, которые вы читаете чаще всего."));
-  } else {
-    const max = stats.topGenres[0].count;
-    bars.replaceChildren(...stats.topGenres.map((genre) => {
-      const row = el("div", "genre-bar");
-      const progress = el("div", "t-progress");
-      const fill = el("span");
-      fill.style.width = `${Math.round((genre.count / max) * 100)}%`;
-      progress.append(fill);
-      row.append(el("span", null, genre.name), progress, el("span", "muted", String(genre.count)));
-      return row;
-    }));
-  }
-  $("#favoriteGenres").replaceChildren(...(favoriteGenres.length
-    ? favoriteGenres.map((name) => el("span", "tag is-strong", name))
-    : [el("p", "muted small", "Не выбраны. Выберите их во вкладке «Настройки».")]));
-
-  const favorites = await api("/api/titles?tab=favorites&limit=12&sort=updated");
-  const grid = $("#favoritesGrid");
-  if (!favorites.ok) return grid.replaceChildren(errorBox("Избранное не загрузилось."));
-  grid.replaceChildren(...(favorites.data.titles.length
-    ? favorites.data.titles.map((title) => titleCard(title, { library: library.get(title.id), onFavorite: toggleFavorite }))
-    : [stateBox({ icon: "♡", text: "В избранном пока пусто. Нажмите ♡ на карточке тайтла.", action: { href: "/catalog", text: "Открыть каталог" } })]));
-}
-
-// ==================== ПОЛКА ====================
-
-const EMPTY_TEXT = {
-  reading: "Здесь появятся тайтлы, которые вы читаете. Отметьте прочитанную главу на странице тайтла.",
-  planned: "Добавьте тайтлы, которые хотите прочитать: статус «В планах» на странице тайтла.",
-  completed: "Пока ничего не дочитано.",
-  on_hold: "Отложенных тайтлов нет.",
-  dropped: "Брошенных тайтлов нет.",
-  favorites: "В избранном пока пусто."
-};
-
-async function renderLibrary() {
-  const list = $("#libraryList");
-  $("#libraryTabs").querySelectorAll("[data-filter]").forEach((tab) => tab.setAttribute("aria-pressed", String(tab.dataset.filter === libraryFilter)));
-  const result = await api(`/api/titles?tab=${libraryFilter}&limit=100&sort=updated`);
-  if (!result.ok) return list.replaceChildren(errorBox(result.data?.error || "Полка не загрузилась.", renderLibrary));
-  if (!result.data.titles.length) {
-    return list.replaceChildren(stateBox({ icon: "📚", text: EMPTY_TEXT[libraryFilter], action: { href: "/catalog", text: "Открыть каталог" } }));
-  }
-  list.replaceChildren(...result.data.titles.map((title) => titleCard(title, { library: library.get(title.id), onFavorite: toggleFavorite })));
+  const links = $("#overviewLinks");
+  links.replaceChildren(
+    link("/community", "primary-btn", "Открыть форум"),
+    link(`/users/${encodeURIComponent(profile.username)}`, "ghost-btn", "Мои темы и ответы"),
+    link("/notifications", "ghost-btn", "Уведомления")
+  );
 }
 
 // ==================== ДОСТИЖЕНИЯ ====================
@@ -145,19 +92,8 @@ function renderSettings() {
     return label;
   }));
   $("#avatarRemove").hidden = !profile.avatar;
-  const chosen = new Set(favoriteGenres);
-  $("#genrePicker").replaceChildren(...allGenres.map((genre) => {
-    const chip = button(genre.name, "chip", () => {
-      const pressed = chip.getAttribute("aria-pressed") === "true";
-      if (!pressed && $("#genrePicker").querySelectorAll('[aria-pressed="true"]').length >= 10) return toast("Можно выбрать до 10 жанров.");
-      chip.setAttribute("aria-pressed", String(!pressed));
-    }, { pressed: chosen.has(genre.name) });
-    chip.dataset.genre = genre.name;
-    return chip;
-  }));
   const privacy = $("#privacyForm");
   privacy.elements.namedItem("isPublic").checked = settings.isPublic;
-  privacy.elements.namedItem("showLibrary").checked = settings.showLibrary;
   privacy.elements.namedItem("showActivity").checked = settings.showActivity;
 }
 
@@ -178,10 +114,6 @@ $("#profileForm").addEventListener("submit", async (event) => {
   if (!saved.ok) return setMessage(message, saved.data?.error || "Не удалось сохранить профиль.");
   profile = saved.data.profile;
   settings = saved.data.settings;
-  const genres = [...$("#genrePicker").querySelectorAll('[aria-pressed="true"]')].map((chip) => chip.dataset.genre);
-  const genreResult = await api("/api/me/genres", { method: "PUT", body: { genres } });
-  if (!genreResult.ok) return setMessage(message, genreResult.data?.error || "Жанры не сохранились.");
-  favoriteGenres = genreResult.data.genres;
   renderHead();
   setMessage(message, "Профиль сохранён.", true);
 });
@@ -189,7 +121,7 @@ $("#profileForm").addEventListener("submit", async (event) => {
 $("#privacyForm").addEventListener("submit", async (event) => {
   event.preventDefault();
   const form = event.currentTarget;
-  const body = Object.fromEntries(["isPublic", "showLibrary", "showActivity"].map((key) => [key, form.elements.namedItem(key).checked]));
+  const body = Object.fromEntries(["isPublic", "showActivity"].map((key) => [key, form.elements.namedItem(key).checked]));
   const saved = await api("/api/me/profile", { method: "PATCH", body });
   if (!saved.ok) return setMessage($("#privacyMessage"), saved.data?.error || "Не удалось сохранить.");
   settings = saved.data.settings;
@@ -239,7 +171,7 @@ $("#passwordForm").addEventListener("submit", async (event) => {
 
 $("#deleteForm").addEventListener("submit", async (event) => {
   event.preventDefault();
-  if (!confirm("Удалить аккаунт, полку, оценки и подборки? Это нельзя отменить.")) return;
+  if (!confirm("Удалить аккаунт? Это нельзя отменить.")) return;
   const result = await api("/api/me", { method: "DELETE", body: { password: $("#deletePassword").value } });
   // Аккаунт Endemion ID: сначала заново ввести пароль там, потом повторить удаление
   if (result.data?.reauth && confirm(`${result.data.error} Перейти ко входу?`)) {
@@ -260,7 +192,7 @@ $("#logoutButton").addEventListener("click", async () => {
 // ==================== ВКЛАДКИ ====================
 
 const tabs = [...document.querySelectorAll("[data-tab]")];
-const RENDER = { overview: renderOverview, library: renderLibrary, achievements: renderAchievements, settings: renderSettings };
+const RENDER = { overview: renderOverview, achievements: renderAchievements, settings: renderSettings };
 
 function open(name) {
   const tab = RENDER[name] ? name : "overview";
@@ -283,16 +215,9 @@ tabs.forEach((tab, i) => {
   });
 });
 
-$("#libraryTabs").addEventListener("click", (event) => {
-  const chip = event.target instanceof Element ? event.target.closest("[data-filter]") : null;
-  if (!(chip instanceof HTMLElement)) return;
-  libraryFilter = chip.dataset.filter;
-  renderLibrary();
-});
-
 /**
  * Вход через Endemion ID: имя, адрес профиля, аватар, почта и пароль общие с Endemion Life и меняются там.
- * Здесь вместо этих полей ссылка на Endemion ID. Описание, цвет, жанры и приватность остаются на сайте
+ * Здесь вместо этих полей ссылка на Endemion ID. Описание, цвет и приватность остаются на сайте
  */
 async function showEndemionId() {
   if (!me.viaEndemionId) return;
@@ -315,14 +240,12 @@ async function init() {
   }
   me = (await getMe()).user;
   await showEndemionId();
-  const [profileResult, taxonomy, entries] = await Promise.all([api("/api/me/profile"), api("/api/taxonomy"), api("/api/library")]);
+  const profileResult = await api("/api/me/profile");
   if (!profileResult.ok) {
     $("#profileLoading").replaceChildren(errorBox(profileResult.data?.error || "Профиль не загрузился.", () => location.reload()));
     return;
   }
-  ({ profile, settings, genres: favoriteGenres } = profileResult.data);
-  allGenres = taxonomy.ok ? taxonomy.data.genres : [];
-  library = new Map((entries.ok ? entries.data.items : []).map((item) => [item.titleId, item]));
+  ({ profile, settings } = profileResult.data);
   renderHead();
   $("#profileLoading").remove();
   $("#profile").hidden = false;

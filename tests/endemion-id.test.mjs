@@ -20,7 +20,7 @@ before(async () => {
       redirect_uris: [`${BASE}/auth/callback`], post_logout_redirect_uris: [`${BASE}/`]
     }])
   });
-  site = await createApp({ withSeed: false });
+  site = await createApp();
   Object.assign(site.env, {
     ENDEMION_ID: "1",
     ENDEMION_ID_ISSUER: auth.issuer,

@@ -75,11 +75,6 @@ function render(thread) {
   post.replaceChildren(badges, el("h1", null, thread.subject), author, spoilerText(text, thread.spoiler), actions);
 
   aside.replaceChildren();
-  if (thread.title) {
-    const panel = el("section", "panel");
-    panel.append(el("h2", null, "О тайтле"), link(`/title/${thread.title.id}`, "ghost-btn", `«${thread.title.title}» →`));
-    aside.append(panel);
-  }
   const rules = el("section", "panel");
   rules.append(el("h2", null, "Правила"), el("p", "muted small",
     "Уважайте собеседников, прячьте спойлеры под пометкой, не публикуйте спам и чужие личные данные. Нарушения можно отправить модераторам кнопкой «Пожаловаться»."));
