@@ -85,6 +85,7 @@ function loadSocial(env) {
   };
   const google = pair("AUTH_GOOGLE_CLIENT_ID", "AUTH_GOOGLE_CLIENT_SECRET", "Google");
   const github = pair("AUTH_GITHUB_CLIENT_ID", "AUTH_GITHUB_CLIENT_SECRET", "GitHub");
+  const discord = pair("AUTH_DISCORD_CLIENT_ID", "AUTH_DISCORD_CLIENT_SECRET", "Discord");
   const vkId = String(env.AUTH_VK_CLIENT_ID || "").trim();
   if (!vkId && env.AUTH_VK_SERVICE_TOKEN) fail("VK ID: AUTH_VK_SERVICE_TOKEN задан без AUTH_VK_CLIENT_ID");
   if (vkId && !/^\d+$/.test(vkId)) fail("AUTH_VK_CLIENT_ID — числовой ID приложения из кабинета VK ID");
@@ -95,6 +96,12 @@ function loadSocial(env) {
       authorizeUrl: url("AUTH_GITHUB_AUTHORIZE_URL", "https://github.com/login/oauth/authorize"),
       tokenUrl: url("AUTH_GITHUB_TOKEN_URL", "https://github.com/login/oauth/access_token"),
       apiUrl: url("AUTH_GITHUB_API_URL", "https://api.github.com")
+    },
+    discord: discord && {
+      ...discord,
+      authorizeUrl: url("AUTH_DISCORD_AUTHORIZE_URL", "https://discord.com/oauth2/authorize"),
+      tokenUrl: url("AUTH_DISCORD_TOKEN_URL", "https://discord.com/api/oauth2/token"),
+      apiUrl: url("AUTH_DISCORD_API_URL", "https://discord.com/api/v10")
     },
     vk: vkId ? { clientId: vkId, serviceToken: String(env.AUTH_VK_SERVICE_TOKEN || "").trim(), baseUrl: url("AUTH_VK_BASE_URL", "https://id.vk.ru") } : null
   };
