@@ -54,7 +54,7 @@ function formatBytes(bytes) {
 
 // ==================== РАЗДЕЛЫ ====================
 
-const SECTIONS = ["dashboard", "games", "studio", "forum-categories", "site-settings", "moderation", "complaints", "users", "audit"];
+const SECTIONS = ["dashboard", "games", "studio", "forum-categories", "site-settings", "moderation", "complaints", "users", "accounts", "audit"];
 const MODERATOR_SECTIONS = ["moderation"];
 
 /** Разделы, доступные вошедшему: модератору — только модерация */
@@ -83,6 +83,7 @@ async function route() {
   if (section === "moderation") loadModeration();
   if (section === "complaints") loadComplaints();
   if (section === "users") loadUsers();
+  if (section === "accounts") loadAccounts();
   if (section === "audit") loadAudit();
 }
 
@@ -400,6 +401,95 @@ async function deleteUser(user) {
   renderUsers();
   setMessage(usersMessage, `Аккаунт ${user.email} удалён.`, true);
 }
+
+// ==================== АККАУНТЫ ENDEMION ID ====================
+
+const accountList = $("#accountList");
+const accountSearch = $("#accountSearch");
+const accountFilter = $("#accountFilter");
+const accountsMessage = $("#accountsMessage");
+const accountsMore = $("#accountsMore");
+const ACCOUNTS_PAGE = 50;
+const PLATFORM_NAMES = { endemion: "Endemion", endemion_life: "Life" };
+let accountItems = [];
+let accountsTotal = 0;
+let accountsRequest = 0;
+
+function accountsUrl(offset) {
+  const params = new URLSearchParams({ platform: accountFilter.value, limit: String(ACCOUNTS_PAGE), offset: String(offset) });
+  const query = accountSearch.value.trim();
+  if (query) params.set("q", query);
+  return `/api/admin/accounts?${params}`;
+}
+
+/** Дата из Endemion ID: ISO-строка UTC */
+const formatIsoDate = (value) => new Date(value).toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric" });
+
+function accountRow(account) {
+  const item = element("li", `admin-user${account.status === "blocked" ? " is-blocked" : ""}`);
+  const info = element("div", "admin-user-info");
+  const tags = element("span", "admin-tags");
+  for (const visit of account.platforms) {
+    tags.append(tag(`${PLATFORM_NAMES[visit.platform] || visit.platform} · ${formatIsoDate(visit.lastSeenAt)}`, `is-platform is-${visit.platform}`));
+  }
+  if (account.status === "blocked") tags.append(tag("Заблокирован в Endemion ID", "is-blocked"));
+  if (!account.emailVerified) tags.append(tag("Почта не подтверждена"));
+  if (account.siteUser?.role === "admin") tags.append(tag("Администратор", "is-admin"));
+  info.append(
+    element("strong", null, `${account.displayName} @${account.username}`),
+    tags,
+    element("small", null, account.email),
+    element("small", null, `с ${formatIsoDate(account.createdAt)} · ${account.siteUser ? `пользователь сайта #${account.siteUser.id}` : "на сайте не заходил"}`)
+  );
+  const actions = element("div", "admin-chapter-actions");
+  // Управление пользователем сайта — в разделе «Пользователи», поиск по почте
+  if (account.siteUser) {
+    actions.append(button("Открыть в «Пользователях»", "secondary-button", () => {
+      userSearch.value = account.email;
+      userFilter.value = "all";
+      location.hash = "#users";
+    }));
+  }
+  item.append(info, actions);
+  return item;
+}
+
+function renderAccounts() {
+  $("#accountCount").textContent = `Найдено: ${accountsTotal}`;
+  accountList.replaceChildren(...(accountItems.length ? accountItems.map(accountRow) : [element("li", "admin-empty", "Никого не найдено.")]));
+  accountsMore.hidden = accountItems.length >= accountsTotal;
+}
+
+async function loadAccounts() {
+  const id = ++accountsRequest;
+  setMessage(accountsMessage, "");
+  const result = await api(accountsUrl(0));
+  if (id !== accountsRequest) return;
+  if (!result.ok) return setMessage(accountsMessage, result.data?.error || "Не удалось загрузить аккаунты.");
+  accountItems = result.data.accounts;
+  accountsTotal = result.data.total;
+  renderAccounts();
+}
+
+accountsMore.addEventListener("click", async () => {
+  const id = accountsRequest;
+  accountsMore.disabled = true;
+  const result = await api(accountsUrl(accountItems.length));
+  accountsMore.disabled = false;
+  if (id !== accountsRequest) return;
+  if (!result.ok) return setMessage(accountsMessage, result.data?.error || "Не удалось загрузить аккаунты.");
+  const known = new Set(accountItems.map((account) => account.sub));
+  accountItems = [...accountItems, ...result.data.accounts.filter((account) => !known.has(account.sub))];
+  accountsTotal = result.data.total;
+  renderAccounts();
+});
+
+let accountSearchTimer = null;
+accountSearch.addEventListener("input", () => {
+  clearTimeout(accountSearchTimer);
+  accountSearchTimer = setTimeout(loadAccounts, SEARCH_DELAY);
+});
+accountFilter.addEventListener("change", loadAccounts);
 
 // ==================== ЖУРНАЛ ====================
 

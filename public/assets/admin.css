@@ -232,6 +232,16 @@
   background: var(--green);
 }
 
+/* Сайты, где входил аккаунт Endemion ID */
+.admin-tag.is-platform {
+  border: 1px solid var(--border);
+  background: transparent;
+}
+
+.admin-tag.is-endemion_life {
+  border-color: var(--green);
+}
+
 /* ==================== ЖУРНАЛ ==================== */
 
 .admin-audit-list {

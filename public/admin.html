@@ -39,6 +39,7 @@
         <a href="#moderation" data-section="moderation">Модерация <span class="admin-badge" id="reportsBadge" hidden></span></a>
         <a href="#complaints" data-section="complaints" data-admin-only>Жалобы <span class="admin-badge" id="complaintsBadge" hidden></span></a>
         <a href="#users" data-section="users" data-admin-only>Пользователи</a>
+        <a href="#accounts" data-section="accounts" data-admin-only>Аккаунты Endemion ID</a>
         <a href="#audit" data-section="audit" data-admin-only>Журнал</a>
       </nav>
 
@@ -127,6 +128,34 @@
           <p class="form-message" id="usersMessage" role="status" aria-live="polite"></p>
           <ul class="admin-user-list" id="userList"></ul>
           <button class="secondary-button admin-more" id="usersMore" type="button" hidden>Показать ещё</button>
+        </section>
+
+        <!-- ==================== АККАУНТЫ ENDEMION ID ==================== -->
+        <section class="admin-panel" data-panel="accounts" aria-labelledby="accountsHeading" hidden>
+          <h2 id="accountsHeading">Аккаунты Endemion ID</h2>
+          <p class="panel-description">
+            Все аккаунты единого входа, в том числе игроки Life, которые на этот сайт не заходили.
+            Метки показывают, на каких сайтах человек входил и когда последний раз. Имя, почту и пароль меняет сам владелец в Endemion ID.
+          </p>
+          <div class="admin-filters">
+            <div class="field">
+              <label for="accountSearch">Почта, имя или username</label>
+              <input id="accountSearch" type="search" maxlength="100" autocomplete="off">
+            </div>
+            <div class="field">
+              <label for="accountFilter">Показать</label>
+              <select id="accountFilter">
+                <option value="all">Всех</option>
+                <option value="endemion_life">Игроков Life</option>
+                <option value="endemion">Входивших на сайт</option>
+                <option value="none">Не входивших никуда</option>
+              </select>
+            </div>
+          </div>
+          <p class="admin-count" id="accountCount" role="status" aria-live="polite"></p>
+          <p class="form-message" id="accountsMessage" role="status" aria-live="polite"></p>
+          <ul class="admin-user-list" id="accountList"></ul>
+          <button class="secondary-button admin-more" id="accountsMore" type="button" hidden>Показать ещё</button>
         </section>
 
         <!-- ==================== ЖУРНАЛ ==================== -->

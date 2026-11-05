@@ -18,6 +18,7 @@ import * as adminStats from "../functions/api/admin/stats.js";
 import * as adminUsers from "../functions/api/admin/users/index.js";
 import * as adminUser from "../functions/api/admin/users/[id].js";
 import * as adminAudit from "../functions/api/admin/audit.js";
+import * as adminAccounts from "../functions/api/admin/accounts.js";
 import * as robots from "../functions/robots.txt.js";
 import * as sitemap from "../functions/sitemap.xml.js";
 import * as profile from "../functions/api/profile.js";
@@ -54,6 +55,7 @@ const ROUTE_LIST = [
   ["/api/admin/users", adminUsers],
   ["/api/admin/users/:id", adminUser],
   ["/api/admin/audit", adminAudit],
+  ["/api/admin/accounts", adminAccounts],
   // Профили ENDEMION ID
   ["/api/me/profile", profile.meProfile],
   ["/api/me/avatar", profile.meAvatar],

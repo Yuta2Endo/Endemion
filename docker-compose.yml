@@ -35,6 +35,8 @@ services:
       AUTH_COOKIE_KEYS: ${AUTH_COOKIE_KEYS:-}
       AUTH_JWKS_FILE: /app/data/auth-jwks.json
       OIDC_CLIENTS: ${OIDC_CLIENTS:-[]}
+      # Секрет внутреннего API для админки сайта (/internal/accounts). Пусто — API выключен
+      AUTH_ADMIN_TOKEN: ${AUTH_ADMIN_TOKEN:-}
       ENDEMION_URL: https://${SITE_DOMAIN}
       ENDEMION_LIFE_URL: https://life.${SITE_DOMAIN}
       MAIL_FROM: ${AUTH_MAIL_FROM:-${MAIL_FROM:-}}

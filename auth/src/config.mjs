@@ -119,8 +119,13 @@ export function loadConfig(env = process.env) {
     fail("AUTH_COOKIE_KEYS: нужен хотя бы один ключ длиной от 32 символов");
   }
 
+  // Секрет внутреннего API для админки сайта (/internal/accounts). Пусто — API выключен
+  const adminToken = String(env.AUTH_ADMIN_TOKEN || "").trim();
+  if (adminToken && adminToken.length < 32) fail("AUTH_ADMIN_TOKEN короче 32 символов (openssl rand -hex 32)");
+
   const dataDir = path.resolve(env.AUTH_DATA_DIR || path.join(REPO_ROOT, "data", "auth"));
   return {
+    adminToken,
     production,
     issuer: issuerUrl.origin,
     port: Number(env.PORT) || 3001,

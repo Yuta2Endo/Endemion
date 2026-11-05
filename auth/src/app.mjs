@@ -151,6 +151,22 @@ export function createApp(config, { mailer = createMailer(config.mail), log = cr
   });
   provider.proxy = config.trustProxy;
 
+  // На каких сайтах бывал аккаунт: каждая выдача токенов сайту (вход и сверка сессии) обновляет последний вход
+  const touchActivity = db.prepare(
+    `INSERT INTO client_activity (account_sub, client_id) VALUES (?, ?)
+     ON CONFLICT (account_sub, client_id) DO UPDATE SET last_seen_at = excluded.last_seen_at`
+  );
+  provider.on("grant.success", (ctx) => {
+    const sub = ctx.oidc?.entities?.Grant?.accountId;
+    const clientId = ctx.oidc?.client?.clientId;
+    if (!sub || !clientId || !platformByClient.has(clientId)) return;
+    try {
+      touchActivity.run(sub, clientId);
+    } catch (err) {
+      log("error", "client activity failed", { error: err.message });
+    }
+  });
+
   provider.on("server_error", (_ctx, err) => log("error", "oidc server_error", { error: err.message }));
   provider.on("grant.error", (_ctx, err) => log("warn", "grant.error", { error: err.error, description: err.error_description }));
 
@@ -319,6 +335,69 @@ export function createApp(config, { mailer = createMailer(config.mail), log = cr
     }
   }
 
+  // ---------- внутренний API для админки сайта ----------
+
+  function checkAdminToken(header) {
+    const expected = Buffer.from(`Bearer ${config.adminToken}`);
+    const actual = Buffer.from(String(header || ""));
+    return actual.length === expected.length && timingSafeEqual(actual, expected);
+  }
+
+  const clientsOf = (platform) => [...platformByClient].filter(([, value]) => value === platform).map(([id]) => id);
+  const activityOf = db.prepare("SELECT client_id, first_seen_at, last_seen_at FROM client_activity WHERE account_sub = ?");
+
+  /** Аккаунты с сайтами, где они бывали. platform: all, endemion, endemion_life или none (ни на одном сайте) */
+  function listAccounts({ query, platform, limit, offset }) {
+    const where = [];
+    const binds = [];
+    if (query) {
+      const pattern = `%${query.replace(/[\\%_]/g, "\\$&")}%`;
+      where.push("(a.email LIKE ? ESCAPE '\\' OR a.username LIKE ? ESCAPE '\\' OR a.display_name LIKE ? ESCAPE '\\' OR a.sub = ?)");
+      binds.push(pattern, pattern, pattern, query.toLowerCase());
+    }
+    if (platform === "none") {
+      where.push("NOT EXISTS (SELECT 1 FROM client_activity c WHERE c.account_sub = a.sub)");
+    } else if (platform !== "all") {
+      const ids = clientsOf(platform);
+      where.push(ids.length ? `EXISTS (SELECT 1 FROM client_activity c WHERE c.account_sub = a.sub AND c.client_id IN (${ids.map(() => "?").join(", ")}))` : "0");
+      binds.push(...ids);
+    }
+    const condition = where.length ? ` WHERE ${where.join(" AND ")}` : "";
+    const rows = db.prepare(
+      `SELECT a.sub, a.email, a.email_verified_at, a.username, a.display_name, a.avatar_version, a.status, a.created_at
+       FROM accounts a${condition} ORDER BY a.created_at DESC, a.sub LIMIT ? OFFSET ?`
+    ).all(...binds, limit, offset);
+    const total = Number(db.prepare(`SELECT COUNT(*) AS n FROM accounts a${condition}`).get(...binds).n);
+    return {
+      total,
+      accounts: rows.map((row) => {
+        // У сайта может быть несколько client_id: даты сводятся по сайту
+        const platforms = new Map();
+        for (const item of activityOf.all(row.sub)) {
+          const name = platformByClient.get(String(item.client_id));
+          if (!name) continue;
+          const seen = platforms.get(name);
+          const first = String(item.first_seen_at);
+          const last = String(item.last_seen_at);
+          platforms.set(name, seen
+            ? { platform: name, firstSeenAt: first < seen.firstSeenAt ? first : seen.firstSeenAt, lastSeenAt: last > seen.lastSeenAt ? last : seen.lastSeenAt }
+            : { platform: name, firstSeenAt: first, lastSeenAt: last });
+        }
+        return {
+          sub: String(row.sub),
+          email: String(row.email),
+          emailVerified: Boolean(row.email_verified_at),
+          username: String(row.username),
+          displayName: String(row.display_name),
+          avatarUrl: accounts.avatarUrl(row),
+          status: String(row.status),
+          createdAt: String(row.created_at),
+          platforms: [...platforms.values()]
+        };
+      })
+    };
+  }
+
   // ---------- вход через Google, VK ID, GitHub ----------
 
   /** Вход в эту сессию был недавно: привязка провайдеров и пароль без старого пароля */
@@ -473,6 +552,28 @@ export function createApp(config, { mailer = createMailer(config.mail), log = cr
       db.prepare("SELECT 1").get();
       ctx.set("Cache-Control", "no-store");
       ctx.body = { status: "ok" };
+    },
+
+    // Аккаунты для админки endemion.online: поиск, фильтр по сайту, постраничная выдача.
+    // Только из сети Docker (через Caddy запрос приходит с X-Forwarded-For) и только с секретом AUTH_ADMIN_TOKEN
+    "GET /internal/accounts": async (ctx) => {
+      ctx.set("Cache-Control", "no-store");
+      if (!config.adminToken || ctx.get("x-forwarded-for") || !checkAdminToken(ctx.get("authorization"))) {
+        ctx.status = 404;
+        ctx.body = { error: "not_found" };
+        return;
+      }
+      const query = String(ctx.query.q || "").trim().slice(0, 100);
+      const platform = String(ctx.query.platform || "all");
+      const limit = Number(ctx.query.limit || 50);
+      const offset = Number(ctx.query.offset || 0);
+      if (!["all", "endemion", "endemion_life", "none"].includes(platform)
+        || !Number.isInteger(limit) || limit < 1 || limit > 100 || !Number.isInteger(offset) || offset < 0) {
+        ctx.status = 400;
+        ctx.body = { error: "bad_request" };
+        return;
+      }
+      ctx.body = listAccounts({ query, platform, limit, offset });
     },
 
     "GET /": async (ctx) => ctx.redirect("/account"),
