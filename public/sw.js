@@ -5,7 +5,7 @@
 const VERSION = "v6";
 const CACHE = `endemion-${VERSION}`;
 const OFFLINE_URL = "/offline";
-const PRECACHE = [OFFLINE_URL, "/assets/base.css", "/assets/account.css", "/assets/ui.css", "/favicon.ico", "/icons/icon-192.png"];
+const PRECACHE = [OFFLINE_URL, "/assets/base.css", "/assets/account.css", "/assets/ui.css", "/favicon.ico?v=2", "/icons/icon-192.png?v=2"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(PRECACHE)).then(() => self.skipWaiting()));
@@ -54,7 +54,7 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  if (url.pathname.startsWith("/assets/") || url.pathname.startsWith("/icons/") || url.pathname === "/favicon.svg") {
+  if (url.pathname.startsWith("/assets/") || url.pathname.startsWith("/icons/") || url.pathname === "/favicon.svg" || url.pathname === "/favicon.ico") {
     event.respondWith(networkFirst(event));
   }
   // Остальное (API, страницы глав, обложки) идёт мимо service worker, как без него
