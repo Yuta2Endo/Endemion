@@ -347,3 +347,28 @@ test("health check", async () => {
   assert.equal(response.status, 200);
   assert.deepEqual(await response.json(), { status: "ok" });
 });
+
+test("значки сайта: ICO и PNG отдаются, страницы ссылаются на них, а не на SVG", async () => {
+  const icons = {
+    "/favicon.ico": "image/x-icon",
+    "/icons/favicon-16x16.png": "image/png",
+    "/icons/favicon-32x32.png": "image/png",
+    "/favicon.svg": "image/svg+xml"
+  };
+  for (const [iconPath, type] of Object.entries(icons)) {
+    const response = await fetch(new URL(`${iconPath}?v=2`, auth.issuer));
+    assert.equal(response.status, 200, iconPath);
+    assert.equal(response.headers.get("content-type"), type, iconPath);
+    assert.ok((await response.arrayBuffer()).byteLength > 0, iconPath);
+  }
+  // Чужие файлы из public/ сайта через папку значков не отдаются
+  assert.equal((await fetch(new URL("/icons/icon-512.png", auth.issuer))).status, 404);
+  assert.equal((await fetch(new URL("/icons/../manifest.webmanifest", auth.issuer))).status, 404);
+
+  const page = await fetch(new URL("/forgot-password", auth.issuer));
+  const html = await page.text();
+  assert.match(html, /<link rel="icon" href="\/favicon\.ico\?v=2" sizes="32x32">/);
+  assert.match(html, /<link rel="icon" href="\/icons\/favicon-32x32\.png\?v=2" type="image\/png" sizes="32x32">/);
+  assert.match(html, /<link rel="icon" href="\/icons\/favicon-16x16\.png\?v=2" type="image\/png" sizes="16x16">/);
+  assert.doesNotMatch(html, /favicon\.svg/);
+});

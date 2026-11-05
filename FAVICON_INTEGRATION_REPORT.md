@@ -74,7 +74,7 @@ The old icons had transparent backgrounds (RGBA). The new pack uses opaque backg
 | File | Reason |
 |---|---|
 | `public/favicon.svg` | Kept on disk: referenced by service worker fetch handler and Endemion ID service |
-| `public/icons/icon-maskable-512.png` | Not included in new pack; kept at old design |
+| `public/icons/icon-maskable-512.png` | Replaced in stage 2 (see section 7) |
 | `auth/src/views.mjs` | Separate service with its own static serving; out of scope |
 | `auth/src/app.mjs` | Same |
 | `scripts/generate-brand-assets.mjs` | Generator script — not run, icons come from the provided pack |
@@ -168,8 +168,64 @@ All icon URLs referenced in `<head>` and `manifest.webmanifest` return HTTP 200.
 
 | Task | Priority | Notes |
 |---|---|---|
-| **Maskable icon** | Medium | The new pack does not include a maskable icon. `icon-maskable-512.png` still shows the old design. A new maskable version should be created with the safe zone (inner 80%) containing the icon. |
-| **Endemion ID service** | Low | `auth/src/views.mjs` still links `favicon.svg`. Updating it requires changes to the auth service, which is a separate deployment. |
+| ~~Maskable icon~~ | Done | Stage 2, see section 7. |
+| ~~Endemion ID service~~ | Done | Stage 2, see `AUTH_FAVICON_UPDATE_REPORT.md`. |
 | **E2E / browser check** | Medium | Run `npm run test:e2e` (at least `pwa.spec.mjs`) and look at the tab icon and home-screen icon on real devices before deploy. |
 | **Deploy** | — | Branch `feature/favicon` is ready to merge into `main` and deploy. Deployment requires explicit owner approval. |
 | **`offline.html` apple-touch-icon** | Low | This page has no apple-touch-icon link (same as before this change). Not critical since the offline page is only shown by the service worker. |
+
+---
+
+## 7. Stage 2 — Android maskable icon
+
+### Source file
+
+The provided `icon-maskable-512.png` (three identical copies: `G:\II\` and two in Downloads, md5 `a8b816c3`). It is 512×512, PNG, RGB, and not the old maskable icon.
+
+### Problem found
+
+The provided image does **not** fit the Android safe zone. Android launchers crop maskable icons down to a circle of radius 40% of the width. Measured on the file:
+
+| | Provided file | Old maskable icon |
+|---|---|---|
+| Content bounding box | 78% × 78% of the canvas | 49% × 48% |
+| Farthest content pixel from centre | 55.1% of width | 30.3% |
+| Content pixels outside the 40% circle | ~15 000–21 000 | 0 |
+
+The overflow is on the diagonals (the corners of the square badge): ~14 300 pixels there versus ~1 070 near the axes. Rendered under circle, squircle and rounded-square masks, the badge corners were cut off.
+
+### What was done
+
+The provided image was scaled **uniformly** (aspect ratio kept, no stretching) to 70% (358×358, Lanczos) and centred on a 512×512 canvas filled with the file's own border colour `#030c2a`. The border of the provided file is a single flat colour (max deviation 0), so the padding adds no visible seam (seam deviation 0).
+
+Result, `public/icons/icon-maskable-512.png`:
+
+| Check | Value |
+|---|---|
+| Size / format | 512×512, PNG, RGB (opaque, as required for maskable) |
+| Content bounding box | 54.7% × 54.7% |
+| Farthest content pixel | 38.5% of width (limit 40%) |
+| Content pixels outside the safe zone | 0 |
+
+A preview under circle, squircle and rounded-square masks showed the whole badge intact.
+
+The original provided file was not modified and is still in `G:\II\icon-maskable-512.png`. The previous maskable icon remains in git history (`e0aad01`).
+
+### Manifest
+
+`public/manifest.webmanifest` keeps a separate maskable entry; only the URL was versioned:
+
+```json
+{ "src": "/icons/icon-maskable-512.png?v=2", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+```
+
+The `any` icons (192, 512) and all other manifest settings are unchanged.
+
+### Stage 2 verification
+
+- `npm run check` (main site): lint and typecheck clean, 67/67 tests.
+- Local server + headless Chromium (Playwright): the manifest has 3 icons; each was fetched and decoded — declared size, type and actual size match (`any` 192, `any` 512, `maskable` 512, all `image/png`, all 200).
+- Pages `/`, `/copyright`, `/privacy`, `/auth`, `/reset`, `/offline`: 0 console errors, 0 failed requests. On the 404 page the only console message is the browser's report of the page's own 404 status, which is expected.
+- No page `<head>` links `favicon.svg` or any other old icon.
+
+Not verified: installing the PWA on a real Android device, and Playwright e2e (`npm run test:e2e`).

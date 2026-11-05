@@ -31,7 +31,14 @@ const TOKEN_RE = /^[A-Za-z0-9_-]{43}$/;
 const sha256 = (text) => createHash("sha256").update(text).digest("hex");
 const newToken = () => randomBytes(32).toString("base64url");
 
-const STATIC_TYPES = { ".css": "text/css; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".woff2": "font/woff2", ".svg": "image/svg+xml" };
+const STATIC_TYPES = { ".css": "text/css; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".woff2": "font/woff2", ".svg": "image/svg+xml", ".ico": "image/x-icon", ".png": "image/png" };
+// Значки сайта, которые отдаёт Endemion ID (файлы из public/ сайта)
+const SHARED_ICONS = new Map([
+  ["/favicon.svg", "favicon.svg"],
+  ["/favicon.ico", "favicon.ico"],
+  ["/icons/favicon-16x16.png", "icons/favicon-16x16.png"],
+  ["/icons/favicon-32x32.png", "icons/favicon-32x32.png"]
+]);
 
 /** Тип картинки по первым байтам: расширению и заявленному Content-Type не доверяем */
 function imageType(bytes) {
@@ -948,7 +955,7 @@ export function createApp(config, { mailer = createMailer(config.mail), log = cr
     const font = ctx.path.match(/^\/assets\/fonts\/([a-z0-9-]+\.woff2)$/);
     const file = own ? path.join(ownDir, "assets", own[1])
       : font ? path.join(sharedDir, "assets", "fonts", font[1])
-        : ctx.path === "/favicon.svg" ? path.join(sharedDir, "favicon.svg") : null;
+        : SHARED_ICONS.has(ctx.path) ? path.join(sharedDir, SHARED_ICONS.get(ctx.path)) : null;
     if (!file || !existsSync(file)) return false;
     ctx.type = STATIC_TYPES[path.extname(file)];
     ctx.set("Cache-Control", font ? "public, max-age=31536000, immutable" : "public, max-age=300");

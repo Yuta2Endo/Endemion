@@ -20,7 +20,9 @@ function layout({ title, content, wide = false, scripts = [] }) {
   <meta name="theme-color" content="#07061a">
   <meta name="robots" content="noindex">
   <title>${escapeHtml(title)} — Endemion ID</title>
-  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="/favicon.ico?v=2" sizes="32x32">
+  <link rel="icon" href="/icons/favicon-32x32.png?v=2" type="image/png" sizes="32x32">
+  <link rel="icon" href="/icons/favicon-16x16.png?v=2" type="image/png" sizes="16x16">
   <link rel="stylesheet" href="/assets/auth.css">
 ${scripts.map((src) => `  <script type="module" src="${escapeHtml(src)}"></script>`).join("\n")}
 </head>

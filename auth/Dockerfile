@@ -13,9 +13,10 @@ COPY auth/src ./src
 COPY auth/migrations ./migrations
 COPY auth/public ./public
 COPY auth/scripts ./scripts
-# Шрифты и значок сайта: страницы входа выглядят так же, как endemion.online
+# Шрифты и значки сайта: страницы входа выглядят так же, как endemion.online
 COPY public/assets/fonts ./shared/assets/fonts
-COPY public/favicon.svg ./shared/favicon.svg
+COPY public/favicon.svg public/favicon.ico ./shared/
+COPY public/icons/favicon-16x16.png public/icons/favicon-32x32.png ./shared/icons/
 
 RUN mkdir -p /app/data && chown node:node /app/data
 USER node
