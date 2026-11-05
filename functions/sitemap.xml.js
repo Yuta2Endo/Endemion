@@ -2,6 +2,7 @@
 // Черновики игр и публикаций в карту не попадают
 
 import { escapeHtml } from "./_lib/html.js";
+import { legalPaths } from "./legal.js";
 
 export async function onRequestGet({ request, env }) {
   const origin = new URL(request.url).origin;
@@ -20,7 +21,8 @@ export async function onRequestGet({ request, env }) {
     ...["games", "studio", "about", "community", "terms", "privacy", "copyright"].map((path) => ({ loc: `${origin}/${path}` })),
     ...games.map((g) => ({ loc: `${origin}/games/${g.slug}`, lastmod: g.updated_at })),
     ...posts.map((p) => ({ loc: `${origin}/studio/${p.slug}`, lastmod: p.updated_at })),
-    ...categories.map((c) => ({ loc: `${origin}/community/c/${c.slug}` }))
+    ...categories.map((c) => ({ loc: `${origin}/community/c/${c.slug}` })),
+    ...legalPaths().map((path) => ({ loc: `${origin}${path}` }))
   ];
 
   const body =

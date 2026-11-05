@@ -73,6 +73,7 @@ export function siteFooter() {
       </nav>
       <nav class="footer-col" aria-label="Документы">
         <h2 class="footer-title">Документы</h2>
+        <a href="/legal">Правовой центр</a>
         <a href="/privacy">Политика конфиденциальности</a>
         <a href="/terms">Условия использования</a>
         <a href="/copyright">Правообладателям</a>
@@ -91,7 +92,7 @@ export function siteFooter() {
  */
 export function renderPage(request, {
   title = "", fullTitle: titleIsFull = false, description = "", path = null, active = null, body, scripts = [], styles = [], head = "",
-  noindex = false, status = 200, cache = "no-cache", mainClass = "", mainAttrs = ""
+  noindex = false, status = 200, cache = "no-cache", mainClass = "", mainAttrs = "", lang = "ru"
 }) {
   const origin = new URL(request.url).origin;
   // fullTitle: true — заголовок уже полный (SEO-заголовок страницы игры), суффикс «| ENDEMION» не добавляется
@@ -99,7 +100,7 @@ export function renderPage(request, {
   const canonical = path ? `${origin}${path}` : null;
   const desc = description || DEFAULT_DESCRIPTION;
   const page = `<!doctype html>
-<html lang="ru">
+<html lang="${lang}">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -109,7 +110,7 @@ export function renderPage(request, {
   ${noindex ? '<meta name="robots" content="noindex">' : ""}
   ${canonical ? `<link rel="canonical" href="${e(canonical)}">` : ""}
   <meta property="og:site_name" content="ENDEMION">
-  <meta property="og:locale" content="ru_RU">
+  <meta property="og:locale" content="${lang === "en" ? "en_US" : "ru_RU"}">
   ${head || `<meta property="og:type" content="website">
   <meta property="og:title" content="${e(fullTitle)}">
   <meta property="og:description" content="${e(desc)}">

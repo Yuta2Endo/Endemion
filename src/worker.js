@@ -29,6 +29,7 @@ import * as adminPlatform from "../functions/api/adminPlatform.js";
 import * as site from "../functions/site.js";
 import * as adminStudio from "../functions/api/adminStudio.js";
 import * as studioPages from "../functions/studio.js";
+import * as legal from "../functions/legal.js";
 import * as media from "../functions/media.js";
 import { error } from "../functions/_lib/http.js";
 
@@ -106,6 +107,10 @@ const ROUTE_LIST = [
   ["/studio/:slug", studioPages.postPage],
   ["/about", studioPages.aboutPage],
   ["/terms", studioPages.termsPage],
+  // Legal Center: документы игр, тексты в functions/_lib/legal/
+  ["/legal", legal.center],
+  ["/legal/:game", legal.gameIndex],
+  ["/legal/:game/:document", legal.documentPage],
   ["/media/games/:id/cover", media.gameCover],
   ["/media/games/:id/shots/:mediaId", media.gameShot],
   ["/media/posts/:id", media.postImage],
