@@ -16,7 +16,7 @@ after(async () => {
   await app.close();
 });
 
-const SLUGS = ["tetrus", "little-weather", "liforae", "endemion-life"];
+const SLUGS = ["tetrus", "little-weather", "liforae", "block-city", "endemion-life"];
 const DOCS = ["privacy-policy", "terms-of-service"];
 
 const PRIVACY_SECTIONS = ["information-collected", "automatic", "device", "advertising", "analytics", "third-party", "usage", "sharing",
@@ -25,7 +25,7 @@ const TERMS_SECTIONS = ["acceptance", "eligibility", "license", "accounts", "use
   "purchases", "refunds", "intellectual-property", "availability", "updates", "termination", "disclaimers", "liability", "governing-law",
   "changes", "contact"];
 
-test("в Legal Center ровно четыре игры, без OS Developer Simulator", () => {
+test("в Legal Center ровно пять игр, без OS Developer Simulator", () => {
   assert.deepEqual(LEGAL_GAMES.map((g) => g.slug), SLUGS);
 });
 
@@ -143,7 +143,7 @@ test("в подвале сайта есть ссылка на Legal Center, пр
 test("карта сайта содержит все адреса Legal Center на обоих языках", async () => {
   const guest = app.client();
   const { text } = await guest.call("GET", "/sitemap.xml");
-  assert.equal(legalPaths().length, 18);
+  assert.equal(legalPaths().length, 22);
   for (const path of legalPaths()) assert.ok(text.includes(`${path.replace("?", "?")}</loc>`), path);
   const robots = await guest.call("GET", "/robots.txt");
   assert.doesNotMatch(robots.text, /Disallow: \/legal/);

@@ -14,6 +14,7 @@ Prepared 2026-11-05 on branch `feature/legal-center`.
 | TETRUS | Android | `endemion.tetrus` | `https://endemion.online/legal/tetrus/privacy-policy` | `https://endemion.online/legal/tetrus/terms-of-service` |
 | Little Weather | Android | `endemion.littleweather` | `https://endemion.online/legal/little-weather/privacy-policy` | `https://endemion.online/legal/little-weather/terms-of-service` |
 | Liforae | Android | `com.liforae.game` | `https://endemion.online/legal/liforae/privacy-policy` | `https://endemion.online/legal/liforae/terms-of-service` |
+| BLOCK CITY | Android | `org.blockcity.game` | `https://endemion.online/legal/block-city/privacy-policy` | `https://endemion.online/legal/block-city/terms-of-service` |
 | ENDEMION LIFE | Web (life.endemion.online) | — | `https://endemion.online/legal/endemion-life/privacy-policy` | `https://endemion.online/legal/endemion-life/terms-of-service` |
 
 - The default language is Russian. Add `?lang=en` for English, for example `https://endemion.online/legal/tetrus/privacy-policy?lang=en`.
@@ -37,7 +38,7 @@ The Terms of Service URL is not a required Play Console field. Link it from the 
 Google's reviewers must be able to open the page without logging in, from any country. After deploy, check every URL:
 
 ```sh
-for g in tetrus little-weather liforae endemion-life; do
+for g in tetrus little-weather liforae block-city endemion-life; do
   for d in privacy-policy terms-of-service; do
     for q in "" "?lang=en"; do
       u="https://endemion.online/legal/$g/$d$q"
