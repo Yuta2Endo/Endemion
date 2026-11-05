@@ -115,9 +115,11 @@ export function renderPage(request, {
   <meta property="og:description" content="${e(desc)}">
   <meta property="og:image" content="${e(origin)}/assets/og-image.png">
   <meta name="twitter:card" content="summary_large_image">`}
-  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="/favicon.ico?v=2" sizes="32x32">
+  <link rel="icon" href="/icons/favicon-32x32.png?v=2" type="image/png" sizes="32x32">
+  <link rel="icon" href="/icons/favicon-16x16.png?v=2" type="image/png" sizes="16x16">
   <link rel="manifest" href="/manifest.webmanifest">
-  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png?v=2" sizes="180x180">
   <meta name="apple-mobile-web-app-title" content="ENDEMION">
   <link rel="preload" href="/assets/fonts/manrope-cyrillic-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/assets/fonts/unbounded-cyrillic-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
