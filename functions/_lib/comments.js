@@ -100,7 +100,7 @@ export async function getComment(env, viewer, id) {
 }
 
 export async function rawComment(env, id) {
-  return env.DB.prepare("SELECT id, user_id, target_type, target_id, parent_id, root_id, deleted_at FROM comments WHERE id = ?").bind(id).first();
+  return env.DB.prepare("SELECT id, user_id, target_type, target_id, parent_id, root_id, body, deleted_at FROM comments WHERE id = ?").bind(id).first();
 }
 
 export { commentLink };

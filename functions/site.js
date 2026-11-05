@@ -5,33 +5,36 @@
 import { escapeHtml as e } from "./_lib/html.js";
 import { renderPage } from "./_lib/layout.js";
 import { categoryIndex, listCategories } from "./_lib/studio.js";
+import { langOf } from "./_lib/i18n.js";
 
 /** GET /community — категории форума, лента обсуждений и теорий, поиск участников */
 export const community = {
   async onRequestGet({ request, env }) {
+    const lang = langOf(request);
+    const en = lang === "en";
     const categories = await listCategories(env);
     const body = `
     <div class="container page">
       <div class="page-head">
         <div>
           <div class="eyebrow">Endemion Community</div>
-          <h1>Сообщество</h1>
-          <p class="section-text">Форум студии и игроков: общение, игры, разработка, творчество и события.</p>
+          <h1>${en ? "Community" : "Сообщество"}</h1>
+          <p class="section-text">${en ? "The studio and player forum: talk, games, development, creativity and events." : "Форум студии и игроков: общение, игры, разработка, творчество и события."}</p>
         </div>
         <div class="section-actions" id="communityActions"></div>
       </div>
-      <div class="forum-index">${categoryIndex(categories)}</div>
-      <h2 class="forum-section-title" id="feedTitle">Лента сообщества</h2>
-      <div class="tabs-bar" role="tablist" aria-label="Разделы сообщества">
-        <button type="button" role="tab" data-tab="threads" aria-selected="true">Обсуждения</button>
-        <button type="button" role="tab" data-tab="theories" aria-selected="false">Теории</button>
-        <button type="button" role="tab" data-tab="readers" aria-selected="false">Участники</button>
+      <div class="forum-index">${categoryIndex(categories, lang)}</div>
+      <h2 class="forum-section-title" id="feedTitle">${en ? "Community feed" : "Лента сообщества"}</h2>
+      <div class="tabs-bar" role="tablist" aria-label="${en ? "Community sections" : "Разделы сообщества"}">
+        <button type="button" role="tab" data-tab="threads" aria-selected="true">${en ? "Discussions" : "Обсуждения"}</button>
+        <button type="button" role="tab" data-tab="theories" aria-selected="false">${en ? "Theories" : "Теории"}</button>
+        <button type="button" role="tab" data-tab="readers" aria-selected="false">${en ? "Members" : "Участники"}</button>
       </div>
       <div id="communityBody" role="tabpanel" aria-live="polite"></div>
     </div>`;
     return renderPage(request, {
-      title: "Сообщество", path: "/community", active: "community", body, scripts: ["community.js"], styles: ["studio.css"],
-      description: "Сообщество Endemion: форум студии и игроков, обсуждения игр, разработки и творчества."
+      title: en ? "Community" : "Сообщество", path: "/community", active: "community", body, scripts: ["community.js"], styles: ["studio.css"],
+      description: en ? "The Endemion community: the studio and player forum, discussions of games, development and creativity." : "Сообщество Endemion: форум студии и игроков, обсуждения игр, разработки и творчества."
     });
   }
 };
@@ -39,20 +42,45 @@ export const community = {
 /** GET /community/thread/:id — обсуждение или теория с комментариями */
 export const threadPage = {
   async onRequestGet({ request, params }) {
+    const en = langOf(request) === "en";
     const body = `
     <div class="container page">
-      <nav class="breadcrumbs" aria-label="Навигация"><a href="/community">Сообщество</a> <span aria-hidden="true">/</span> <span id="crumb">Обсуждение</span></nav>
+      <nav class="breadcrumbs" aria-label="${en ? "Breadcrumb" : "Навигация"}"><a href="/community">${en ? "Community" : "Сообщество"}</a> <span aria-hidden="true">/</span> <span id="crumb">${en ? "Discussion" : "Обсуждение"}</span></nav>
       <div class="split section">
         <div class="stack">
           <article class="post" id="post" aria-busy="true"><div class="skeleton skeleton-row"></div></article>
-          <section class="panel" aria-labelledby="commentsTitle"><h2 id="commentsTitle">Комментарии</h2><div id="comments"></div></section>
+          <section class="panel" aria-labelledby="commentsTitle"><h2 id="commentsTitle">${en ? "Comments" : "Комментарии"}</h2><div id="comments"></div></section>
         </div>
         <aside class="stack" id="threadAside"></aside>
       </div>
     </div>`;
     return renderPage(request, {
-      title: "Обсуждение", active: "community", body, scripts: ["thread.js"], path: `/community/thread/${encodeURIComponent(params.id)}`,
+      title: en ? "Discussion" : "Обсуждение", active: "community", body, scripts: ["thread.js"], path: `/community/thread/${encodeURIComponent(params.id)}`,
       mainAttrs: `data-thread-id="${e(params.id)}"`
+    });
+  }
+};
+
+/** GET /search?q= — общий поиск: темы, ответы, игры и публикации студии. Результаты подгружает search.js */
+export const searchPage = {
+  async onRequestGet({ request }) {
+    const body = `
+    <div class="container page">
+      <div class="page-head">
+        <div>
+          <div class="eyebrow">Endemion</div>
+          <h1>Поиск</h1>
+          <p class="section-text">Темы форума, ответы, игры и публикации студии.</p>
+        </div>
+      </div>
+      <form class="search-page-form" role="search" action="/search" method="get">
+        <input class="input" type="search" name="q" maxlength="80" placeholder="Что ищете?" aria-label="Поисковый запрос" required>
+        <button class="primary-btn" type="submit">Найти</button>
+      </form>
+      <div id="searchResults" aria-live="polite"></div>
+    </div>`;
+    return renderPage(request, {
+      title: "Поиск", path: "/search", active: null, body, scripts: ["search.js"], styles: ["studio.css"], noindex: true
     });
   }
 };
@@ -101,6 +129,10 @@ export const profile = {
       <section data-panel="overview">
         <div class="stat-grid" id="stats"></div>
         <div class="section-actions section" id="overviewLinks"></div>
+        <section class="panel section" aria-labelledby="myTopicsTitle">
+          <h2 id="myTopicsTitle">Мои последние темы</h2>
+          <div id="myTopics"><p class="muted small">Загружаем…</p></div>
+        </section>
       </section>
 
       <section data-panel="achievements" id="achievements" hidden><div class="achievements" id="achievementList"></div></section>

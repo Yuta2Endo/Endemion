@@ -31,13 +31,13 @@ test("удалённые разделы ведут на главную (301), и
   const home = await guest.call("GET", "/");
   for (const href of ["/games", "/community", "/studio", "/about"]) assert.match(home.text, new RegExp(`href="${href}"`), href);
   assert.doesNotMatch(home.text, /href="\/(encyclopedia|anime|manga|reading|catalog|pulse|arena)"/);
-  for (const path of ["/encyclopedia", "/anime", "/anime/5-name", "/manga", "/characters/1", "/search?q=x", "/mylist",
+  for (const path of ["/encyclopedia", "/anime", "/anime/5-name", "/manga", "/characters/1", "/mylist",
     "/reading", "/catalog", "/title/1", "/read/1/1", "/nexus", "/oracle", "/pulse", "/arena", "/collection/1"]) {
     const r = await guest.call("GET", path);
     assert.equal(r.status, 301, path);
     assert.equal(r.headers.get("location"), "/", path);
   }
-  for (const path of ["/api/titles", "/api/catalog/anime", "/api/search?q=x", "/api/library", "/api/polls", "/api/collections", "/api/universe/anime/1"]) {
+  for (const path of ["/api/titles", "/api/catalog/anime", "/api/library", "/api/polls", "/api/collections", "/api/universe/anime/1"]) {
     assert.equal((await guest.call("GET", path)).status, 404, path);
   }
   // Портал, форум, уведомления и служебные файлы на месте

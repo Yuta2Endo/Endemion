@@ -3,6 +3,8 @@
 
 const PREFERENCE = {
   reply: "notify_replies",
+  // Упоминание @имени — тот же переключатель, что и ответы: оба про сообщения на форуме
+  mention: "notify_replies",
   follow: "notify_follows",
   achievement: "notify_achievements"
 };
@@ -25,6 +27,31 @@ export function notifyStatement(env, { userId, kind, text, link = "", titleId = 
 
 export async function notify(env, options) {
   await notifyStatement(env, options).run();
+}
+
+const MENTION = /(?:^|[^A-Za-z0-9_])@([A-Za-z0-9_]{3,24})(?![A-Za-z0-9_])/g;
+
+/**
+ * Уведомления тем, кого упомянули через @имя профиля. Себе и уже уведомлённым не пишем.
+ * Возвращает prepared statements для batch вместе с основным действием
+ */
+export async function mentionStatements(env, { text, actor, link, told }) {
+  const names = [...new Set([...text.matchAll(MENTION)].map((match) => match[1].toLowerCase()))].slice(0, 10);
+  if (!names.length) return [];
+  const { results } = await env.DB.prepare(
+    `SELECT u.id, p.username FROM users u JOIN user_profiles p ON p.user_id = u.id
+     WHERE p.is_public = 1 AND u.blocked_at IS NULL AND lower(p.username) IN (${names.map(() => "?").join(", ")})`
+  ).bind(...names).all();
+  const statements = [];
+  for (const row of results) {
+    if (told.has(row.id)) continue;
+    told.add(row.id);
+    statements.push(notifyStatement(env, {
+      userId: row.id, kind: "mention", actorId: actor.id, link,
+      text: `${actor.name} упомянул(а) вас: @${row.username}`
+    }));
+  }
+  return statements;
 }
 
 export async function listNotifications(env, userId, { limit = 30, before = null, unreadOnly = false } = {}) {

@@ -10,6 +10,12 @@ export const GAME_STATUS_LABELS = {
   released: "Вышла",
   planned: "Запланирована"
 };
+export const GAME_STATUS_LABELS_EN = {
+  in_development: "In development",
+  prototype: "Prototype",
+  released: "Released",
+  planned: "Planned"
+};
 
 export const POST_KINDS = ["news", "devlog", "update", "roadmap", "announcement"];
 export const POST_KIND_LABELS = {
@@ -18,6 +24,13 @@ export const POST_KIND_LABELS = {
   update: "Обновление",
   roadmap: "Roadmap",
   announcement: "Анонс"
+};
+export const POST_KIND_LABELS_EN = {
+  news: "News",
+  devlog: "Devlog",
+  update: "Update",
+  roadmap: "Roadmap",
+  announcement: "Announcement"
 };
 export const POST_STATUSES = ["draft", "published", "archived"];
 
@@ -225,39 +238,42 @@ export function richText(text) {
   }).join("\n");
 }
 
-export function statusBadge(status) {
-  const key = status && GAME_STATUS_LABELS[status] ? status : "unknown";
-  return `<span class="badge status-${key}">${e(GAME_STATUS_LABELS[status] || "Статус не указан")}</span>`;
+export function statusBadge(status, lang = "ru") {
+  const labels = lang === "en" ? GAME_STATUS_LABELS_EN : GAME_STATUS_LABELS;
+  const key = status && labels[status] ? status : "unknown";
+  return `<span class="badge status-${key}">${e(labels[status] || (lang === "en" ? "Status not set" : "Статус не указан"))}</span>`;
 }
 
 /** Обложка игры или заглушка с явной подписью: временная картинка не выдаётся за игровой ассет */
-export function gameArt(game, { eager = false } = {}) {
+export function gameArt(game, { eager = false, lang = "ru" } = {}) {
+  const cover = lang === "en" ? "Cover" : "Обложка";
   if (game.coverUrl) {
-    return `<img src="${e(game.coverUrl)}" alt="Обложка ${e(game.title)}" ${eager ? 'fetchpriority="high"' : 'loading="lazy"'} decoding="async" width="1280" height="720">`;
+    return `<img src="${e(game.coverUrl)}" alt="${cover} ${e(game.title)}" ${eager ? 'fetchpriority="high"' : 'loading="lazy"'} decoding="async" width="1280" height="720">`;
   }
-  return `<div class="placeholder-art" role="img" aria-label="Обложка ${e(game.title)} ещё не загружена"><strong>${e(game.title)}</strong><small>Обложка скоро появится</small></div>`;
+  const soon = lang === "en" ? "Cover coming soon" : "Обложка скоро появится";
+  return `<div class="placeholder-art" role="img" aria-label="${cover} ${e(game.title)}"><strong>${e(game.title)}</strong><small>${soon}</small></div>`;
 }
 
-export function gameCard(game) {
-  const meta = game.platforms.length ? `<span>${e(game.platforms.join(" · "))}</span>` : `<span>Платформы не указаны</span>`;
+export function gameCard(game, lang = "ru") {
+  const meta = game.platforms.length ? `<span>${e(game.platforms.join(" · "))}</span>` : `<span>${lang === "en" ? "Platforms not set" : "Платформы не указаны"}</span>`;
   return `<article class="card">
-      <div class="card-media">${gameArt(game)}${statusBadge(game.status)}</div>
+      <div class="card-media">${gameArt(game, { lang })}${statusBadge(game.status, lang)}</div>
       <div class="card-body">
         <h3 class="card-title"><a href="/games/${e(game.slug)}">${e(game.title)}</a></h3>
-        <p class="card-text">${e(game.tagline || "Описание появится позже.")}</p>
+        <p class="card-text">${e(game.tagline || (lang === "en" ? "Description coming later." : "Описание появится позже."))}</p>
         <div class="card-meta">${meta}</div>
       </div>
     </article>`;
 }
 
-export function postCard(post) {
+export function postCard(post, lang = "ru") {
   const media = post.imageUrl
     ? `<div class="card-media"><img src="${e(post.imageUrl)}" alt="" loading="lazy" decoding="async" width="1280" height="720"></div>`
     : "";
   return `<article class="card">
       ${media}
       <div class="card-body">
-        <div class="badge-list"><span class="badge plain">${e(POST_KIND_LABELS[post.kind])}</span>${post.game ? `<span class="badge plain">${e(post.game.title)}</span>` : ""}</div>
+        <div class="badge-list"><span class="badge plain">${e((lang === "en" ? POST_KIND_LABELS_EN : POST_KIND_LABELS)[post.kind])}</span>${post.game ? `<span class="badge plain">${e(post.game.title)}</span>` : ""}</div>
         <h3 class="card-title"><a href="/studio/${e(post.slug)}">${e(post.title)}</a></h3>
         ${post.summary ? `<p class="card-text">${e(post.summary)}</p>` : ""}
         <div class="card-meta"><time datetime="${e(isoDate(post.publishedAt || post.createdAt))}">${e(formatDate(post.publishedAt || post.createdAt))}</time>${post.author ? `<span>${e(post.author.name)}</span>` : ""}</div>
@@ -265,21 +281,24 @@ export function postCard(post) {
     </article>`;
 }
 
-export function threadRow(thread) {
-  const marks = `${thread.pinned ? '<span class="pin-mark" title="Закреплена" aria-label="Закреплена">📌</span>' : ""}${thread.locked ? '<span class="lock-mark" title="Закрыта" aria-label="Закрыта">🔒</span>' : ""}`;
+export function threadRow(thread, lang = "ru") {
+  const en = lang === "en";
+  const pinned = en ? "Pinned" : "Закреплена";
+  const locked = en ? "Locked" : "Закрыта";
+  const marks = `${thread.pinned ? `<span class="pin-mark" title="${pinned}" aria-label="${pinned}">📌</span>` : ""}${thread.locked ? `<span class="lock-mark" title="${locked}" aria-label="${locked}">🔒</span>` : ""}`;
   const author = thread.author
     ? (thread.author.username ? `<a href="/users/${e(thread.author.username)}">${e(thread.author.name)}</a>` : e(thread.author.name))
-    : "Удалённый пользователь";
+    : (en ? "Deleted user" : "Удалённый пользователь");
   return `<div class="list-row">
       <div>
         <h3>${marks}<a href="/community/thread/${thread.id}">${e(thread.subject)}</a></h3>
         <div class="card-meta">
           ${thread.category ? `<span class="badge plain">${e(thread.category.title)}</span>` : ""}
           <span>${author}</span>
-          <span>Активность: <time datetime="${e(isoDate(thread.lastActivityAt))}">${e(formatDate(thread.lastActivityAt, true))}</time></span>
+          <span>${en ? "Activity" : "Активность"}: <time datetime="${e(isoDate(thread.lastActivityAt))}">${e(formatDate(thread.lastActivityAt, true))}</time></span>
         </div>
       </div>
-      <div class="list-count"><strong>${thread.replies}</strong> ${pluralReplies(thread.replies)}</div>
+      <div class="list-count"><strong>${thread.replies}</strong> ${en ? (thread.replies === 1 ? "reply" : "replies") : pluralReplies(thread.replies)}</div>
     </div>`;
 }
 
@@ -298,10 +317,10 @@ export function emptyCard(title, text, action = "") {
 // ==================== ФОРУМ: КАТЕГОРИИ ====================
 
 export const FORUM_SECTIONS = [
-  ["general", "Общее"],
-  ["games", "Игры"],
-  ["development", "Разработка"],
-  ["community", "Сообщество"]
+  ["general", "Общее", "General"],
+  ["games", "Игры", "Games"],
+  ["development", "Разработка", "Development"],
+  ["community", "Сообщество", "Community"]
 ];
 export const FORUM_PAGE = 20;
 
@@ -373,19 +392,20 @@ export function pluralTopics(n) {
 }
 
 /** Блок категорий форума по разделам: для /community */
-export function categoryIndex(categories) {
-  return FORUM_SECTIONS.map(([key, label]) => {
+export function categoryIndex(categories, lang = "ru") {
+  const en = lang === "en";
+  return FORUM_SECTIONS.map(([key, label, labelEn]) => {
     const items = categories.filter((c) => c.section === key);
     if (!items.length) return "";
     return `<section class="forum-section" aria-labelledby="forum-${key}">
-        <h2 class="forum-section-title" id="forum-${key}">${e(label)}</h2>
+        <h2 class="forum-section-title" id="forum-${key}">${e(en ? labelEn : label)}</h2>
         <div class="list-panel">${items.map((c) => `<div class="list-row">
           <div>
-            <h3><a href="/community/c/${e(c.slug)}">${e(c.title)}</a>${c.staffOnly ? ' <span class="badge plain">Команда</span>' : ""}</h3>
+            <h3><a href="/community/c/${e(c.slug)}">${e(c.title)}</a>${c.staffOnly ? ` <span class="badge plain">${en ? "Team" : "Команда"}</span>` : ""}</h3>
             ${c.description ? `<p class="card-text">${e(c.description)}</p>` : ""}
-            <div class="card-meta">${c.lastActivityAt ? `<span>Активность: <time datetime="${e(isoDate(c.lastActivityAt))}">${e(formatDate(c.lastActivityAt, true))}</time></span>` : "<span>Тем пока нет</span>"}</div>
+            <div class="card-meta">${c.lastActivityAt ? `<span>${en ? "Activity" : "Активность"}: <time datetime="${e(isoDate(c.lastActivityAt))}">${e(formatDate(c.lastActivityAt, true))}</time></span>` : `<span>${en ? "No topics yet" : "Тем пока нет"}</span>`}</div>
           </div>
-          <div class="list-count"><strong>${c.topics}</strong> ${pluralTopics(c.topics)}</div>
+          <div class="list-count"><strong>${c.topics}</strong> ${en ? (c.topics === 1 ? "topic" : "topics") : pluralTopics(c.topics)}</div>
         </div>`).join("")}</div>
       </section>`;
   }).join("");

@@ -3,7 +3,7 @@
 import { api, button, el, errorBox, initHeader, lineSkeletons, link, loginUrl, setUnread, stateBox, timeAgo, toast } from "./app.js";
 
 const body = document.querySelector("#noticeBody");
-const NOTICE_ICONS = { reply: "💬", follow: "👤", achievement: "🏆", moderation: "🛡", system: "✦" };
+const NOTICE_ICONS = { reply: "💬", mention: "💬", follow: "👤", achievement: "🏆", moderation: "🛡", system: "✦" };
 const PAGE = 30;
 
 let onlyUnread = false;

@@ -4,11 +4,12 @@
 import { escapeHtml as e } from "./_lib/html.js";
 import { renderPage } from "./_lib/layout.js";
 import {
-  categoryThreads, emptyCard, FORUM_PAGE, formatDate, gameArt, gameCard, gameCategory, gameCategoryIds, getCategoryBySlug,
-  getGameBySlug, getPostBySlug, getSettings, isoDate, listGameMedia, listGames, listPosts, POST_KIND_LABELS, POST_KINDS,
+  categoryThreads, emptyCard, FORUM_PAGE, formatDate, gameArt, gameCard, gameCategory, gameCategoryIds, getCategoryBySlug, pluralReplies, pluralTopics,
+  getGameBySlug, getPostBySlug, getSettings, isoDate, listGameMedia, listGames, listPosts, POST_KIND_LABELS, POST_KIND_LABELS_EN, POST_KINDS,
   postCard, recentThreads, richText, statusBadge, threadRow
 } from "./_lib/studio.js";
 import { cleanLine } from "./_lib/validate.js";
+import { langOf } from "./_lib/i18n.js";
 import { hasRole } from "./_lib/roles.js";
 import { currentUser } from "./_lib/session.js";
 import {
@@ -44,13 +45,21 @@ function notFoundPage(request, active, text) {
 export const home = {
   async onRequestGet({ request, env }) {
     const origin = new URL(request.url).origin;
-    const [settings, games, upcoming, threads, posts] = await Promise.all([
+    const lang = langOf(request);
+    const [settings, games, upcoming, threads, posts, devlog, activity] = await Promise.all([
       getSettings(env),
       listGames(env, { upcoming: false }),
       listGames(env, { upcoming: true }),
       recentThreads(env, { limit: 6 }),
-      listPosts(env, { limit: 3 })
+      listPosts(env, { limit: 3 }),
+      listPosts(env, { kinds: ["devlog"], limit: 1 }),
+      env.DB.prepare(
+        `SELECT
+           (SELECT COUNT(*) FROM threads WHERE deleted_at IS NULL AND last_activity_at >= datetime('now', '-1 day')) AS topics_day,
+           (SELECT COUNT(*) FROM comments WHERE deleted_at IS NULL AND target_type = 'thread' AND created_at >= datetime('now', '-1 day')) AS replies_day`
+      ).first()
     ]);
+    const en = lang === "en";
     const featured = games.find((g) => g.slug === settings.featuredGame) || games[0] || null;
     const discussion = featured ? await gameCategory(env, featured.id) : null;
 
@@ -61,16 +70,15 @@ export const home = {
         <div class="rise">
           <div class="eyebrow">ENDEMION — Create. Play. Connect.</div>
           <h1 class="display-1" id="heroTitle"><span class="gradient-text">Welcome to Endemion</span></h1>
-          <p class="lead">An independent game studio creating worlds, experiences, and communities.
-            Независимая студия, которая делает игры и собирает вокруг них сообщество.</p>
+          <p class="lead">${en ? "An independent game studio creating worlds, experiences, and communities." : "Независимая студия, которая делает игры и собирает вокруг них сообщество."}</p>
           <div class="btn-row">
             <a class="primary-btn btn-lg" href="/games">Explore Games</a>
             <a class="ghost-btn btn-lg" href="/community">Join Community</a>
           </div>
         </div>
-        ${featured ? `<a class="card rise rise-2" href="/games/${e(featured.slug)}" aria-label="${e(featured.title)}: главная игра студии">
-          <div class="card-media">${gameArt(featured, { eager: true })}${statusBadge(featured.status)}</div>
-          <div class="card-body"><span class="eyebrow">Главный проект</span><strong class="card-title">${e(featured.title)}</strong></div>
+        ${featured ? `<a class="card rise rise-2" href="/games/${e(featured.slug)}" aria-label="${e(featured.title)}: ${en ? "the studio's featured game" : "главная игра студии"}">
+          <div class="card-media">${gameArt(featured, { eager: true, lang })}${statusBadge(featured.status, lang)}</div>
+          <div class="card-body"><span class="eyebrow">${en ? "Featured project" : "Главный проект"}</span><strong class="card-title">${e(featured.title)}</strong></div>
         </a>` : ""}
       </div>
     </section>`;
@@ -82,15 +90,15 @@ export const home = {
         <div class="featured-body">
           <div class="eyebrow">Featured Game</div>
           <h2 class="display-2" id="featuredTitle">${e(featured.title)}</h2>
-          <p class="lead">${e(featured.tagline || featured.description || "Описание появится позже.")}</p>
+          <p class="lead">${e(featured.tagline || featured.description || (en ? "Description coming later." : "Описание появится позже."))}</p>
           <dl class="featured-facts">
-            <dt>Статус</dt><dd>${statusBadge(featured.status)}</dd>
-            <dt>Платформы</dt><dd>${e(featured.platforms.join(", ") || "не указаны")}</dd>
+            <dt>${en ? "Status" : "Статус"}</dt><dd>${statusBadge(featured.status, lang)}</dd>
+            <dt>${en ? "Platforms" : "Платформы"}</dt><dd>${e(featured.platforms.join(", ") || (en ? "not set" : "не указаны"))}</dd>
           </dl>
           <div class="btn-row">
-            ${featured.websiteUrl ? `<a class="primary-btn" href="${e(featured.websiteUrl)}" rel="noopener">Играть</a>` : ""}
-            <a class="ghost-btn" href="/games/${e(featured.slug)}">Об игре</a>
-            ${discussion ? `<a class="ghost-btn" href="/community/c/${e(discussion.slug)}">Обсуждение</a>` : ""}
+            ${featured.websiteUrl ? `<a class="primary-btn" href="${e(featured.websiteUrl)}" rel="noopener">${en ? "Play" : "Играть"}</a>` : ""}
+            <a class="ghost-btn" href="/games/${e(featured.slug)}">${en ? "About the game" : "Об игре"}</a>
+            ${discussion ? `<a class="ghost-btn" href="/community/c/${e(discussion.slug)}">${en ? "Discussion" : "Обсуждение"}</a>` : ""}
           </div>
         </div>
       </div>
@@ -98,39 +106,60 @@ export const home = {
 
     const gamesBlock = `
     <section class="studio-section container" aria-labelledby="gamesTitle">
-      <div class="section-head"><div><div class="eyebrow">Our Games</div><h2 id="gamesTitle">Наши игры</h2></div>
-        <a class="ghost-btn small-btn" href="/games">Все игры →</a></div>
-      ${games.length ? `<div class="grid-games">${games.map(gameCard).join("")}</div>` : emptyCard("Игр пока нет", "Каталог появится, когда студия добавит первую игру.")}
+      <div class="section-head"><div><div class="eyebrow">Our Games</div><h2 id="gamesTitle">${en ? "Our games" : "Наши игры"}</h2></div>
+        <a class="ghost-btn small-btn" href="/games">${en ? "All games →" : "Все игры →"}</a></div>
+      ${games.length ? `<div class="grid-games">${games.map((g) => gameCard(g, lang)).join("")}</div>` : emptyCard(en ? "No games yet" : "Игр пока нет", en ? "The catalog will appear when the studio adds its first game." : "Каталог появится, когда студия добавит первую игру.")}
     </section>`;
 
     const communityBlock = `
     <section class="studio-section container" aria-labelledby="communityTitle">
-      <div class="section-head"><div><div class="eyebrow">Community</div><h2 id="communityTitle">Последние темы форума</h2></div>
-        <a class="ghost-btn small-btn" href="/community">Visit Community →</a></div>
-      ${threads.length ? `<div class="list-panel">${threads.map(threadRow).join("")}</div>`
-    : emptyCard("Тем пока нет", "Начните первое обсуждение — форум открыт для всех участников.", '<a class="primary-btn" href="/community">Visit Community</a>')}
+      <div class="section-head"><div><div class="eyebrow">Community</div><h2 id="communityTitle">${en ? "Latest forum topics" : "Последние темы форума"}</h2></div>
+        <a class="ghost-btn small-btn" href="/community">${en ? "Visit Community →" : "На форум →"}</a></div>
+      ${threads.length ? `<div class="list-panel">${threads.map((t) => threadRow(t, lang)).join("")}</div>`
+    : emptyCard(en ? "No topics yet" : "Тем пока нет", en ? "Start the first discussion — the forum is open to everyone." : "Начните первое обсуждение — форум открыт для всех участников.", `<a class="primary-btn" href="/community">${en ? "Visit Community" : "На форум"}</a>`)}
     </section>`;
 
     const devBlock = `
     <section class="studio-section container" aria-labelledby="devTitle">
-      <div class="section-head"><div><div class="eyebrow">Development Updates</div><h2 id="devTitle">Новости разработки</h2></div>
-        <a class="ghost-btn small-btn" href="/studio">Все публикации →</a></div>
-      ${posts.posts.length ? `<div class="grid-posts">${posts.posts.map(postCard).join("")}</div>`
-    : emptyCard("Публикаций пока нет", "Здесь появятся devlog, новости игр, обновления и планы студии.")}
+      <div class="section-head"><div><div class="eyebrow">Development Updates</div><h2 id="devTitle">${en ? "Development news" : "Новости разработки"}</h2></div>
+        <a class="ghost-btn small-btn" href="/studio">${en ? "All posts →" : "Все публикации →"}</a></div>
+      ${posts.posts.length ? `<div class="grid-posts">${posts.posts.map((p) => postCard(p, lang)).join("")}</div>`
+    : emptyCard(en ? "No posts yet" : "Публикаций пока нет", en ? "Devlogs, game news, updates and plans will appear here." : "Здесь появятся devlog, новости игр, обновления и планы студии.")}
     </section>`;
+
+    const latest = devlog.posts[0] || null;
+    const nowBlock = latest ? `
+    <section class="studio-section container" aria-labelledby="nowTitle">
+      <div class="section-head"><div><div class="eyebrow">Now in development</div><h2 id="nowTitle">${en ? "Now in development" : "Сейчас в разработке"}</h2></div>
+        <a class="ghost-btn small-btn" href="/studio?tab=devlog">${en ? "All entries →" : "Все записи →"}</a></div>
+      <article class="panel now-card">
+        <div class="badge-list"><span class="badge plain">Devlog</span>${latest.game ? `<span class="badge plain">${e(latest.game.title)}</span>` : ""}</div>
+        <h3 class="card-title"><a href="/studio/${e(latest.slug)}">${e(latest.title)}</a></h3>
+        ${latest.summary ? `<p class="lead">${e(latest.summary)}</p>` : ""}
+        <div class="card-meta"><time datetime="${e(isoDate(latest.publishedAt || latest.createdAt))}">${e(formatDate(latest.publishedAt || latest.createdAt))}</time></div>
+      </article>
+    </section>` : "";
+
+    const pulse = (activity?.topics_day || 0) + (activity?.replies_day || 0);
+    const pulseBlock = pulse ? `
+    <p class="container forum-pulse">${en
+      ? `Forum in the last day: ${activity.topics_day} ${activity.topics_day === 1 ? "topic" : "topics"} and ${activity.replies_day} ${activity.replies_day === 1 ? "reply" : "replies"}.`
+      : `За сутки на форуме: ${activity.topics_day} ${pluralTopics(activity.topics_day)} и ${activity.replies_day} ${pluralReplies(activity.replies_day)}.`}</p>` : "";
 
     const upcomingBlock = upcoming.length ? `
     <section class="studio-section container" aria-labelledby="upcomingTitle">
-      <div class="section-head"><div><div class="eyebrow">Upcoming Projects</div><h2 id="upcomingTitle">Будущие проекты</h2></div></div>
-      <div class="grid-games">${upcoming.map(gameCard).join("")}</div>
+      <div class="section-head"><div><div class="eyebrow">Upcoming Projects</div><h2 id="upcomingTitle">${en ? "Upcoming projects" : "Будущие проекты"}</h2></div></div>
+      <div class="grid-games">${upcoming.map((g) => gameCard(g, lang)).join("")}</div>
     </section>` : "";
 
-    const description = "Endemion — независимая игровая студия и сообщество: игры студии, форум, devlog и новости разработки.";
+    const description = en
+      ? "Endemion is an independent game studio and community: our games, the forum, devlogs and development news."
+      : "Endemion — независимая игровая студия и сообщество: игры студии, форум, devlog и новости разработки.";
     return renderPage(request, {
       path: "/", active: "home", styles: STYLES, scripts: SCRIPTS, description,
       head: head({ title: "ENDEMION — Create. Play. Connect.", description, url: `${origin}/`, image: `${origin}/assets/og-image.png` })
         + ld({ "@context": "https://schema.org", "@type": "Organization", name: "Endemion", url: `${origin}/` }),
-      body: hero + featuredBlock + gamesBlock + communityBlock + devBlock + upcomingBlock
+      body: hero + featuredBlock + nowBlock + gamesBlock + pulseBlock + communityBlock + devBlock + upcomingBlock
     });
   }
 };
@@ -139,22 +168,24 @@ export const home = {
 
 export const gamesPage = {
   async onRequestGet({ request, env }) {
+    const lang = langOf(request);
+    const en = lang === "en";
     const [games, upcoming] = await Promise.all([listGames(env, { upcoming: false }), listGames(env, { upcoming: true })]);
     const body = `
     <div class="container page">
       <div class="page-head"><div>
         <div class="eyebrow">Endemion Games</div>
-        <h1 class="display-2">Игры студии</h1>
-        <p class="section-text">Проекты Endemion: в разработке, прототипы и вышедшие игры.</p>
+        <h1 class="display-2">${en ? "Studio games" : "Игры студии"}</h1>
+        <p class="section-text">${en ? "Endemion projects: in development, prototypes and released games." : "Проекты Endemion: в разработке, прототипы и вышедшие игры."}</p>
       </div></div>
-      ${games.length ? `<div class="grid-games">${games.map(gameCard).join("")}</div>` : emptyCard("Игр пока нет", "Каталог появится, когда студия добавит первую игру.")}
+      ${games.length ? `<div class="grid-games">${games.map((g) => gameCard(g, lang)).join("")}</div>` : emptyCard(en ? "No games yet" : "Игр пока нет", en ? "The catalog will appear when the studio adds its first game." : "Каталог появится, когда студия добавит первую игру.")}
       ${upcoming.length ? `<section class="studio-section" aria-labelledby="upcomingTitle">
-        <div class="section-head"><div><h2 id="upcomingTitle">Будущие проекты</h2></div></div>
-        <div class="grid-games">${upcoming.map(gameCard).join("")}</div></section>` : ""}
+        <div class="section-head"><div><h2 id="upcomingTitle">${en ? "Upcoming projects" : "Будущие проекты"}</h2></div></div>
+        <div class="grid-games">${upcoming.map((g) => gameCard(g, lang)).join("")}</div></section>` : ""}
     </div>`;
     return renderPage(request, {
-      title: "Игры", path: "/games", active: "games", body, styles: STYLES, scripts: SCRIPTS,
-      description: "Каталог игр Endemion: статусы разработки, платформы и ссылки на страницы игр."
+      title: en ? "Games" : "Игры", path: "/games", active: "games", body, styles: STYLES, scripts: SCRIPTS,
+      description: en ? "The Endemion game catalog: development status, platforms and links to game pages." : "Каталог игр Endemion: статусы разработки, платформы и ссылки на страницы игр."
     });
   }
 };
@@ -165,9 +196,11 @@ export const gamePage = {
   async onRequestGet({ request, env, params }) {
     const url = new URL(request.url);
     const origin = url.origin;
+    const lang = langOf(request);
+    const en = lang === "en";
     const game = await getGameBySlug(env, String(params.slug || "").toLowerCase());
     const viewer = game && !game.published ? await currentUser(env, request) : null;
-    if (!game || (!game.published && !hasRole(viewer, "admin"))) return notFoundPage(request, "games", "Такой игры нет в каталоге.");
+    if (!game || (!game.published && !hasRole(viewer, "admin"))) return notFoundPage(request, "games", en ? "No such game in the catalog." : "Такой игры нет в каталоге.");
 
     const profile = GAME_PROFILES[game.slug] || null;
     const devlogPage = Math.max(1, Math.min(1000, Number.parseInt(url.searchParams.get("devlog") || "1", 10) || 1));
@@ -193,29 +226,29 @@ export const gamePage = {
     const latest = lastUpdate.posts[0];
     const latestDate = latest ? latest.publishedAt || latest.createdAt : null;
     const statusRows = [
-      ["Статус разработки", statusBadge(game.status)],
+      [en ? "Development status" : "Статус разработки", statusBadge(game.status, lang)],
       // Версия и дата обновления — только из реальных данных: публикаций студии о игре. Выдумывать их нельзя
-      ["Текущая версия", profile?.version ? e(profile.version) : ""],
-      ["Последнее обновление", latestDate ? `<a href="/studio/${e(latest.slug)}"><time datetime="${e(isoDate(latestDate))}">${e(formatDate(latestDate))}</time></a>` : ""],
-      ["Платформа", e(game.platforms.join(", "))],
-      ["Тип игры", e(profile?.genre || "")]
+      [en ? "Current version" : "Текущая версия", profile?.version ? e(profile.version) : ""],
+      [en ? "Last update" : "Последнее обновление", latestDate ? `<a href="/studio/${e(latest.slug)}"><time datetime="${e(isoDate(latestDate))}">${e(formatDate(latestDate))}</time></a>` : ""],
+      [en ? "Platform" : "Платформа", e(game.platforms.join(", "))],
+      [en ? "Genre" : "Тип игры", e(profile?.genre || "")]
     ];
 
     const sections = [
-      ["about", "Об игре", aboutSection(game, profile)],
-      ["worlds", "Миры", worldsSection(profile?.worlds, profile?.worldsHeading || { title: "Миры" })],
-      ["features", "Особенности", featuresSection(profile?.features)],
-      ["screenshots", "Скриншоты", screenshotsSection(game, media)],
-      ["roadmap", "Roadmap", roadmapSection(game, roadmapPosts.posts, postCard, { title: profile?.roadmapTitle || "Roadmap" })],
-      ["news", "Новости", newsSection(news.posts)],
-      ["devlog", "Devlog", devlogSection(game, devlog, { page: devlogPage, pageSize: DEVLOG_PAGE })],
-      ["community", "Сообщество", communitySection(game, { links, threads, knownIssues: game.knownIssues })],
-      ["status", "Статус", statusSection(statusRows)]
+      ["about", en ? "About" : "Об игре", aboutSection(game, profile, lang)],
+      ["worlds", en ? "Worlds" : "Миры", worldsSection(profile?.worlds, { ...(profile?.worldsHeading || { title: en ? "Worlds" : "Миры" }), lang })],
+      ["features", en ? "Features" : "Особенности", featuresSection(profile?.features, lang)],
+      ["screenshots", en ? "Screenshots" : "Скриншоты", screenshotsSection(game, media, lang)],
+      ["roadmap", "Roadmap", roadmapSection(game, roadmapPosts.posts, (p) => postCard(p, lang), { title: profile?.roadmapTitle || "Roadmap", lang })],
+      ["news", en ? "News" : "Новости", newsSection(news.posts, lang)],
+      ["devlog", "Devlog", devlogSection(game, devlog, { page: devlogPage, pageSize: DEVLOG_PAGE, lang })],
+      ["community", en ? "Community" : "Сообщество", communitySection(game, { links, threads, knownIssues: game.knownIssues, lang })],
+      ["status", en ? "Status" : "Статус", statusSection(statusRows, lang)]
     ].filter(([, , html]) => html);
 
     const body = `
-    ${heroSection(game, profile, { cover, discussionHref: links.discuss })}
-    ${sectionNav(sections.map(([id, label]) => [id, label]))}
+    ${heroSection(game, profile, { cover, discussionHref: links.discuss, lang })}
+    ${sectionNav(sections.map(([id, label]) => [id, label]), lang)}
     <div class="container">
       ${sections.map(([, , html]) => html).join("")}
       <div class="gp-page-end"></div>
@@ -246,33 +279,35 @@ export const gamePage = {
 
 // ==================== РАЗРАБОТКА (/studio) ====================
 
-/** @type {Array<[string, string, string[] | null]>} [ключ вкладки, подпись, виды публикаций или null — все] */
+/** @type {Array<[string, string, string, string[] | null]>} [ключ вкладки, подпись, подпись EN, виды публикаций или null — все] */
 const STUDIO_TABS = [
-  ["", "Все", null],
-  ["news", "Новости студии", ["news"]],
-  ["devlog", "Devlog", ["devlog"]],
-  ["updates", "Обновления игр", ["update"]],
-  ["roadmap", "Roadmap", ["roadmap"]],
-  ["announcements", "Анонсы", ["announcement"]],
-  ["history", "История разработки", null]
+  ["", "Все", "All", null],
+  ["news", "Новости студии", "Studio news", ["news"]],
+  ["devlog", "Devlog", "Devlog", ["devlog"]],
+  ["updates", "Обновления игр", "Game updates", ["update"]],
+  ["roadmap", "Roadmap", "Roadmap", ["roadmap"]],
+  ["announcements", "Анонсы", "Announcements", ["announcement"]],
+  ["history", "История разработки", "Development history", null]
 ];
 const PAGE_SIZE = 12;
 
 export const studioPage = {
   async onRequestGet({ request, env }) {
     const url = new URL(request.url);
+    const lang = langOf(request);
+    const en = lang === "en";
     const tab = STUDIO_TABS.find(([key]) => key === (url.searchParams.get("tab") || "")) || STUDIO_TABS[0];
     const page = Math.max(1, Math.min(1000, Number.parseInt(url.searchParams.get("page") || "1", 10) || 1));
     // «История разработки» — архивные публикации; остальные вкладки — опубликованные
     const status = tab[0] === "history" ? "archived" : "published";
     const [list, upcoming] = await Promise.all([
-      listPosts(env, { status, kinds: tab[2], limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE }),
+      listPosts(env, { status, kinds: tab[3], limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE }),
       tab[0] ? Promise.resolve([]) : listGames(env, { upcoming: true })
     ]);
     const pages = Math.max(1, Math.ceil(list.total / PAGE_SIZE));
     const tabLink = (item) => {
-      const [key, label] = item;
-      return `<a href="/studio${key ? `?tab=${key}` : ""}"${key === tab[0] ? ' aria-current="page"' : ""}>${e(label)}</a>`;
+      const [key, label, labelEn] = item;
+      return `<a href="/studio${key ? `?tab=${key}` : ""}"${key === tab[0] ? ' aria-current="page"' : ""}>${e(en ? labelEn : label)}</a>`;
     };
     const pageLink = (n, label) => `<a class="ghost-btn small-btn" href="/studio?${new URLSearchParams({ ...(tab[0] ? { tab: tab[0] } : {}), page: String(n) })}">${label}</a>`;
 
@@ -280,19 +315,19 @@ export const studioPage = {
     <div class="container page">
       <div class="page-head"><div>
         <div class="eyebrow">Endemion Studio</div>
-        <h1 class="display-2">Разработка</h1>
-        <p class="section-text">Новости студии, devlog, обновления игр, планы и анонсы.</p>
+        <h1 class="display-2">${en ? "Development" : "Разработка"}</h1>
+        <p class="section-text">${en ? "Studio news, devlogs, game updates, plans and announcements." : "Новости студии, devlog, обновления игр, планы и анонсы."}</p>
       </div></div>
-      <nav class="studio-tabs" aria-label="Виды публикаций">${STUDIO_TABS.map(tabLink).join("")}</nav>
-      ${list.posts.length ? `<div class="grid-posts">${list.posts.map(postCard).join("")}</div>`
-    : emptyCard("Публикаций пока нет", tab[0] === "history" ? "Здесь появятся публикации, перенесённые в архив." : "Студия ещё ничего не опубликовала в этом разделе.")}
-      ${pages > 1 ? `<nav class="btn-row pager" aria-label="Страницы">${page > 1 ? pageLink(page - 1, "← Назад") : ""}<span class="muted">Страница ${page} из ${pages}</span>${page < pages ? pageLink(page + 1, "Дальше →") : ""}</nav>` : ""}
-      ${upcoming.length ? `<section class="studio-section" aria-labelledby="futureTitle"><div class="section-head"><div><h2 id="futureTitle">Будущие проекты</h2></div></div>
-        <div class="grid-games">${upcoming.map(gameCard).join("")}</div></section>` : ""}
+      <nav class="studio-tabs" aria-label="${en ? "Post types" : "Виды публикаций"}">${STUDIO_TABS.map(tabLink).join("")}</nav>
+      ${list.posts.length ? `<div class="grid-posts">${list.posts.map((p) => postCard(p, lang)).join("")}</div>`
+    : emptyCard(en ? "No posts yet" : "Публикаций пока нет", tab[0] === "history" ? (en ? "Posts moved to the archive will appear here." : "Здесь появятся публикации, перенесённые в архив.") : (en ? "The studio has not published anything in this section yet." : "Студия ещё ничего не опубликовала в этом разделе."))}
+      ${pages > 1 ? `<nav class="btn-row pager" aria-label="${en ? "Pages" : "Страницы"}">${page > 1 ? pageLink(page - 1, en ? "← Back" : "← Назад") : ""}<span class="muted">${en ? `Page ${page} of ${pages}` : `Страница ${page} из ${pages}`}</span>${page < pages ? pageLink(page + 1, en ? "Next →" : "Дальше →") : ""}</nav>` : ""}
+      ${upcoming.length ? `<section class="studio-section" aria-labelledby="futureTitle"><div class="section-head"><div><h2 id="futureTitle">${en ? "Upcoming projects" : "Будущие проекты"}</h2></div></div>
+        <div class="grid-games">${upcoming.map((g) => gameCard(g, lang)).join("")}</div></section>` : ""}
     </div>`;
     return renderPage(request, {
-      title: tab[0] ? tab[1] : "Разработка", path: `/studio${tab[0] ? `?tab=${tab[0]}` : ""}`, active: "studio", body, styles: STYLES, scripts: SCRIPTS,
-      description: "Devlog, новости и roadmap студии Endemion."
+      title: tab[0] ? (en ? tab[2] : tab[1]) : (en ? "Development" : "Разработка"), path: `/studio${tab[0] ? `?tab=${tab[0]}` : ""}`, active: "studio", body, styles: STYLES, scripts: SCRIPTS,
+      description: en ? "Devlogs, news and the roadmap of Endemion studio." : "Devlog, новости и roadmap студии Endemion."
     });
   }
 };
@@ -300,14 +335,16 @@ export const studioPage = {
 export const postPage = {
   async onRequestGet({ request, env, params }) {
     const origin = new URL(request.url).origin;
+    const lang = langOf(request);
+    const en = lang === "en";
     const post = await getPostBySlug(env, String(params.slug || "").toLowerCase());
     const viewer = post && post.status === "draft" ? await currentUser(env, request) : null;
-    if (!post || (post.status === "draft" && !hasRole(viewer, "admin"))) return notFoundPage(request, "studio", "Такой публикации нет.");
+    if (!post || (post.status === "draft" && !hasRole(viewer, "admin"))) return notFoundPage(request, "studio", en ? "No such post." : "Такой публикации нет.");
     const date = post.publishedAt || post.createdAt;
     const body = `
     <article class="container page post-page">
-      <nav class="breadcrumbs" aria-label="Навигация"><a href="/studio">Разработка</a> <span aria-hidden="true">/</span> <span>${e(POST_KIND_LABELS[post.kind])}</span></nav>
-      ${post.status !== "published" ? `<p class="badge status-unknown">${post.status === "draft" ? "Черновик: видна только администраторам" : "В архиве"}</p>` : ""}
+      <nav class="breadcrumbs" aria-label="${en ? "Breadcrumb" : "Навигация"}"><a href="/studio">${en ? "Development" : "Разработка"}</a> <span aria-hidden="true">/</span> <span>${e((en ? POST_KIND_LABELS_EN : POST_KIND_LABELS)[post.kind])}</span></nav>
+      ${post.status !== "published" ? `<p class="badge status-unknown">${post.status === "draft" ? (en ? "Draft: visible to administrators only" : "Черновик: видна только администраторам") : (en ? "Archived" : "В архиве")}</p>` : ""}
       <h1 class="display-2">${e(post.title)}</h1>
       <div class="card-meta">
         <time datetime="${e(isoDate(date))}">${e(formatDate(date))}</time>

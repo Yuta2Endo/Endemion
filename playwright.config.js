@@ -28,7 +28,7 @@ export default defineConfig({
   ],
   webServer: {
     command: "npx wrangler dev --port 8787 --ip 127.0.0.1",
-    url: `${BASE}/api/titles`,
+    url: `${BASE}/sitemap.xml`,
     reuseExistingServer: true,
     timeout: 120_000
   }

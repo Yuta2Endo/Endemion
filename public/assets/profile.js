@@ -58,6 +58,24 @@ async function renderOverview() {
     link(`/users/${encodeURIComponent(profile.username)}`, "ghost-btn", "Мои темы и ответы"),
     link("/notifications", "ghost-btn", "Уведомления")
   );
+  renderMyTopics();
+}
+
+/** Последние свои темы прямо в обзоре: тот же запрос, что на публичном профиле, владельцу он открыт всегда */
+async function renderMyTopics() {
+  const box = $("#myTopics");
+  if (!box) return;
+  const result = await api(`/api/users/${encodeURIComponent(profile.username)}/forum`);
+  if (!result.ok) return box.replaceChildren(errorBox("Темы не загрузились.", renderMyTopics));
+  const { topics } = result.data;
+  if (!topics.length) return box.replaceChildren(el("p", "muted small", "Вы ещё не создавали тем."));
+  const list = el("div", "stack");
+  for (const topic of topics) {
+    const row = el("p");
+    row.append(link(`/community/thread/${topic.id}`, null, topic.subject), el("span", "muted small", ` · ${formatDate(topic.createdAt)}`));
+    list.append(row);
+  }
+  box.replaceChildren(list);
 }
 
 // ==================== ДОСТИЖЕНИЯ ====================

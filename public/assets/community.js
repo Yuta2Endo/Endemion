@@ -39,8 +39,8 @@ async function showThreads(kind) {
   const bar = el("div", "catalog-bar");
   const search = el("form", "search-box");
   search.setAttribute("role", "search");
-  const query = input("q", { type: "search", placeholder: "Поиск по заголовкам…", maxLength: 80 });
-  query.setAttribute("aria-label", "Поиск по заголовкам");
+  const query = input("q", { type: "search", placeholder: "Поиск по темам…", maxLength: 80 });
+  query.setAttribute("aria-label", "Поиск по темам");
   search.append(query);
   const sort = el("select", "select");
   sort.setAttribute("aria-label", "Сортировка");

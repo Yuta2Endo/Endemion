@@ -56,6 +56,16 @@ function render(thread) {
   author.append(userLink(thread.author), el("span", null, timeAgo(thread.createdAt)));
   const text = el("p", "post-body", thread.body);
   const actions = el("div", "section-actions section");
+  if (user) {
+    actions.append(button(thread.subscribed ? "Отписаться" : "Подписаться", "ghost-btn small-btn", async () => {
+      const method = thread.subscribed ? "DELETE" : "PUT";
+      const result = await api(`/api/threads/${id}/subscription`, { method });
+      if (!result.ok) return toast(result.data?.error || "Не удалось.");
+      thread.subscribed = result.data.subscribed;
+      render(thread);
+    }, { pressed: thread.subscribed }));
+  }
+  if (thread.revisions) actions.append(button(`История правок (${thread.revisions})`, "ghost-btn small-btn", () => showRevisions()));
   if (thread.canEdit) actions.append(button("Изменить", "ghost-btn small-btn", () => edit(thread)));
   if (thread.canDelete) {
     actions.append(button("Удалить", "danger-btn small-btn", async () => {
@@ -79,6 +89,28 @@ function render(thread) {
   rules.append(el("h2", null, "Правила"), el("p", "muted small",
     "Уважайте собеседников, прячьте спойлеры под пометкой, не публикуйте спам и чужие личные данные. Нарушения можно отправить модераторам кнопкой «Пожаловаться»."));
   aside.append(rules);
+}
+
+async function showRevisions() {
+  const result = await api(`/api/threads/${id}/revisions`);
+  if (!result.ok) return toast(result.data?.error || "История не загрузилась.");
+  await openDialog({
+    title: "История правок",
+    submitText: "Закрыть",
+    build(form) {
+      const list = el("div", "stack");
+      for (const revision of result.data.revisions) {
+        const block = el("article", "panel");
+        const who = revision.editor ? revision.editor.name : "Удалённый участник";
+        block.append(el("small", "thread-meta", `${who} · ${timeAgo(revision.createdAt)}`), el("h3", null, revision.subject || ""), el("p", null, revision.body));
+        list.append(block);
+      }
+      form.append(list);
+    },
+    async onSubmit() {
+      return null;
+    }
+  });
 }
 
 async function edit(thread) {

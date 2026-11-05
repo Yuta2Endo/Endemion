@@ -73,9 +73,12 @@ function render(data) {
   hero.append(avatar(profile, "avatar-lg"), info, buttons);
   root.replaceChildren(hero);
 
-  if (data.private) {
+  if (data.private && !data.own) {
     root.append(stateBox({ icon: "🔒", title: "Профиль скрыт", text: "Участник сделал профиль приватным. Его активность и статистика не видны." }));
     return;
+  }
+  if (data.private) {
+    root.append(stateBox({ icon: "🔒", title: "Профиль скрыт от других", text: "Вы видите его, потому что это ваш профиль. Остальные видят только имя и аватар." }));
   }
 
   const stats = el("div", "stat-grid section");

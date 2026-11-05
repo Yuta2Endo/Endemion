@@ -2,6 +2,7 @@
 // данные подгружают скрипты из public/assets. Встроенных скриптов и стилей нет: CSP остаётся строгим
 
 import { escapeHtml as e, html } from "./html.js";
+import { langOf, t } from "./i18n.js";
 
 export const SLOGAN = "ENDEMION — Create. Play. Connect.";
 export const BRAND = "ENDEMION — Create. Play. Connect.";
@@ -34,54 +35,60 @@ export function svgIcon(name, className = "") {
     `stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name]}</svg>`;
 }
 
-export function siteHeader(active) {
-  const item = ([href, label, key]) => `<a href="${href}"${key === active ? ' aria-current="page"' : ""}>${e(label)}</a>`;
+export function siteHeader(active, s) {
+  const item = ([href, , key]) => `<a href="${href}"${key === active ? ' aria-current="page"' : ""}>${e(s.nav[key])}</a>`;
   return `<header class="header">
     <div class="container nav">
-      <a class="logo" href="/" aria-label="ENDEMION — на главную"><span class="logo-mark" aria-hidden="true">E</span><span class="logo-text">ENDEMION</span></a>
-      <nav class="nav-links" id="navLinks" aria-label="Разделы">${NAV.map(item).join("")}</nav>
+      <a class="logo" href="/" aria-label="${e(s.homeAria)}"><span class="logo-mark" aria-hidden="true">E</span><span class="logo-text">ENDEMION</span></a>
+      <nav class="nav-links" id="navLinks" aria-label="${e(s.sections)}">${NAV.map(item).join("")}</nav>
       <div class="nav-actions">
-        <a class="icon-btn" id="notifyButton" href="/notifications" aria-label="Уведомления" hidden>${svgIcon("bell")}<span class="badge-count" id="notifyCount" hidden></span></a>
-        <a class="ghost-btn register-btn" id="registerButton" href="/auth?mode=register" hidden>Регистрация</a>
-        <a class="profile-btn" id="accountButton" href="/auth">Войти</a>
-        <button class="icon-btn menu-toggle" type="button" aria-controls="navLinks" aria-expanded="false" aria-label="Меню">${svgIcon("menu", "icon-open")}${svgIcon("close", "icon-close")}</button>
+        <form class="nav-search" role="search" action="/search" method="get">
+          <label class="visually-hidden" for="navSearch">${e(s.searchLabel)}</label>
+          <input id="navSearch" type="search" name="q" maxlength="80" placeholder="${e(s.searchPlaceholder)}" autocomplete="off">
+          <button type="submit" aria-label="${e(s.find)}">${svgIcon("search")}</button>
+        </form>
+        <a class="icon-btn" id="notifyButton" href="/notifications" aria-label="${e(s.notifications)}" hidden>${svgIcon("bell")}<span class="badge-count" id="notifyCount" hidden></span></a>
+        <a class="ghost-btn register-btn" id="registerButton" href="/auth?mode=register" hidden>${e(s.register)}</a>
+        <a class="profile-btn" id="accountButton" href="/auth">${e(s.login)}</a>
+        <button class="lang-btn" type="button" data-lang-toggle aria-label="${e(s.langSwitch)}">${e(s.langSwitch)}</button>
+        <button class="icon-btn menu-toggle" type="button" aria-controls="navLinks" aria-expanded="false" aria-label="${e(s.menu)}">${svgIcon("menu", "icon-open")}${svgIcon("close", "icon-close")}</button>
       </div>
     </div>
   </header>`;
 }
 
-export function siteFooter() {
+export function siteFooter(s) {
   const year = new Date().getUTCFullYear();
   return `<footer class="footer">
     <div class="container footer-grid">
       <div class="footer-about">
-        <a class="logo" href="/" aria-label="ENDEMION — на главную"><span class="logo-mark" aria-hidden="true">E</span><span class="logo-text">ENDEMION</span></a>
+        <a class="logo" href="/" aria-label="${e(s.homeAria)}"><span class="logo-mark" aria-hidden="true">E</span><span class="logo-text">ENDEMION</span></a>
         <p class="footer-tagline">Create. Play. Connect.</p>
-        <p class="footer-text">Независимая игровая студия и сообщество игроков.</p>
+        <p class="footer-text">${e(s.footerText)}</p>
         <!-- Ссылки на соцсети задаёт администратор (Настройки сайта), их подставляет app.js. Пока ссылок нет, блок скрыт -->
-        <ul class="footer-social" id="footerSocial" aria-label="Endemion в соцсетях" hidden></ul>
+        <ul class="footer-social" id="footerSocial" aria-label="${e(s.social)}" hidden></ul>
       </div>
-      <nav class="footer-col" aria-label="Разделы">
-        <h2 class="footer-title">Разделы</h2>
-        ${NAV.map(([href, label]) => `<a href="${href}">${e(label)}</a>`).join("")}
+      <nav class="footer-col" aria-label="${e(s.sections)}">
+        <h2 class="footer-title">${e(s.sections)}</h2>
+        ${NAV.map(([href, , key]) => `<a href="${href}">${e(s.nav[key])}</a>`).join("")}
       </nav>
-      <nav class="footer-col" aria-label="Проекты">
-        <h2 class="footer-title">Проекты</h2>
+      <nav class="footer-col" aria-label="${e(s.projects)}">
+        <h2 class="footer-title">${e(s.projects)}</h2>
         <a href="https://life.endemion.online">Endemion Life</a>
         <a href="/community">Endemion Community</a>
         <a href="/studio">Devlog</a>
       </nav>
-      <nav class="footer-col" aria-label="Документы">
-        <h2 class="footer-title">Документы</h2>
-        <a href="/legal">Правовой центр</a>
-        <a href="/privacy">Политика конфиденциальности</a>
-        <a href="/terms">Условия использования</a>
-        <a href="/copyright">Правообладателям</a>
-        <a href="/privacy#cookie" data-cookie-settings hidden>Настройки cookie</a>
+      <nav class="footer-col" aria-label="${e(s.documents)}">
+        <h2 class="footer-title">${e(s.documents)}</h2>
+        <a href="/legal">${e(s.legal)}</a>
+        <a href="/privacy">${e(s.privacy)}</a>
+        <a href="/terms">${e(s.terms)}</a>
+        <a href="/copyright">${e(s.copyright)}</a>
+        <a href="/privacy#cookie" data-cookie-settings hidden>${e(s.cookies)}</a>
       </nav>
     </div>
     <div class="container footer-bottom">
-      <p>© ${year} Endemion. Все права защищены.</p>
+      <p>© ${year} Endemion. ${e(s.rights)}</p>
     </div>
   </footer>`;
 }
@@ -92,15 +99,17 @@ export function siteFooter() {
  */
 export function renderPage(request, {
   title = "", fullTitle: titleIsFull = false, description = "", path = null, active = null, body, scripts = [], styles = [], head = "",
-  noindex = false, status = 200, cache = "no-cache", mainClass = "", mainAttrs = "", lang = "ru"
+  noindex = false, status = 200, cache = "no-cache", mainClass = "", mainAttrs = "", lang = null
 }) {
   const origin = new URL(request.url).origin;
+  const pageLang = lang || langOf(request);
+  const s = t(pageLang);
   // fullTitle: true — заголовок уже полный (SEO-заголовок страницы игры), суффикс «| ENDEMION» не добавляется
   const fullTitle = title ? (titleIsFull ? title : `${title} | ENDEMION`) : BRAND;
   const canonical = path ? `${origin}${path}` : null;
   const desc = description || DEFAULT_DESCRIPTION;
   const page = `<!doctype html>
-<html lang="${lang}">
+<html lang="${pageLang}">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -110,7 +119,7 @@ export function renderPage(request, {
   ${noindex ? '<meta name="robots" content="noindex">' : ""}
   ${canonical ? `<link rel="canonical" href="${e(canonical)}">` : ""}
   <meta property="og:site_name" content="ENDEMION">
-  <meta property="og:locale" content="${lang === "en" ? "en_US" : "ru_RU"}">
+  <meta property="og:locale" content="${pageLang === "en" ? "en_US" : "ru_RU"}">
   ${head || `<meta property="og:type" content="website">
   <meta property="og:title" content="${e(fullTitle)}">
   <meta property="og:description" content="${e(desc)}">
@@ -127,15 +136,16 @@ export function renderPage(request, {
   <link rel="stylesheet" href="/assets/base.css?v=${ASSET_VERSION}">
   <link rel="stylesheet" href="/assets/ui.css?v=${ASSET_VERSION}">
   ${styles.map((file) => `<link rel="stylesheet" href="/assets/${file}?v=${ASSET_VERSION}">`).join("\n  ")}
+  <script type="module" src="/assets/lang.js?v=${ASSET_VERSION}"></script>
   ${scripts.map((file) => `<script type="module" src="/assets/${file}?v=${ASSET_VERSION}"></script>`).join("\n  ")}
 </head>
 <body>
-  <a class="skip-link" href="#main">Перейти к содержимому</a>
-  ${siteHeader(active)}
+  <a class="skip-link" href="#main">${e(s.skip)}</a>
+  ${siteHeader(active, s)}
   <main id="main"${mainClass ? ` class="${mainClass}"` : ""}${mainAttrs ? ` ${mainAttrs}` : ""}>
 ${body}
   </main>
-  ${siteFooter()}
+  ${siteFooter(s)}
 </body>
 </html>`;
   return html(page, status, { "Cache-Control": cache, ...(noindex ? { "X-Robots-Tag": "noindex" } : {}) });

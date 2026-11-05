@@ -9,7 +9,7 @@ import {
 import { error, json, readJson } from "../_lib/http.js";
 import { isDuplicate, spamProblem, takeAction } from "../_lib/limits.js";
 import { commentLink, REPORT_REASONS, REPORT_TARGETS, loadTarget, moderationStatement } from "../_lib/moderation.js";
-import { notifyStatement } from "../_lib/notifications.js";
+import { mentionStatements, notifyStatement } from "../_lib/notifications.js";
 import { mutedProblem, requireRole, requireUser } from "../_lib/roles.js";
 import { currentUser } from "../_lib/session.js";
 import { cleanLine, cleanText, intParam, lengthProblem, parseId } from "../_lib/validate.js";
@@ -100,7 +100,20 @@ export const comments = {
       statements.push(env.DB.prepare(
         "UPDATE threads SET comments_count = comments_count + 1, last_activity_at = datetime('now') WHERE id = ?"
       ).bind(body.targetId));
+      // Подписчики темы узнают об ответе, кроме тех, кому уведомление уже ушло (автор темы, автор ответа)
+      const subscribers = (await env.DB.prepare(
+        "SELECT user_id FROM thread_subscriptions WHERE thread_id = ?"
+      ).bind(body.targetId).all()).results;
+      for (const subscriber of subscribers) {
+        if (told.has(subscriber.user_id)) continue;
+        told.add(subscriber.user_id);
+        statements.push(notifyStatement(env, {
+          userId: subscriber.user_id, kind: "reply", actorId: user.id, link,
+          text: `${user.name}: новый ответ в теме ${target.label}`
+        }));
+      }
     }
+    statements.push(...await mentionStatements(env, { text: parsed.text, actor: user, link, told }));
     if (statements.length) await env.DB.batch(statements);
 
     const achievements = await checkAchievements(env, user.id, "comment");
@@ -120,8 +133,12 @@ export const comment = {
     const body = await readJson(request, 20_000);
     const parsed = readBody(body?.body, "Комментарий", 1, COMMENT_MAX);
     if (parsed.problem) return error(parsed.problem);
+    if (parsed.text !== row.body) await saveRevision(env, "comment", id, { body: row.body }, user.id);
     await env.DB.prepare("UPDATE comments SET body = ?, spoiler = ?, edited_at = datetime('now') WHERE id = ?")
       .bind(parsed.text, body.spoiler === true ? 1 : 0, id).run();
+    const link = await commentLink(env, row.target_type, row.target_id, id);
+    const mentions = await mentionStatements(env, { text: parsed.text, actor: user, link, told: new Set([user.id]) });
+    if (mentions.length) await env.DB.batch(mentions);
     return json({ comment: await getComment(env, user, id) });
   },
 
@@ -288,6 +305,8 @@ export const threads = {
     const row = await env.DB.prepare(
       "INSERT INTO threads (user_id, kind, subject, body, spoiler, category_id) VALUES (?, ?, ?, ?, ?, ?) RETURNING id"
     ).bind(user.id, body.kind, subject, parsed.text, body.spoiler === true ? 1 : 0, category.id).first();
+    // Автор темы подписан на ответы в ней
+    await env.DB.prepare("INSERT OR IGNORE INTO thread_subscriptions (user_id, thread_id) VALUES (?, ?)").bind(user.id, row.id).run();
     const achievements = await checkAchievements(env, user.id, "thread");
     const saved = await env.DB.prepare(`${THREAD_SELECT} WHERE th.id = ?`).bind(row.id).first();
     return json({ thread: toThread(saved, user, true), achievements }, 201);
@@ -301,7 +320,14 @@ export const thread = {
     const row = id ? await env.DB.prepare(`${THREAD_SELECT} WHERE th.id = ?`).bind(id).first() : null;
     if (!row || row.deleted_at) return error("Обсуждение не найдено.", 404);
     const viewer = await currentUser(env, request);
-    return json({ thread: toThread(row, viewer, true) });
+    const thread = toThread(row, viewer, true);
+    thread.subscribed = viewer
+      ? Boolean(await env.DB.prepare("SELECT 1 AS n FROM thread_subscriptions WHERE user_id = ? AND thread_id = ?").bind(viewer.id, id).first())
+      : false;
+    thread.revisions = (await env.DB.prepare(
+      "SELECT COUNT(*) AS n FROM content_revisions WHERE target_type = 'thread' AND target_id = ?"
+    ).bind(id).first()).n;
+    return json({ thread });
   },
 
   async onRequestPatch({ request, env, params }) {
@@ -319,8 +345,14 @@ export const thread = {
     if (subjectProblem) return error(subjectProblem);
     const parsed = readBody(body.body, "Текст", 1, 10_000);
     if (parsed.problem) return error(parsed.problem);
+    const previous = await env.DB.prepare("SELECT subject, body FROM threads WHERE id = ?").bind(id).first();
+    if (previous.subject !== subject || previous.body !== parsed.text) await saveRevision(env, "thread", id, previous, user.id);
     await env.DB.prepare("UPDATE threads SET subject = ?, body = ?, spoiler = ? WHERE id = ?")
       .bind(subject, parsed.text, body.spoiler === true ? 1 : 0, id).run();
+    const mentions = await mentionStatements(env, {
+      text: `${subject}\n${parsed.text}`, actor: user, link: `/community/thread/${id}`, told: new Set([user.id])
+    });
+    if (mentions.length) await env.DB.batch(mentions);
     const saved = await env.DB.prepare(`${THREAD_SELECT} WHERE th.id = ?`).bind(id).first();
     return json({ thread: toThread(saved, user, true) });
   },
@@ -384,6 +416,65 @@ export const threadModeration = {
     }
     const saved = await env.DB.prepare(`${THREAD_SELECT} WHERE th.id = ?`).bind(id).first();
     return json({ thread: toThread(saved, user, true) });
+  }
+};
+
+// На запись хранится до 20 последних версий: старше удаляются
+const REVISIONS_KEEP = 20;
+
+async function saveRevision(env, type, id, { subject = null, body }, editorId) {
+  await env.DB.batch([
+    env.DB.prepare(
+      "INSERT INTO content_revisions (target_type, target_id, subject, body, edited_by) VALUES (?, ?, ?, ?, ?)"
+    ).bind(type, id, subject, body.slice(0, 10_000), editorId),
+    env.DB.prepare(
+      `DELETE FROM content_revisions WHERE target_type = ? AND target_id = ? AND id NOT IN
+         (SELECT id FROM content_revisions WHERE target_type = ? AND target_id = ? ORDER BY id DESC LIMIT ?)`
+    ).bind(type, id, type, id, REVISIONS_KEEP)
+  ]);
+}
+
+/** PUT/DELETE /api/threads/:id/subscription — подписаться на ответы в теме или отписаться */
+export const threadSubscription = {
+  async onRequestPut({ request, env, params }) {
+    return setSubscription(request, env, params, true);
+  },
+  async onRequestDelete({ request, env, params }) {
+    return setSubscription(request, env, params, false);
+  }
+};
+
+async function setSubscription(request, env, params, on) {
+  const { user, response } = await requireUser(env, request);
+  if (response) return response;
+  const id = parseId(params.id);
+  const row = id ? await env.DB.prepare("SELECT deleted_at FROM threads WHERE id = ?").bind(id).first() : null;
+  if (!row || row.deleted_at) return error("Обсуждение не найдено.", 404);
+  if (on) {
+    await env.DB.prepare("INSERT OR IGNORE INTO thread_subscriptions (user_id, thread_id) VALUES (?, ?)").bind(user.id, id).run();
+  } else {
+    await env.DB.prepare("DELETE FROM thread_subscriptions WHERE user_id = ? AND thread_id = ?").bind(user.id, id).run();
+  }
+  return json({ subscribed: on });
+}
+
+/** GET /api/threads/:id/revisions — прежние версии темы: новее первыми. Видят все, тема не удалена */
+export const threadRevisions = {
+  async onRequestGet({ env, params }) {
+    const id = parseId(params.id);
+    const row = id ? await env.DB.prepare("SELECT deleted_at FROM threads WHERE id = ?").bind(id).first() : null;
+    if (!row || row.deleted_at) return error("Обсуждение не найдено.", 404);
+    const { results } = await env.DB.prepare(
+      `SELECT r.id, r.subject, r.body, r.created_at, u.name AS editor_name, p.username AS editor_username
+       FROM content_revisions r LEFT JOIN users u ON u.id = r.edited_by LEFT JOIN user_profiles p ON p.user_id = r.edited_by
+       WHERE r.target_type = 'thread' AND r.target_id = ? ORDER BY r.id DESC LIMIT 20`
+    ).bind(id).all();
+    return json({
+      revisions: results.map((revision) => ({
+        id: revision.id, subject: revision.subject, body: revision.body, createdAt: revision.created_at,
+        editor: revision.editor_name ? { name: revision.editor_name, username: revision.editor_username } : null
+      }))
+    });
   }
 };
 

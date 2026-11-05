@@ -101,6 +101,71 @@ test("заголовок темы экранируется на странице
   assert.match(missing.text, /Ничего не нашлось/);
 });
 
+test("поиск находит тему, ответ и игру, но не черновик", async () => {
+  const author = await app.user("Искатель");
+  const admin = await app.user("Админ поиска", "admin");
+  const created = await author.call("POST", "/api/threads", topic("Уникальноесловотема"));
+  const threadId = created.data.thread.id;
+  await author.call("POST", "/api/comments", { targetType: "thread", targetId: threadId, body: "Уникальноесловоответ внутри темы" });
+  await admin.call("POST", "/api/admin/studio-posts", {
+    slug: "poisk-test", kind: "news", status: "draft", title: "Уникальноесловочерновик", summary: "", body: ""
+  });
+
+  const guest = app.client();
+  const found = await guest.call("GET", "/api/search?q=Уникальноесловотема");
+  assert.equal(found.status, 200);
+  assert.equal(found.data.threads.length, 1);
+  assert.equal(found.data.threads[0].url, `/community/thread/${threadId}`);
+
+  const byReply = await guest.call("GET", "/api/search?q=Уникальноесловоответ");
+  assert.equal(byReply.data.comments.length, 1);
+  assert.equal(byReply.data.comments[0].url, `/community/thread/${threadId}#comment-${byReply.data.comments[0].id}`);
+
+  const game = await guest.call("GET", "/api/search?q=TETRUS");
+  assert.equal(game.data.games[0].url, "/games/tetrus");
+
+  const draft = await guest.call("GET", "/api/search?q=Уникальноесловочерновик");
+  assert.equal(draft.data.posts.length, 0);
+
+  assert.equal((await guest.call("GET", "/search?q=TETRUS")).status, 200);
+  assert.equal(found.data.threads[0].subject.includes("<"), false);
+});
+
+test("подписка на тему, упоминание @имени и история правки", async () => {
+  const author = await app.user("Автор подписки");
+  const reader = await app.user("Читатель подписки");
+  const mentioned = await app.user("Упомянутый");
+  const mentionedName = await usernameOf(mentioned);
+  const created = await author.call("POST", "/api/threads", topic("Тема с подпиской", "general"));
+  const threadId = created.data.thread.id;
+
+  // Автор подписан на свою тему сам
+  assert.equal((await author.call("GET", `/api/threads/${threadId}`)).data.thread.subscribed, true);
+  assert.equal((await reader.call("PUT", `/api/threads/${threadId}/subscription`)).data.subscribed, true);
+
+  const reply = await reader.call("POST", "/api/comments", {
+    targetType: "thread", targetId: threadId, body: `Ответ с упоминанием @${mentionedName}`
+  });
+  assert.equal(reply.status, 201);
+
+  const authorNotes = await author.call("GET", "/api/notifications");
+  assert.ok(authorNotes.data.notifications.some((note) => note.kind === "reply" && note.link.includes(`/community/thread/${threadId}`)));
+  const mentionNotes = await mentioned.call("GET", "/api/notifications");
+  assert.ok(mentionNotes.data.notifications.some((note) => note.kind === "mention"));
+  // Сам автор ответа уведомления не получает
+  assert.equal((await reader.call("GET", "/api/notifications")).data.notifications.length, 0);
+
+  const edited = await author.call("PATCH", `/api/threads/${threadId}`, { subject: "Новый заголовок темы", body: "Новый текст темы.", spoiler: false });
+  assert.equal(edited.status, 200);
+  const history = await app.client().call("GET", `/api/threads/${threadId}/revisions`);
+  assert.equal(history.status, 200);
+  assert.equal(history.data.revisions.length, 1);
+  assert.equal(history.data.revisions[0].subject, "Тема с подпиской");
+  assert.equal((await author.call("GET", `/api/threads/${threadId}`)).data.thread.revisions, 1);
+
+  assert.equal((await reader.call("DELETE", `/api/threads/${threadId}/subscription`)).data.subscribed, false);
+});
+
 test("запрос с чужого сайта отклоняется", async () => {
   const user = await app.user("Автор CSRF");
   const response = await user.call("POST", "/api/threads", topic("Тема с чужого сайта"), { origin: "https://evil.example" });
@@ -136,4 +201,9 @@ test("активность на форуме видна в профиле, но 
 
   await app.db.prepare("UPDATE user_profiles SET show_activity = 1, is_public = 0 WHERE user_id = ?").bind(user.id).run();
   assert.equal((await app.client().call("GET", `/api/users/${username}/forum`)).status, 403);
+  // Скрытый профиль: гостю API отвечает private, владелец видит свою активность
+  assert.equal((await app.client().call("GET", `/api/users/${username}`)).data.private, true);
+  assert.equal((await user.call("GET", `/api/users/${username}`)).data.own, true);
+  assert.equal((await user.call("GET", `/api/users/${username}/forum`)).status, 200);
+  assert.match((await user.call("GET", "/profile")).text, /id="myTopics"/);
 });

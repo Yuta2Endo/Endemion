@@ -560,5 +560,15 @@
 /* Форум: разделы и категории на /community, поиск в категории */
 .forum-index{display:grid;gap:28px;margin:8px 0 40px}
 .forum-section-title{margin:0 0 12px;font-size:.85rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.search-page-form{display:flex;gap:10px;margin:0 0 28px}
+.search-page-form .input{flex:1;min-width:0}
+.search-group{margin:0 0 28px}
+.search-group h2{margin:0 0 12px;font-size:18px}
+.search-item{padding:16px 18px}
+.search-item h3{margin:0 0 6px;font-size:16px}
+.search-item p{margin:0;color:var(--muted)}
+.now-card{padding:22px 24px}
+.now-card .card-title{margin:10px 0}
+.forum-pulse{margin:-8px auto 0;color:var(--muted);font-size:14px}
 .forum-search{display:flex;gap:10px;margin:0 0 18px}
 .forum-search .input{flex:1;min-width:0}

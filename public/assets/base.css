@@ -288,6 +288,51 @@ img {
   gap: 8px;
 }
 
+/* Поиск в шапке: поле с иконкой, ведёт на /search */
+.nav-search {
+  display: flex;
+  align-items: center;
+  height: 42px;
+  padding-right: 4px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--panel-light);
+}
+
+.nav-search:focus-within {
+  border-color: var(--border-strong);
+}
+
+.nav-search input {
+  width: 150px;
+  height: 100%;
+  padding: 0 12px;
+  border: 0;
+  color: var(--text);
+  background: transparent;
+  font: inherit;
+  font-size: 14px;
+}
+
+.nav-search button {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border-radius: 8px;
+  color: var(--muted);
+}
+
+.nav-search button:hover {
+  color: var(--text);
+  background: rgba(var(--accent-rgb), 0.12);
+}
+
+.nav-search svg {
+  width: 18px;
+  height: 18px;
+}
+
 .profile-btn,
 .ghost-btn {
   display: inline-flex;
@@ -356,6 +401,22 @@ img {
   width: 26px;
   height: 26px;
   font-size: 12px;
+}
+
+.lang-btn {
+  min-height: 42px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--muted);
+  background: var(--panel-light);
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.lang-btn:hover {
+  color: var(--text);
+  border-color: var(--border-strong);
 }
 
 .menu-toggle {

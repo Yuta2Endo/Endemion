@@ -24,6 +24,7 @@ import * as sitemap from "../functions/sitemap.xml.js";
 import * as profile from "../functions/api/profile.js";
 import * as pulse from "../functions/api/pulse.js";
 import * as community from "../functions/api/community.js";
+import * as searchApi from "../functions/api/search.js";
 import * as moderation from "../functions/api/moderation.js";
 import * as adminPlatform from "../functions/api/adminPlatform.js";
 import * as site from "../functions/site.js";
@@ -73,9 +74,12 @@ const ROUTE_LIST = [
   ["/api/comments", community.comments],
   ["/api/comments/:id", community.comment],
   ["/api/comments/:id/reactions", community.commentReactions],
+  ["/api/search", searchApi.search],
   ["/api/threads", community.threads],
   ["/api/threads/:id", community.thread],
   ["/api/threads/:id/moderation", community.threadModeration],
+  ["/api/threads/:id/subscription", community.threadSubscription],
+  ["/api/threads/:id/revisions", community.threadRevisions],
   ["/api/reports", community.reports],
   // Модерация (модератор и администратор)
   ["/api/moderation/reports", moderation.moderationReports],
@@ -116,6 +120,7 @@ const ROUTE_LIST = [
   ["/media/posts/:id", media.postImage],
   ["/profile", site.profile],
   ["/notifications", site.notificationsPage],
+  ["/search", site.searchPage],
   ["/community", site.community],
   ["/community/c/:slug", studioPages.categoryPage],
   ["/community/thread/:id", site.threadPage],
@@ -128,7 +133,7 @@ const ROUTE_LIST = [
 // Разделы, удалённые при переходе на портал студии (2026-11-04): энциклопедия, читалка манги, Nexus, Oracle, Pulse, Арена, подборки.
 // Старые адреса и закладки ведут на главную. Данные этих разделов остались в базе
 const RETIRED = new Set([
-  "encyclopedia", "anime", "manga", "characters", "people", "studios", "seasons", "rankings", "mylist", "search",
+  "encyclopedia", "anime", "manga", "characters", "people", "studios", "seasons", "rankings", "mylist",
   "reading", "catalog", "title", "read", "pages", "covers", "nexus", "oracle", "pulse", "arena", "collection"
 ]);
 
