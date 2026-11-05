@@ -4,26 +4,26 @@
 
 export const P = {
   ru: {
-    owner: "[[юридическое имя или название разработчика]]",
-    email: "[[адрес электронной почты для обращений]]",
+    owner: "Endemion",
+    email: "endemion@internet.ru",
     address: "[[почтовый адрес для обращений, если он публикуется]]",
     law: "[[страна, право которой применяется]]",
     courts: "[[суд или порядок рассмотрения споров]]",
-    age: "[[минимальный возраст]]",
-    audience: "[[целевая возрастная группа, указанная в Google Play Console]]",
+    age: "18",
+    audience: "взрослые от 18 лет (18+)",
     mailRetention: "[[срок хранения переписки]]",
-    mailProvider: "[[почтовый сервис и страна]]"
+    mailProvider: "Почта Mail.ru (Россия)"
   },
   en: {
-    owner: "[[developer's legal name]]",
-    email: "[[contact email]]",
+    owner: "Endemion",
+    email: "endemion@internet.ru",
     address: "[[postal address for requests, if published]]",
     law: "[[governing law]]",
     courts: "[[courts or dispute resolution procedure]]",
-    age: "[[minimum age]]",
-    audience: "[[target age group set in Google Play Console]]",
+    age: "18",
+    audience: "adults aged 18 and over (18+)",
     mailRetention: "[[email retention period]]",
-    mailProvider: "[[email provider and country]]"
+    mailProvider: "Mail.ru Mail (Russia)"
   }
 };
 
@@ -34,11 +34,11 @@ export function contactSection(lang, title) {
   const p = P[lang];
   return lang === "ru"
     ? { id: "contact", title: "Контакты", body: [
-      `Разработчик и издатель ${title}: ${p.owner}, бренд Endemion.`,
+      `Разработчик и издатель ${title}: ${p.owner}.`,
       [`Электронная почта: ${p.email}`, `Почтовый адрес: ${p.address}`, "Сайт: {{https://endemion.online|endemion.online}}"]
     ] }
     : { id: "contact", title: "Contact", body: [
-      `${title} is developed and published by ${p.owner} under the Endemion brand.`,
+      `${title} is developed and published by ${p.owner}.`,
       [`Email: ${p.email}`, `Postal address: ${p.address}`, "Website: {{https://endemion.online|endemion.online}}"]
     ] };
 }
@@ -105,7 +105,7 @@ export function offlinePrivacy(lang, g) {
   if (lang === "ru") {
     return { description: g.description, sections: [
       { id: "about", title: "Об этой политике", body: [
-        `Эта политика описывает, как обращается с информацией игра ${g.title} для Android (пакет ${g.packageId}). Игру разрабатывает и издаёт ${p.owner} под брендом Endemion («мы»).`,
+        `Эта политика описывает, как обращается с информацией игра ${g.title} для Android (пакет ${g.packageId}). Игру разрабатывает и издаёт ${p.owner} («мы»).`,
         "Политика относится только к этой игре. Для сайта endemion.online и аккаунта Endemion ID действует {{/privacy|отдельная политика конфиденциальности}}."
       ] },
       { id: "summary", title: "Коротко", body: [[
@@ -152,6 +152,7 @@ export function offlinePrivacy(lang, g) {
         "У игры нет подключения к сети, поэтому данные по интернету не передаются."
       ] },
       { id: "children", title: "Конфиденциальность детей", body: [
+        `Игра предназначена для лиц от ${p.age} лет и не ориентирована на детей.`,
         "Игра не собирает персональные данные ни у кого, в том числе у детей. В ней нет аккаунтов, чата, рекламы и покупок.",
         ...(g.children || []),
         `Целевая аудитория: ${p.audience}.`
@@ -182,7 +183,7 @@ export function offlinePrivacy(lang, g) {
   }
   return { description: g.description, sections: [
     { id: "about", title: "About this policy", body: [
-      `This Privacy Policy explains how ${g.title}, a game for Android (package ${g.packageId}), handles information. The game is developed and published by ${p.owner} under the Endemion brand ("we", "us").`,
+      `This Privacy Policy explains how ${g.title}, a game for Android (package ${g.packageId}), handles information. The game is developed and published by ${p.owner} ("we", "us").`,
       "This policy covers only this game. The endemion.online website and the Endemion ID account have {{/privacy|their own privacy policy}}."
     ] },
     { id: "summary", title: "Summary", body: [[
@@ -229,6 +230,7 @@ export function offlinePrivacy(lang, g) {
       "The game has no network connection, so no data is transferred over the internet."
     ] },
     { id: "children", title: "Children's privacy", body: [
+      `The game is intended for people aged ${p.age} and over and is not directed at children.`,
       "The game does not collect personal information from anyone, including children. It has no accounts, chat, advertising or purchases.",
       ...(g.children || []),
       `Intended audience: ${p.audience}.`
@@ -265,11 +267,11 @@ export function offlineTerms(lang, g) {
   if (lang === "ru") {
     return { description: g.termsDescription, sections: [
       { id: "acceptance", title: "Принятие условий", body: [
-        `Эти условия использования — соглашение между вами и ${p.owner}, разработчиком ${g.title} под брендом Endemion («мы»). Устанавливая игру или играя в неё, вы принимаете эти условия. Если вы не согласны, не устанавливайте игру и не пользуйтесь ею.`,
+        `Эти условия использования — соглашение между вами и ${p.owner}, разработчиком ${g.title} («мы»). Устанавливая игру или играя в неё, вы принимаете эти условия. Если вы не согласны, не устанавливайте игру и не пользуйтесь ею.`,
         "При загрузке игры из Google Play также действуют условия Google Play."
       ] },
       { id: "eligibility", title: "Возраст и право пользоваться игрой", body: [
-        `Игра предназначена для игроков от ${p.age} лет. Если вы не достигли совершеннолетия в своей стране, эти условия за вас должен принять родитель или законный представитель.`,
+        `Игра предназначена только для игроков от ${p.age} лет. Если вам меньше ${p.age} лет, не устанавливайте игру и не пользуйтесь ею.`,
         ...(g.eligibility || [])
       ] },
       { id: "license", title: "Лицензия на игру", body: [
@@ -317,11 +319,11 @@ export function offlineTerms(lang, g) {
   }
   return { description: g.termsDescription, sections: [
     { id: "acceptance", title: "Acceptance of Terms", body: [
-      `These Terms of Service ("Terms") are an agreement between you and ${p.owner}, the developer of ${g.title} under the Endemion brand ("we", "us"). By installing or playing the game, you accept these Terms. If you do not agree, do not install or use the game.`,
+      `These Terms of Service ("Terms") are an agreement between you and ${p.owner}, the developer of ${g.title} ("we", "us"). By installing or playing the game, you accept these Terms. If you do not agree, do not install or use the game.`,
       "The Google Play Terms of Service also apply when you download the game from Google Play."
     ] },
     { id: "eligibility", title: "Eligibility and age", body: [
-      `The game is intended for players aged ${p.age} and older. If you are under the age of majority where you live, a parent or guardian must accept these Terms on your behalf.`,
+      `The game is intended only for players aged ${p.age} and older. If you are under ${p.age}, do not install or use the game.`,
       ...(g.eligibility || [])
     ] },
     { id: "license", title: "License to use the game", body: [

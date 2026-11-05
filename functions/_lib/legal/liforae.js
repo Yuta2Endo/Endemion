@@ -33,7 +33,7 @@ const FACTS = {
     virtual: [
       "Деньги в игре (евро) и предметы, которые на них покупаются, вымышлены. Их нельзя купить за настоящие деньги, вывести или обменять. Они не имеют денежной стоимости и не являются вашей собственностью."
     ],
-    eligibility: ["В игре есть темы, которые могут не подходить детям (см. «Отказ от гарантий»). Решение о том, подходит ли игра ребёнку, принимают родители."],
+    eligibility: ["В игре есть темы для взрослой аудитории (см. «Отказ от гарантий»)."],
     disclaimer: [
       "Liforae — вымышленная симуляция жизни. События, карьеры, болезни, финансы, законы и отношения в игре упрощены и не являются медицинскими, финансовыми, юридическими или иными советами.",
       "Игра изображает курение, лотерею, долги и другие рискованные решения как часть вымышленной жизни и не призывает к ним."
@@ -68,7 +68,7 @@ const FACTS = {
     virtual: [
       "In-game money (euros) and the items bought with it are fictional. They cannot be bought with real money, cashed out or exchanged. They have no monetary value and are not your property."
     ],
-    eligibility: ["The game includes themes that may not suit children (see Disclaimers). Parents decide whether the game is suitable for their child."],
+    eligibility: ["The game includes themes intended for an adult audience (see Disclaimers)."],
     disclaimer: [
       "Liforae is a fictional life simulation. Events, careers, illnesses, finances, laws and relationships in the game are simplified and are not medical, financial, legal or other advice.",
       "The game depicts smoking, lotteries, debt and other risky choices as part of a fictional life and does not encourage them."

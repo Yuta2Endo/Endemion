@@ -106,16 +106,15 @@ Still based on the repo only: the claim that error reporting (Sentry) is off in 
 
 ## 6. Missing legal information
 
-These are shown as placeholders on the pages:
+Filled in on 2026-11-05 from the owner: developer **Endemion**, contact email **endemion@internet.ru**, minimum age **18+** for all games. With 18+ the Terms now say the games are only for players aged 18 and over (the earlier "a parent may accept on your behalf" wording was removed), and the privacy policies say the games are not directed at children. The email provider (Mail.ru, Russia) was inferred from the address domain.
 
-1. Developer or operator legal name (all documents).
-2. Contact email for privacy requests (all documents).
-3. Postal address, if published.
-4. Minimum age and Google Play target age group.
-5. Governing law and courts or dispute procedure.
-6. Developer refund terms (all games currently have no purchases).
-7. Email retention period and email provider (offline games).
-8. ENDEMION LIFE: server log retention, VK Cloud backup retention, inactive guest retention, breach-notification procedure, international transfer mechanism.
+Still shown as placeholders:
+
+1. Postal address, if published.
+2. Governing law and courts or dispute procedure.
+3. Developer refund terms (all games currently have no purchases).
+4. Email retention period (offline games).
+5. ENDEMION LIFE: server log retention, VK Cloud backup retention, inactive guest retention, breach-notification procedure, international transfer mechanism.
 
 ## 7. Privacy risks (from the audit)
 

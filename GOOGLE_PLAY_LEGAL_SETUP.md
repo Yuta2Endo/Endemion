@@ -5,7 +5,7 @@ Prepared 2026-11-05 on branch `feature/legal-center`.
 
 > **Status of the URLs.** The routes below are implemented and tested locally, but they are **not deployed yet**: in production `https://endemion.online/legal` currently returns 404. Enter them in Play Console only after the branch is merged and deployed, and after the checks in section 3 pass.
 
-> The documents contain highlighted placeholders (developer name, contact email, minimum age, governing law and others). Google Play requires a privacy policy that names the developer and gives a way to contact them, so **fill in at least the developer name and contact email before submitting**. These documents are templates based on the code, not legal advice.
+> Developer name (**Endemion**), contact email (**endemion@internet.ru**) and minimum age (**18+**) are filled in, which covers what Google Play requires. Other highlighted placeholders remain (postal address, governing law, retention periods), so pages still show the Draft banner. These documents are templates based on the code, not legal advice.
 
 ## 1. URLs per game
 
@@ -73,7 +73,7 @@ Notes:
 - Liforae stores the character name the player types. It stays on the device, so it is still not collected.
 - **Permissions to declare.** TETRUS and Little Weather request only `VIBRATE`. Liforae requests none. If the release manifest shows anything else (especially `INTERNET`), update the policy before publishing.
 - **Ads.** All three games answer "No, my app does not contain ads".
-- **Target audience and content.** Set the target age groups to match the "minimum age" you choose in the documents. Liforae includes tobacco (including a teen choice) and a simulated lottery, so complete the IARC questionnaire carefully. Do not select ages under 13 for Liforae without a separate review against the Families policy.
+- **Target audience and content.** The documents say 18+ for every game, so in Play Console → App content → Target audience select **only 18 and over** for each game. Then the Families policy does not apply. Complete the IARC questionnaire honestly (Liforae: tobacco, simulated lottery); the IARC rating is separate from the target audience and may come out lower than 18.
 
 ### ENDEMION LIFE (if it is ever wrapped as an app)
 
@@ -85,25 +85,26 @@ Fill these in before publishing (they appear as highlighted placeholders):
 
 | Field | Used in | Required for Google Play |
 |---|---|---|
-| Developer's legal name | all documents | **Yes** |
-| Contact email for privacy requests | all documents | **Yes** |
+| ~~Developer's legal name~~ — filled: Endemion | all documents | **Yes** |
+| ~~Contact email~~ — filled: endemion@internet.ru | all documents | **Yes** |
 | Postal address (if published) | all documents | Recommended (Google may require an address for paid apps) |
-| Minimum age / target age group | Terms, Children's privacy | **Yes**, must match the Target audience setting |
+| ~~Minimum age~~ — filled: 18+ for all games | Terms, Children's privacy | **Yes**, must match the Target audience setting |
 | Governing law, courts | Terms | No |
 | Developer refund terms | Terms | No (no purchases) |
-| Email retention period, email provider | offline-game policies | No |
+| Email retention period (email provider filled: Mail.ru, from the address domain) | offline-game policies | No |
 | Data-breach notification procedure, log/backup/guest retention periods, transfer mechanism | ENDEMION LIFE policy | Not for Play |
 
 Placeholders live in `functions/_lib/legal/common.js` (shared) and in each game's file in `functions/_lib/legal/`. When they are all filled in, the "Draft" banner disappears from the page by itself. Change `LEGAL_UPDATED` in `functions/_lib/legal/index.js` whenever the texts change.
 
 ## 6. Checklist per Android game
 
-- [ ] Placeholders filled in (at least name and email); branch deployed.
+- [x] Developer name, email and minimum age filled in.
+- [ ] Branch deployed.
 - [ ] All 4 URLs of the game return `200` (section 3).
 - [ ] Release build manifest re-checked: permissions unchanged, no new SDKs.
 - [ ] Play Console → App content → Privacy policy URL saved.
 - [ ] Data Safety form filled in as in section 4.
 - [ ] Ads declaration: "No ads".
-- [ ] Target audience matches the minimum age in the Terms.
+- [ ] Target audience set to 18+ only, matching the Terms.
 - [ ] IARC content rating questionnaire completed (Liforae: tobacco, lottery, death, romance).
 - [ ] Store listing contact email matches the policy.

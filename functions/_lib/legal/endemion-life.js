@@ -12,7 +12,7 @@ function privacy(lang) {
     const retention = { logs: "[[срок хранения журналов сервера]]", offsite: "[[срок хранения резервных копий в VK Cloud]]", guests: "[[срок хранения неактивных гостевых игроков]]" };
     return { description: "Политика конфиденциальности ENDEMION LIFE: какие данные собирает браузерная игра, cookie, журналы, хранение и удаление аккаунта.", sections: [
       { id: "about", title: "Об этой политике", body: [
-        `Эта политика описывает, как обрабатывает данные браузерная игра ${GAME} на {{https://life.endemion.online|life.endemion.online}}. Оператор — ${p.owner}, бренд Endemion («мы»).`,
+        `Эта политика описывает, как обрабатывает данные браузерная игра ${GAME} на {{https://life.endemion.online|life.endemion.online}}. Оператор — ${p.owner} («мы»).`,
         "Вход в игру выполняется через Endemion ID — общий аккаунт сайта endemion.online и игр Endemion. Сам аккаунт Endemion ID, вход через сторонние сервисы и письма Endemion ID описаны в {{/privacy|политике конфиденциальности сайта}}."
       ] },
       { id: "summary", title: "Коротко", body: [[
@@ -69,7 +69,7 @@ function privacy(lang) {
       ]] },
       { id: "security", title: "Безопасность данных", body: ["Соединение защищено HTTPS. Cookie сеанса недоступна скриптам страницы (HttpOnly); в базе хранится только хеш токена сеанса. Ключ обновления сеанса Endemion ID хранится в зашифрованном виде. Токен сеанса удаляется из журналов. Никакая защита не абсолютна. [[порядок уведомления об утечке данных]]"] },
       { id: "children", title: "Конфиденциальность детей", body: [
-        `Игра не предназначена для детей младше ${p.age} лет. Проверки возраста в игре нет. Если вы считаете, что ребёнок передал нам данные, напишите на ${p.email}, и мы их удалим.`
+        `Игра не предназначена для лиц младше ${p.age} лет. Проверки возраста в игре нет. Если вы считаете, что ребёнок передал нам данные, напишите на ${p.email}, и мы их удалим.`
       ] },
       { id: "rights", title: "Ваши права", body: [
         "Вы можете узнать, какие данные о вас хранятся, получить копию, исправить, удалить их, ограничить обработку или возразить против неё, а также отозвать согласие.",
@@ -98,7 +98,7 @@ function privacy(lang) {
   const retention = { logs: "[[server log retention period]]", offsite: "[[VK Cloud backup retention period]]", guests: "[[retention period for inactive guest players]]" };
   return { description: "ENDEMION LIFE Privacy Policy: what data the browser game collects, cookies, logs, retention and account deletion.", sections: [
     { id: "about", title: "About this policy", body: [
-      `This Privacy Policy explains how ${GAME}, a browser game at {{https://life.endemion.online|life.endemion.online}}, processes data. The operator is ${p.owner}, under the Endemion brand ("we", "us").`,
+      `This Privacy Policy explains how ${GAME}, a browser game at {{https://life.endemion.online|life.endemion.online}}, processes data. The operator is ${p.owner} ("we", "us").`,
       "You sign in to the game with Endemion ID, the shared account for the endemion.online website and Endemion games. The Endemion ID account itself, sign-in through other services and Endemion ID emails are covered by the {{/privacy|website privacy policy}}."
     ] },
     { id: "summary", title: "Summary", body: [[
@@ -155,7 +155,7 @@ function privacy(lang) {
     ]] },
     { id: "security", title: "Data security", body: ["Connections are protected with HTTPS. The session cookie is not available to page scripts (HttpOnly), and only a hash of the session token is stored. The Endemion ID refresh key is stored encrypted. The session token is removed from logs. No protection is absolute. [[data breach notification procedure]]"] },
     { id: "children", title: "Children's privacy", body: [
-      `The game is not intended for children under ${p.age}. The game does not check age. If you believe a child has given us data, write to ${p.email} and we will delete it.`
+      `The game is not intended for anyone under ${p.age}. The game does not check age. If you believe a child has given us data, write to ${p.email} and we will delete it.`
     ] },
     { id: "rights", title: "Your rights", body: [
       "You can ask what data we hold about you, get a copy, correct or delete it, restrict or object to processing, and withdraw consent.",
@@ -187,8 +187,8 @@ function terms(lang) {
   const c = termsCommon(lang);
   if (lang === "ru") {
     return { description: "Условия использования браузерной игры ENDEMION LIFE: аккаунт, правила, игровое золото, доступность и контакты.", sections: [
-      { id: "acceptance", title: "Принятие условий", body: [`Эти условия — соглашение между вами и ${p.owner}, оператором ${GAME} под брендом Endemion («мы»). Играя в ${GAME} на life.endemion.online, вы принимаете эти условия. Для аккаунта Endemion ID также действуют {{/terms|условия сайта}}.`] },
-      { id: "eligibility", title: "Возраст и право пользоваться игрой", body: [`Игра предназначена для игроков от ${p.age} лет. Если вы не достигли совершеннолетия в своей стране, условия за вас должен принять родитель или законный представитель.`] },
+      { id: "acceptance", title: "Принятие условий", body: [`Эти условия — соглашение между вами и ${p.owner}, оператором ${GAME} («мы»). Играя в ${GAME} на life.endemion.online, вы принимаете эти условия. Для аккаунта Endemion ID также действуют {{/terms|условия сайта}}.`] },
+      { id: "eligibility", title: "Возраст и право пользоваться игрой", body: [`Игра предназначена только для игроков от ${p.age} лет. Если вам меньше ${p.age} лет, не пользуйтесь игрой.`] },
       { id: "license", title: "Лицензия на игру", body: ["Мы предоставляем вам личную, ограниченную, неисключительную, непередаваемую и отзывную лицензию играть в игру в браузере в некоммерческих целях."] },
       { id: "accounts", title: "Аккаунты", body: [
         "Играть можно гостем; прогресс гостя привязан к браузеру и может быть потерян при очистке cookie. Чтобы сохранить прогресс, войдите через Endemion ID — прогресс гостя перейдёт в аккаунт.",
@@ -221,8 +221,8 @@ function terms(lang) {
     ] };
   }
   return { description: "Terms of Service for the ENDEMION LIFE browser game: account, rules, in-game gold, availability and contact.", sections: [
-    { id: "acceptance", title: "Acceptance of Terms", body: [`These Terms are an agreement between you and ${p.owner}, the operator of ${GAME} under the Endemion brand ("we", "us"). By playing ${GAME} at life.endemion.online, you accept these Terms. The {{/terms|website terms}} also apply to your Endemion ID account.`] },
-    { id: "eligibility", title: "Eligibility and age", body: [`The game is intended for players aged ${p.age} and older. If you are under the age of majority where you live, a parent or guardian must accept these Terms on your behalf.`] },
+    { id: "acceptance", title: "Acceptance of Terms", body: [`These Terms are an agreement between you and ${p.owner}, the operator of ${GAME} ("we", "us"). By playing ${GAME} at life.endemion.online, you accept these Terms. The {{/terms|website terms}} also apply to your Endemion ID account.`] },
+    { id: "eligibility", title: "Eligibility and age", body: [`The game is intended only for players aged ${p.age} and older. If you are under ${p.age}, do not use the game.`] },
     { id: "license", title: "License to use the game", body: ["We grant you a personal, limited, non-exclusive, non-transferable and revocable license to play the game in your browser for non-commercial purposes."] },
     { id: "accounts", title: "User accounts", body: [
       "You can play as a guest; guest progress is tied to your browser and may be lost if you clear cookies. To keep your progress, sign in with Endemion ID and your guest progress moves to your account.",

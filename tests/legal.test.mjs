@@ -113,7 +113,10 @@ test("неизвестные игра и документ — 404 с noindex, а
 test("заполнители видны и помечены, документы с ними отмечены как черновик", async () => {
   const guest = app.client();
   const { text } = await guest.call("GET", "/legal/endemion-life/privacy-policy?lang=en");
-  assert.match(text, /<mark class="legal-placeholder">\[contact email\]<\/mark>/);
+  assert.match(text, /<mark class="legal-placeholder">\[server log retention period\]<\/mark>/);
+  // Данные разработчика вписаны: имя, почта и возраст больше не заполнители
+  assert.match(text, /endemion@internet\.ru/);
+  assert.doesNotMatch(text, /\[contact email\]|\[developer's legal name\]|\[minimum age\]/);
   assert.match(text, /<p class="legal-draft" role="note">Draft\./);
   assert.doesNotMatch(text, /\[\[|\{\{/, "необработанная разметка не попадает на страницу");
 });
