@@ -88,6 +88,7 @@ test("кнопки входа: Google, ВКонтакте, GitHub и Discord, б
   assert.match(page.text, /Войти через ВКонтакте/);
   assert.match(page.text, /Войти через GitHub/);
   assert.match(page.text, /Войти через Discord/);
+  assert.match(page.text, /Войти через Яндекс/);
   assert.doesNotMatch(page.text, /apple|twitter|Войти через X/i);
   // Кнопки — формы POST, ссылок на начало входа нет
   assert.match(page.text, /<form method="post" action="\/interaction\/[^/"]+\/social\/google">/);
@@ -223,9 +224,26 @@ test("VK ID: PKCE, device_id и state при обмене кода, вход п�
   assert.equal((await finishLogin(site, second.start, second.result.final)).claims().sub, sub);
 });
 
+test("Яндекс ID: вход по постоянному id, почта только подсказка", async () => {
+  const user = browser(auth.issuer);
+  const first = await socialLogin(user, "yandex", { user: { id: "1130000058459491", login: "reader", display_name: "Читатель", real_name: "Анна Смирнова", email: "anna@yandex.ru" } });
+  assert.equal(lastAuthorize("yandex").scope, "login:info login:email");
+  assert.match(first.result.text, /value="Анна Смирнова"/);
+  assert.match(first.result.text, /value="anna@yandex.ru"/);
+
+  const done = await completeSignup(user, first.uid, first.result, { email: "anna@yandex.ru", username: "anna_ya" });
+  assert.ok(done.final, done.text.slice(0, 300));
+  const sub = (await finishLogin(site, first.start, done.final)).claims().sub;
+  assert.equal(count("SELECT COUNT(*) AS n FROM external_identities WHERE provider = 'yandex' AND provider_user_id = '1130000058459491'"), 1);
+
+  const renamed = await socialLogin(browser(auth.issuer), "yandex", { user: { id: "1130000058459491", login: "reader2", email: "other@yandex.ru" } });
+  assert.ok(renamed.result.final, "тот же id входит в тот же аккаунт, даже с другой почтой");
+  assert.equal((await finishLogin(site, renamed.start, renamed.result.final)).claims().sub, sub);
+});
+
 test("отмена у провайдера: снова форма входа с сообщением, аккаунт не создан", async () => {
   const before = accountsCount();
-  for (const [provider, name] of [["google", "Google"], ["vk", "ВКонтакте"], ["github", "GitHub"], ["discord", "Discord"]]) {
+  for (const [provider, name] of [["google", "Google"], ["vk", "ВКонтакте"], ["yandex", "Яндекс"], ["github", "GitHub"], ["discord", "Discord"]]) {
     const { result } = await socialLogin(browser(auth.issuer), provider, { deny: true });
     assert.equal(result.status, 200);
     assert.match(result.text, new RegExp(`Вход через ${name} отменён`));
@@ -252,7 +270,9 @@ test("ошибки провайдеров: входа нет, сообщение
     ["vk", { user: { user_id: 5 }, wrongState: true }],
     ["discord", { user: { id: "1300000000000000099" }, tokenError: true }],
     ["discord", { user: { id: "1300000000000000098" }, userinfoFail: true }],
-    ["discord", { user: { id: "not-a-snowflake" } }]
+    ["discord", { user: { id: "not-a-snowflake" } }],
+    ["yandex", { user: { id: "1130000058459492" }, tokenError: true }],
+    ["yandex", { user: { id: "not-a-number" } }]
   ];
   for (const [provider, behaviour] of cases) {
     const { result } = await socialLogin(browser(auth.issuer), provider, behaviour);
@@ -321,7 +341,7 @@ test("совпадение почты не объединяет аккаунты
   const start = await startLogin(site, SITE.redirect, { screen: "register" });
   const page = await user.follow(start.url.href);
   const registered = await user.follow(`/interaction/${interactionUid(page.text)}/register`, {
-    method: "POST", form: { consent: "1", email: "same@example.com", username: "same_owner", password: "owner-password-1" }
+    method: "POST", form: { consent: "1", email: "same@example.com", username: "same_owner", password: "owner-password-1", confirmPassword: "owner-password-1" }
   });
   assert.ok(registered.final);
   const owner = auth.accounts.findByEmail("same@example.com");
@@ -358,13 +378,13 @@ test("привязка и отвязка провайдера в настрой�
   const start = await startLogin(site, SITE.redirect, { screen: "register" });
   const page = await user.follow(start.url.href);
   await user.follow(`/interaction/${interactionUid(page.text)}/register`, {
-    method: "POST", form: { consent: "1", email: "linker@example.com", username: "linker", password: "linker-password-1" }
+    method: "POST", form: { consent: "1", email: "linker@example.com", username: "linker", password: "linker-password-1", confirmPassword: "linker-password-1" }
   });
   const sub = auth.accounts.findByEmail("linker@example.com").sub;
 
-  const account = await user.request("/account");
+  const account = await user.request("/account/security");
   assert.match(account.text, /Способы входа/);
-  assert.equal((account.text.match(/>Привязать</g) || []).length, 4);
+  assert.equal((account.text.match(/>Привязать</g) || []).length, 5);
   assert.doesNotMatch(account.text, /apple|twitter/i);
   const csrf = csrfFrom(account.text);
 
@@ -400,7 +420,7 @@ test("привязка и отвязка провайдера в настрой�
   const otherStart = await startLogin(site, SITE.redirect, { screen: "register" });
   const otherPage = await other.follow(otherStart.url.href);
   await other.follow(`/interaction/${interactionUid(otherPage.text)}/register`, {
-    method: "POST", form: { consent: "1", email: "other-linker@example.com", username: "other_linker", password: "other-password-1" }
+    method: "POST", form: { consent: "1", email: "other-linker@example.com", username: "other_linker", password: "other-password-1", confirmPassword: "other-password-1" }
   });
   fake.next("github", { user: { id: 31337, login: "linker-gh" } });
   const otherLink = await other.request("/account/social/github/link", { method: "POST", form: { csrf: csrfFrom((await other.request("/account")).text) } });
@@ -430,7 +450,7 @@ test("аккаунт без пароля: последний способ вхо
   assert.ok(signed.result.final);
   const sub = (await finishLogin(site, signed.start, signed.result.final)).claims().sub;
 
-  const account = await user.request("/account");
+  const account = await user.request("/account/security");
   assert.match(account.text, /Задать пароль/);
   assert.doesNotMatch(account.text, /name="currentPassword"/);
   const csrf = csrfFrom(account.text);
@@ -446,8 +466,8 @@ test("аккаунт без пароля: последний способ вхо
   const fresh = await socialLogin(user, "google", { user: { sub: "google-sub-1" } }, { extra: { prompt: "login" } });
   assert.ok(fresh.result.final);
 
-  const csrfNow = csrfFrom((await user.request("/account")).text);
-  const saved = await user.request("/account/password", { method: "POST", form: { csrf: csrfNow, newPassword: "google-user-pass-1" } });
+  const csrfNow = csrfFrom((await user.request("/account/security")).text);
+  const saved = await user.request("/account/password", { method: "POST", form: { csrf: csrfNow, newPassword: "google-user-pass-1", confirmPassword: "google-user-pass-1" } });
   assert.match(saved.location, /done=password/);
   assert.match((await user.request("/account/social/google/unlink", { method: "POST", form: { csrf: csrfNow } })).location, /done=unlinked/);
 

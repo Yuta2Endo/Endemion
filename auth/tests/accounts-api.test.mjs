@@ -43,7 +43,7 @@ async function signIn(user, config, redirect, register) {
   let done = await user.follow(url.href);
   if (register) {
     const uid = interactionUid(done.text);
-    done = await user.follow(`/interaction/${uid}/register`, { method: "POST", form: { consent: "1", password: "correct-horse-1", ...register } });
+    done = await user.follow(`/interaction/${uid}/register`, { method: "POST", form: { consent: "1", password: "correct-horse-1", confirmPassword: "correct-horse-1", ...register } });
   }
   assert.ok(done.final, `вход не вернул на сайт: ${done.status}`);
   return oidc.authorizationCodeGrant(config, done.final, { pkceCodeVerifier: verifier, expectedState: state, expectedNonce: nonce });

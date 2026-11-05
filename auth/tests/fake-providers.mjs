@@ -10,6 +10,7 @@ export const GOOGLE = { id: "google-client.apps.test", secret: "google-secret-te
 export const GITHUB = { id: "github-client-test", secret: "github-secret-test" };
 export const VK = { id: "51234567" };
 export const DISCORD = { id: "1300000000000000001", secret: "discord-secret-test" };
+export const YANDEX = { id: "yandex-client-test", secret: "yandex-secret-test" };
 
 const b64u = (value) => Buffer.from(value).toString("base64url");
 
@@ -48,7 +49,7 @@ export async function startFakeProviders() {
   function authorize(provider, url, res) {
     const q = url.searchParams;
     authorizeRequests.push({ provider, params: Object.fromEntries(q) });
-    const clientId = { google: GOOGLE.id, github: GITHUB.id, vk: VK.id, discord: DISCORD.id }[provider];
+    const clientId = { google: GOOGLE.id, github: GITHUB.id, vk: VK.id, discord: DISCORD.id, yandex: YANDEX.id }[provider];
     const problems = [];
     if (q.get("client_id") !== clientId) problems.push("client_id");
     if (q.get("redirect_uri") !== redirectUri(provider)) problems.push("redirect_uri");
@@ -111,6 +112,23 @@ export async function startFakeProviders() {
     if (path === "/github/login/oauth/authorize") return authorize("github", url, res);
     if (path === "/vk/authorize") return authorize("vk", url, res);
     if (path === "/discord/oauth2/authorize") return authorize("discord", url, res);
+    if (path === "/yandex/authorize") return authorize("yandex", url, res);
+
+    if (path === "/yandex/token" && req.method === "POST") {
+      const form = await readBody(req);
+      if (form.get("client_id") !== YANDEX.id || form.get("client_secret") !== YANDEX.secret) return json(res, 401, { error: "invalid_client" });
+      const entry = takeCode("yandex", form);
+      if (!entry || entry.next.tokenError) return json(res, 400, { error: "invalid_grant" });
+      return json(res, 200, { access_token: issueAccess(entry), token_type: "bearer", expires_in: 31536000 });
+    }
+
+    if (path === "/yandex/info") {
+      const entry = tokens.get(String(req.headers.authorization || "").replace(/^OAuth /, ""));
+      if (!entry) return json(res, 401, { error: "unauthorized" });
+      if (entry.next.userinfoFail) return json(res, 500, { error: "fail" });
+      const user = entry.next.user;
+      return json(res, 200, { id: user.id, login: user.login, display_name: user.display_name ?? null, real_name: user.real_name ?? null, default_email: user.email ?? null });
+    }
 
     if (path === "/discord/api/oauth2/token" && req.method === "POST") {
       const form = await readBody(req);
@@ -226,7 +244,12 @@ export async function startFakeProviders() {
         AUTH_DISCORD_CLIENT_SECRET: DISCORD.secret,
         AUTH_DISCORD_AUTHORIZE_URL: `${base}/discord/oauth2/authorize`,
         AUTH_DISCORD_TOKEN_URL: `${base}/discord/api/oauth2/token`,
-        AUTH_DISCORD_API_URL: `${base}/discord/api`
+        AUTH_DISCORD_API_URL: `${base}/discord/api`,
+        AUTH_YANDEX_CLIENT_ID: YANDEX.id,
+        AUTH_YANDEX_CLIENT_SECRET: YANDEX.secret,
+        AUTH_YANDEX_AUTHORIZE_URL: `${base}/yandex/authorize`,
+        AUTH_YANDEX_TOKEN_URL: `${base}/yandex/token`,
+        AUTH_YANDEX_API_URL: `${base}/yandex/info`
       };
     },
     stop: () => new Promise((resolve) => server.close(resolve))

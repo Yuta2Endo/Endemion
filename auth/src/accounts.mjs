@@ -264,6 +264,11 @@ export function createAccounts(db, { issuer }) {
     db.prepare("UPDATE accounts SET avatar_version = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE sub = ?").run(version, sub);
   }
 
+  /** Удалить аккаунт. Связи, письма и личности провайдеров уходят каскадом */
+  function remove(sub) {
+    return db.prepare("DELETE FROM accounts WHERE sub = ?").run(sub).changes > 0;
+  }
+
   return {
     find,
     findByEmail: (email) => byEmail.get(normalizeEmail(email)) || null,
@@ -283,6 +288,7 @@ export function createAccounts(db, { issuer }) {
     setPassword,
     checkPassword,
     markEmailVerified,
-    setAvatarVersion
+    setAvatarVersion,
+    remove
   };
 }

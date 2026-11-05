@@ -86,6 +86,7 @@ function loadSocial(env) {
   const google = pair("AUTH_GOOGLE_CLIENT_ID", "AUTH_GOOGLE_CLIENT_SECRET", "Google");
   const github = pair("AUTH_GITHUB_CLIENT_ID", "AUTH_GITHUB_CLIENT_SECRET", "GitHub");
   const discord = pair("AUTH_DISCORD_CLIENT_ID", "AUTH_DISCORD_CLIENT_SECRET", "Discord");
+  const yandex = pair("AUTH_YANDEX_CLIENT_ID", "AUTH_YANDEX_CLIENT_SECRET", "Яндекс");
   const vkId = String(env.AUTH_VK_CLIENT_ID || "").trim();
   if (!vkId && env.AUTH_VK_SERVICE_TOKEN) fail("VK ID: AUTH_VK_SERVICE_TOKEN задан без AUTH_VK_CLIENT_ID");
   if (vkId && !/^\d+$/.test(vkId)) fail("AUTH_VK_CLIENT_ID — числовой ID приложения из кабинета VK ID");
@@ -96,6 +97,12 @@ function loadSocial(env) {
       authorizeUrl: url("AUTH_GITHUB_AUTHORIZE_URL", "https://github.com/login/oauth/authorize"),
       tokenUrl: url("AUTH_GITHUB_TOKEN_URL", "https://github.com/login/oauth/access_token"),
       apiUrl: url("AUTH_GITHUB_API_URL", "https://api.github.com")
+    },
+    yandex: yandex && {
+      ...yandex,
+      authorizeUrl: url("AUTH_YANDEX_AUTHORIZE_URL", "https://oauth.yandex.ru/authorize"),
+      tokenUrl: url("AUTH_YANDEX_TOKEN_URL", "https://oauth.yandex.ru/token"),
+      apiUrl: url("AUTH_YANDEX_API_URL", "https://login.yandex.ru/info?format=json")
     },
     discord: discord && {
       ...discord,
@@ -144,7 +151,8 @@ export function loadConfig(env = process.env) {
     links: {
       site: env.ENDEMION_URL || "https://endemion.online",
       life: env.ENDEMION_LIFE_URL || "https://life.endemion.online",
-      privacy: (env.ENDEMION_URL || "https://endemion.online") + "/privacy"
+      privacy: (env.ENDEMION_URL || "https://endemion.online") + "/privacy",
+      terms: (env.ENDEMION_URL || "https://endemion.online") + "/terms"
     },
     mail: {
       // unisender | resend | outbox (файлы в data/auth/outbox, разработка) | memory (тесты) | none

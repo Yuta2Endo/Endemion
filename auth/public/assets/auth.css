@@ -34,7 +34,7 @@
 }
 
 :root {
-  color-scheme: dark;
+  color-scheme: dark light;
   --bg: #07061a;
   --bg-soft: #100d2b;
   --panel: rgba(22, 18, 54, 0.78);
@@ -229,6 +229,22 @@ h2,
   font-size: 12px;
 }
 
+.field .reveal {
+  float: right;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  cursor: pointer;
+}
+
+.field .reveal input {
+  width: auto;
+  min-height: 0;
+  padding: 0;
+  accent-color: var(--cyan);
+}
+
 .field input {
   width: 100%;
   min-height: 48px;
@@ -349,6 +365,17 @@ h2,
   margin-top: 10px;
 }
 
+#passkeyLogin:not([hidden]) {
+  margin-bottom: 14px;
+}
+
+#passkeyLogin:not([hidden]) + form .main-button {
+  color: var(--text);
+  background: var(--panel-soft);
+  border: 1px solid var(--border);
+  font-weight: 700;
+}
+
 .danger-button {
   color: var(--pink);
 }
@@ -383,12 +410,13 @@ h2,
 
 .tabs {
   display: flex;
-  flex-wrap: wrap;
   gap: 8px;
   margin-bottom: 22px;
+  overflow-x: auto;
 }
 
 .tabs a {
+  flex: none;
   padding: 8px 16px;
   border: 1px solid var(--border);
   border-radius: 999px;
@@ -452,6 +480,26 @@ h2,
 
 .facts dd {
   word-break: break-word;
+}
+
+.checklist {
+  display: grid;
+  gap: 8px;
+  margin-top: 6px;
+  list-style: none;
+}
+
+.checklist a {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+#copyId {
+  min-height: 32px;
+  margin-top: 6px;
+  padding: 0 10px;
+  font-size: 12px;
 }
 
 .facts code {
@@ -603,6 +651,29 @@ h2,
   word-break: break-word;
 }
 
+.totp-secret,
+.totp-codes {
+  margin: 8px 0 18px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--panel-soft);
+  text-align: center;
+}
+
+.totp-secret code,
+.totp-codes code {
+  font-size: 18px;
+  letter-spacing: 0.08em;
+}
+
+.totp-codes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  list-style: none;
+}
+
 .id-footer {
   margin-top: 40px;
   color: var(--muted);
@@ -614,6 +685,27 @@ h2,
   from {
     opacity: 0;
     transform: translateY(8px);
+  }
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg: #f4f1ff;
+    --bg-soft: #ffffff;
+    --panel: rgba(255, 255, 255, 0.86);
+    --panel-soft: rgba(7, 6, 26, 0.04);
+    --text: #1a1633;
+    --muted: #5d5878;
+    --border: rgba(90, 70, 170, 0.16);
+  }
+
+  .main-button {
+    color: #1a1633;
+  }
+
+  .tabs a[aria-current="page"],
+  .avatar {
+    color: #1a1633;
   }
 }
 
@@ -644,12 +736,17 @@ h2,
   .id-intro,
   .id-panel {
     padding: 24px;
+    backdrop-filter: none;
   }
 
   .session-row,
   .method-row {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .go-links {
+    grid-template-columns: 1fr;
   }
 
   /* На телефоне кнопки провайдеров одна под другой во всю ширину: в ряд не помещается текст */

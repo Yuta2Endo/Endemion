@@ -1,4 +1,4 @@
-// Вход через внешних провайдеров: Google (OpenID Connect), GitHub (OAuth 2.0), VK ID (OAuth 2.1), Discord (OAuth 2.0).
+// Вход через внешних провайдеров: Google (OpenID Connect), GitHub (OAuth 2.0), VK ID (OAuth 2.1), Discord (OAuth 2.0), Яндекс ID (OAuth 2.0).
 // У всех Authorization Code + PKCE S256 и одноразовый state, у Google ещё nonce и проверка подписи ID token.
 // Секреты и токены провайдеров остаются на сервере: токен нужен только, чтобы узнать постоянный номер
 // пользователя у провайдера, после этого он забывается
@@ -8,13 +8,13 @@ import { randomBytes } from "node:crypto";
 import { normalizeEmail, normalizeName, validateEmail } from "./accounts.mjs";
 
 // Порядок — порядок кнопок на странице входа
-export const PROVIDERS = ["google", "vk", "github", "discord"];
-export const PROVIDER_NAMES = { google: "Google", vk: "ВКонтакте", github: "GitHub", discord: "Discord" };
+export const PROVIDERS = ["google", "vk", "yandex", "github", "discord"];
+export const PROVIDER_NAMES = { google: "Google", vk: "ВКонтакте", yandex: "Яндекс", github: "GitHub", discord: "Discord" };
 
 const TIMEOUT_S = 10;
 const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1"]);
 // Только то, что нужно для аккаунта: номер пользователя, имя и почта для подсказки в форме
-const SCOPES = { google: "openid email profile", github: "user:email", vk: "vkid.personal_info email", discord: "identify email" };
+const SCOPES = { google: "openid email profile", github: "user:email", vk: "vkid.personal_info email", yandex: "login:info login:email", discord: "identify email" };
 
 /** code: cancelled — пользователь отказался у провайдера, state — ответ не к этому входу, остальное — сбой провайдера */
 export class SocialError extends Error {
@@ -39,7 +39,7 @@ function profile(id, email, name) {
 }
 
 /**
- * settings — config.social: { google, vk, github, discord }, у выключенного провайдера null.
+   * settings — config.social: { google, vk, yandex, github, discord }, у выключенного провайдера null.
  * redirectBase — адрес Endemion ID: ответ провайдера приходит на {redirectBase}/social/callback/{provider}
  */
 export function createSocial(settings, { redirectBase }) {
@@ -76,6 +76,17 @@ export function createSocial(settings, { redirectBase }) {
     return config;
   }
 
+  function yandexConfig() {
+    const { authorizeUrl, tokenUrl, clientId, clientSecret } = settings.yandex;
+    const config = new oidc.Configuration(
+      { issuer: new URL(authorizeUrl).origin, authorization_endpoint: authorizeUrl, token_endpoint: tokenUrl },
+      clientId, undefined, oidc.ClientSecretPost(clientSecret)
+    );
+    if (insecure(tokenUrl)) oidc.allowInsecureRequests(config);
+    config.timeout = TIMEOUT_S;
+    return config;
+  }
+
   function discordConfig() {
     const { authorizeUrl, tokenUrl, clientId, clientSecret } = settings.discord;
     const config = new oidc.Configuration(
@@ -92,6 +103,7 @@ export function createSocial(settings, { redirectBase }) {
     const origins = [];
     if (settings.google) origins.push(new URL(settings.google.issuer).origin);
     if (settings.github) origins.push(new URL(settings.github.authorizeUrl).origin);
+    if (settings.yandex) origins.push(new URL(settings.yandex.authorizeUrl).origin);
     if (settings.discord) origins.push(new URL(settings.discord.authorizeUrl).origin);
     if (settings.vk) {
       origins.push(new URL(settings.vk.baseUrl).origin);
@@ -120,6 +132,7 @@ export function createSocial(settings, { redirectBase }) {
     let url;
     if (id === "google") url = oidc.buildAuthorizationUrl(await googleConfig(), { ...params, nonce });
     else if (id === "github") url = oidc.buildAuthorizationUrl(githubConfig(), params);
+    else if (id === "yandex") url = oidc.buildAuthorizationUrl(yandexConfig(), params);
     else if (id === "discord") url = oidc.buildAuthorizationUrl(discordConfig(), params);
     else {
       url = new URL(`${settings.vk.baseUrl}/authorize`);
@@ -135,6 +148,16 @@ export function createSocial(settings, { redirectBase }) {
       signal: AbortSignal.timeout(TIMEOUT_S * 1000)
     });
     if (!response.ok) throw new SocialError("provider", `GitHub ${path}: HTTP ${response.status}`);
+    return response.json();
+  }
+
+  async function yandexApi(accessToken) {
+    const response = await fetch(settings.yandex.apiUrl, {
+      headers: { authorization: `OAuth ${accessToken}`, accept: "application/json" },
+      redirect: "error",
+      signal: AbortSignal.timeout(TIMEOUT_S * 1000)
+    });
+    if (!response.ok) throw new SocialError("provider", `Яндекс ID: HTTP ${response.status}`);
     return response.json();
   }
 
@@ -202,6 +225,14 @@ export function createSocial(settings, { redirectBase }) {
           // Без почты вход работает: адрес пользователь введёт сам
         }
         return profile(user.id, email, user.name || user.login);
+      }
+
+      if (id === "yandex") {
+        // ID token у Яндекса не используется: пользователь — тот, чей access token выдан на этот код
+        const tokens = await oidc.authorizationCodeGrant(yandexConfig(), callbackUrl, { pkceCodeVerifier: login.verifier, expectedState: login.state });
+        const user = await yandexApi(tokens.access_token);
+        if (typeof user?.id !== "string" || !/^\d{1,20}$/.test(user.id)) throw new SocialError("profile", "Яндекс ID не вернул id пользователя");
+        return profile(user.id, user.default_email, user.real_name || user.display_name || user.login);
       }
 
       if (id === "discord") {
