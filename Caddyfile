@@ -41,3 +41,11 @@ life.{$SITE_DOMAIN} {
 		header_up X-Forwarded-For {remote_host}
 	}
 }
+
+# Endemion City staging — separate project in /opt/endemion-city-staging. Its web container is attached to
+# endemion_default as endemion-city-staging-web; nothing else of that project joins this network
+staging.endemion.online {
+	reverse_proxy endemion-city-staging-web:8080 {
+		header_up X-Forwarded-For {remote_host}
+	}
+}
