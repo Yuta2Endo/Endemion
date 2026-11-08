@@ -925,16 +925,34 @@ img {
   }
 }
 
-/* Системная настройка «уменьшить движение»: без анимаций и плавной прокрутки */
-@media (prefers-reduced-motion: reduce) {
-  html {
-    scroll-behavior: auto;
-  }
+/* ==================== ОТЗЫВЫ В ТЕЛЕГРАМ ==================== */
 
-  *,
-  *::before,
-  *::after {
-    animation: none !important;
-    transition: none !important;
-  }
+.home-telegram {
+  margin-top: 80px;
+}
+
+.home-telegram .section-head {
+  margin-bottom: 22px;
+}
+
+.home-telegram .eyebrow {
+  color: var(--accent-light);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.home-telegram .section-head h2 {
+  margin-bottom: 10px;
+}
+
+.home-telegram .section-head p {
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.home-telegram .primary-btn {
+  margin-top: 14px;
 }

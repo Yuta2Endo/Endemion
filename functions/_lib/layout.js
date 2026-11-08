@@ -14,7 +14,8 @@ export const NAV = [
   ["/games", "Игры", "games"],
   ["/community", "Сообщество", "community"],
   ["/studio", "Разработка", "studio"],
-  ["/about", "О студии", "about"]
+  ["/about", "О студии", "about"],
+  ["https://t.me/EndemionOfficial", "Телеграм", "telegram"]
 ];
 
 export const NAV_MORE = [];
@@ -27,7 +28,8 @@ const ICONS = {
   search: '<circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/>',
   bell: '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>',
   menu: '<path d="M4 6h16M4 12h16M4 18h16"/>',
-  close: '<path d="M18 6 6 18M6 6l12 12"/>'
+  close: '<path d="M18 6 6 18M6 6l12 12"/>',
+  telegram: '<path d="M5.623 13.232V9.065L13.332 6.77l-3.23-5.823-6.945 6.945L1.73 13.232z"/>',
 };
 
 export function svgIcon(name, className = "") {
@@ -65,8 +67,9 @@ export function siteFooter(s) {
         <a class="logo" href="/" aria-label="${e(s.homeAria)}"><span class="logo-mark" aria-hidden="true">E</span><span class="logo-text">ENDEMION</span></a>
         <p class="footer-tagline">Create. Play. Connect.</p>
         <p class="footer-text">${e(s.footerText)}</p>
-        <!-- Ссылки на соцсети задаёт администратор (Настройки сайта), их подставляет app.js. Пока ссылок нет, блок скрыт -->
-        <ul class="footer-social" id="footerSocial" aria-label="${e(s.social)}" hidden></ul>
+        <ul class="footer-social" id="footerSocial" aria-label="${e(s.social)}">
+          <li data-static><a href="https://t.me/EndemionOfficial" rel="noopener" target="_blank">${svgIcon("telegram")} ${e(s.telegramCTA)}</a></li>
+        </ul>
       </div>
       <nav class="footer-col" aria-label="${e(s.sections)}">
         <h2 class="footer-title">${e(s.sections)}</h2>

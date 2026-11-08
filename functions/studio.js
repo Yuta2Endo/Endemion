@@ -615,10 +615,23 @@ export const gamePage = {
       </nav>`
       : "";
 
+    // ==================== TELEGRAM ====================
+    const telegramHtml = `
+    <section class="home-telegram" aria-labelledby="telegramTitle">
+      <div class="container">
+        <div class="section-head"><div>
+          <div class="eyebrow">${e(s.telegramEyebrow)}</div>
+          <h2 id="telegramTitle">${e(s.telegramTitle)}</h2>
+          <p class="section-text">${e(s.telegramText)}</p>
+        </div></div>
+        <a class="primary-btn btn-lg" href="https://t.me/EndemionOfficial" target="_blank" rel="noopener">${e(s.telegramCTA)}</a>
+      </div>
+    </section>`;
+
     const body = `
-    ${hero}
-    ${sectionNavHtml}
-    <div class="container">
+    <div class="container page">
+      ${hero}
+      ${sectionNavHtml}
       ${aboutSectionHtml}
       ${worldsSectionHtml}
       ${featuresSectionHtml}
@@ -627,6 +640,7 @@ export const gamePage = {
       ${newsHtml}
       ${devlogHtml}
       ${communityHtml}
+      ${telegramHtml}
       ${reviewsHtml}
       ${statusHtml}
       <div class="gp-page-end"></div>

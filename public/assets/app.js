@@ -167,7 +167,9 @@ async function initFooterSocial() {
   if (!list) return;
   const { socialLinks } = await getConfig();
   const links = (socialLinks || []).filter((item) => typeof item?.label === "string" && typeof item.url === "string" && item.url.startsWith("https://"));
-  list.replaceChildren(...links.map((item) => {
+  // Сохраняем статические элементы, добавляем только динамические
+  list.querySelectorAll('li:not([data-static])').forEach(el => el.remove());
+  links.forEach(item => {
     const node = document.createElement("li");
     const a = document.createElement("a");
     a.href = item.url;
@@ -175,9 +177,9 @@ async function initFooterSocial() {
     a.rel = "noopener noreferrer";
     a.target = "_blank";
     node.append(a);
-    return node;
-  }));
-  list.hidden = !links.length;
+    list.append(node);
+  });
+  list.hidden = !list.querySelector('li');
 }
 
 initFooterSocial();
