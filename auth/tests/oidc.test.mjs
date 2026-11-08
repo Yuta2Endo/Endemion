@@ -114,7 +114,6 @@ test("ключ доступа входит без пароля, чужая по�
   const loginOptions = JSON.parse((await other.request(`/interaction/${uid}/passkey/options`)).text);
   const loginClient = Buffer.from(JSON.stringify({ type: "webauthn.get", challenge: loginOptions.challenge, origin }));
   const loginAuth = authenticatorData("127.0.0.1", 1);
-  const signature = sign("sha256", Buffer.concat([loginAuth, createHash("sha256").update(loginClient).digest()]), privateKey);
   const forged = await other.request(`/interaction/${uid}/passkey`, {
     method: "POST",
     headers: { "content-type": "application/json" },
@@ -229,7 +228,7 @@ test("смена почты предупреждает старый адрес",
   assert.equal(recovered.status, 200);
   assert.equal((await login(browser(auth.issuer), site, SITE.redirect, "new-mail@example.com", "old-mail-pass-2")).done.status, 401);
   assert.ok((await login(browser(auth.issuer), site, SITE.redirect, "old-mail@example.com", "old-mail-pass-2")).done.final);
-  assert.equal(auth.accounts.findByEmail("old-mail@example.com").email_verified_at == null, false);
+  assert.equal(auth.accounts.findByEmail("old-mail@example.com").email_verified_at === null, false);
 });
 
 test("код из приложения обязателен и после пароля, запасной код входит один раз", async () => {

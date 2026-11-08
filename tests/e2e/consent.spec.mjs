@@ -4,8 +4,7 @@
 import { expect, test } from "@playwright/test";
 import { apiClient, BASE, state } from "./helpers.mjs";
 
-test.beforeEach(async ({ page }, testInfo) => {
-  test.skip(testInfo.project.name !== "chromium", "проверяется в одном браузере");
+test.beforeEach(async ({ page }) => {
   const config = await apiClient().call("GET", "/api/config");
   test.skip(!config.yandexMetrikaId, "нужен YANDEX_METRIKA_ID на сервере");
   await page.route("https://mc.yandex.ru/**", (route) => route.fulfill({ status: 200, contentType: "text/javascript", body: "" }));

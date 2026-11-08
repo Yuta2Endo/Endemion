@@ -6,8 +6,7 @@ import { apiClient, BASE, state } from "./helpers.mjs";
 
 const stamp = `${Date.now()}`;
 
-test.beforeEach(async ({ context }, testInfo) => {
-  test.skip(testInfo.project.name !== "chromium", "проверяется в одном браузере");
+test.beforeEach(async ({ context }) => {
   const [name, value] = state().cookie.split("=");
   await context.addCookies([{ name, value, url: BASE }]);
 });
@@ -40,8 +39,11 @@ test("админ публикует игру, она появляется в к�
   const title = `E2E игра ${stamp}`;
   const slug = `e2e-${stamp}`;
   await page.goto("/admin#games");
+  // Ждём завершения loadGames(), чтобы форма не была перезаписана после открытия
+  await page.locator("#gamesContent .admin-plain-list").waitFor({ state: "visible" });
   await page.locator("#newGameButton").click();
   const form = page.locator(".admin-studio-form");
+  await form.waitFor({ state: "visible" });
   await form.locator("[name=title]").fill(title);
   await form.locator("[name=slug]").fill(slug);
   await form.locator("[name=published]").check();

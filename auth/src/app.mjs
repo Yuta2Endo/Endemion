@@ -693,7 +693,7 @@ export function createApp(config, { mailer = createMailer(config.mail), log = cr
     if (totpOf.get(account.sub)) {
       if (!interactionUid) return html(ctx, views.errorPage({ text: "Вход не завершён. Начните заново.", retry: true }), 400);
       saveChallenge(interactionUid, account.sub, amr.join(" "));
-      return html(ctx, views.totpLoginPage({ uid: interactionUid }));
+      return html(ctx, views.totpLoginPage({ error: null, uid: interactionUid }));
     }
     await finishInteraction(ctx, { login: { accountId: account.sub, remember: true, amr } }, false);
   }
@@ -1175,7 +1175,7 @@ export function createApp(config, { mailer = createMailer(config.mail), log = cr
     "GET /reset-password": async (ctx) => {
       const token = String(ctx.query.token || "");
       if (!TOKEN_RE.test(token)) return html(ctx, views.errorPage({ text: "Ссылка неверная или устарела. Запросите новую." }), 400);
-      html(ctx, views.resetPage({ token }));
+      html(ctx, views.resetPage({ token, error: null }));
     },
 
     "POST /reset-password": async (ctx) => {
@@ -1207,7 +1207,6 @@ export function createApp(config, { mailer = createMailer(config.mail), log = cr
         sent: "Письмо отправлено.",
         avatar: "Аватар обновлён."
       }[ctx.query.done];
-      const linked = new Map(accounts.identities(current.account.sub).map((item) => [item.provider, item]));
       html(ctx, views.accountPage({
         account: current.account,
         avatarUrl: accounts.avatarUrl(current.account),
@@ -1218,8 +1217,8 @@ export function createApp(config, { mailer = createMailer(config.mail), log = cr
         mailEnabled: mailer.enabled,
         hasPassword: accounts.hasPassword(current.account),
         totp: Boolean(totpStatus(current.account.sub)),
-        passkeys: db.prepare("SELECT COUNT(*) AS n FROM passkeys WHERE account_sub = ?").get(current.account.sub).n,
-        loginMethods: loginMethodsOf(current.account.sub)
+        passkeys: Number(db.prepare("SELECT COUNT(*) AS n FROM passkeys WHERE account_sub = ?").get(current.account.sub).n),
+        _loginMethods: loginMethodsOf(current.account.sub)
       }));
     },
 
@@ -1303,14 +1302,14 @@ export function createApp(config, { mailer = createMailer(config.mail), log = cr
       const secret = generateSecret();
       db.prepare("INSERT INTO totp_setup (account_sub, secret, expires_at) VALUES (?, ?, ?) ON CONFLICT (account_sub) DO UPDATE SET secret = excluded.secret, expires_at = excluded.expires_at")
         .run(account.sub, encryptSecret(secret, config.cookieKeys[0]), Date.now() + 15 * 60 * 1000);
-      html(ctx, views.totpSetupPage({ csrf: csrfFor(session), secret, otpauth: otpauthUrl(secret, account.email) }));
+      html(ctx, views.totpSetupPage({ csrf: csrfFor(session), secret, otpauth: otpauthUrl(secret, account.email), error: null }));
     }),
 
     "POST /account/totp/confirm": accountAction(async (ctx, { account, session }, form) => {
       const row = db.prepare("SELECT secret, expires_at FROM totp_setup WHERE account_sub = ?").get(account.sub);
       const secret = row && Number(row.expires_at) > Date.now() ? decryptSecret(row.secret, config.cookieKeys[0]) : null;
       const step = secret && verifyTotp(secret, normalizeCode(form.code));
-      if (!step) return html(ctx, views.totpSetupPage({ csrf: csrfFor(session), secret: secret || "", error: secret ? "Код не подошёл. Проверьте время на телефоне и введите новый." : "Настройка устарела. Начните заново." }), 400);
+      if (!step) return html(ctx, views.totpSetupPage({ csrf: csrfFor(session), secret: secret || "", otpauth: null, error: secret ? "Код не подошёл. Проверьте время на телефоне и введите новый." : "Настройка устарела. Начните заново." }), 400);
       db.prepare("DELETE FROM totp_setup WHERE account_sub = ?").run(account.sub);
       const codes = generateBackupCodes();
       db.prepare("INSERT INTO totp (account_sub, secret, last_step) VALUES (?, ?, ?)").run(account.sub, encryptSecret(secret, config.cookieKeys[0]), step);

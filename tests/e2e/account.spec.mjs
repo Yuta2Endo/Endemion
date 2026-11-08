@@ -4,8 +4,7 @@
 import { expect, test } from "@playwright/test";
 import { apiClient } from "./helpers.mjs";
 
-test("новый пароль по ссылке из письма", async ({ page }, testInfo) => {
-  test.skip(testInfo.project.name !== "chromium", "проверяется в одном браузере");
+test("новый пароль по ссылке из письма", async ({ page }) => {
   const config = await apiClient().call("GET", "/api/config");
   test.skip(!config.passwordReset, "нужен MAIL_DEV_MODE=1 в .dev.vars");
 

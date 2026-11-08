@@ -54,6 +54,8 @@ export function deleteUserStatements(env, user) {
     env.DB.prepare("DELETE FROM view_history WHERE user_id = ?").bind(user.id),
     env.DB.prepare("DELETE FROM user_profiles WHERE user_id = ?").bind(user.id),
     env.DB.prepare("DELETE FROM library WHERE user_id = ?").bind(user.id),
+    env.DB.prepare("DELETE FROM game_library WHERE user_id = ?").bind(user.id),
+    env.DB.prepare("DELETE FROM game_reviews WHERE user_id = ?").bind(user.id),
     env.DB.prepare("DELETE FROM positions WHERE user_id = ?").bind(user.id),
     env.DB.prepare("DELETE FROM sessions WHERE user_id = ?").bind(user.id),
     env.DB.prepare("DELETE FROM password_resets WHERE user_id = ?").bind(user.id),

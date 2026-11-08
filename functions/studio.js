@@ -4,23 +4,26 @@
 import { escapeHtml as e } from "./_lib/html.js";
 import { renderPage } from "./_lib/layout.js";
 import {
-  categoryThreads, emptyCard, FORUM_PAGE, formatDate, gameArt, gameCard, gameCategory, gameCategoryIds, getCategoryBySlug, pluralReplies, pluralTopics,
-  getGameBySlug, getPostBySlug, getSettings, isoDate, listGameMedia, listGames, listPosts, POST_KIND_LABELS, POST_KIND_LABELS_EN, POST_KINDS,
-  postCard, recentThreads, richText, statusBadge, threadRow
+  categoryThreads, emptyCard, FORUM_PAGE, formatDate, gameArt, gameCard, gameCategory, gameCategoryIds, getCategoryBySlug,
+  getGameBySlug, getPostBySlug, getSettings, isoDate, listGameMedia, listGames, listGamesFiltered, listPosts, GAME_STATUS_LABELS, GAME_STATUS_LABELS_EN, POST_KIND_LABELS, POST_KIND_LABELS_EN, POST_KINDS,
+  postCard, recentThreads, richText, statusBadge, threadRow, isGameFavorited,
+  listGameReviews, getGameReview, getGameReviewStats
 } from "./_lib/studio.js";
 import { cleanLine } from "./_lib/validate.js";
-import { langOf } from "./_lib/i18n.js";
+import { langOf, t } from "./_lib/i18n.js";
 import { hasRole } from "./_lib/roles.js";
 import { currentUser } from "./_lib/session.js";
-import {
-  aboutSection, communitySection, coverSources, devlogSection, featuresSection, heroSection, newsSection, roadmapSection,
-  screenshotsSection, sectionNav, statusSection, worldsSection
-} from "./_lib/gamePage.js";
+
+const REVIEW_BODY_MAX = 5000;
+import { coverSources } from "./_lib/gamePage.js";
 import { GAME_PROFILES } from "./_lib/gameProfiles.js";
 
 const STYLES = ["studio.css"];
 const SCRIPTS = ["studio-page.js"];
 
+/**
+ * @param {{ title: string, description: string, url: string, image?: string, type?: string }} opts
+ */
 function head({ title, description, url, image, type = "website" }) {
   return `<meta property="og:type" content="${e(type)}">
   <meta property="og:title" content="${e(title)}">
@@ -46,110 +49,115 @@ export const home = {
   async onRequestGet({ request, env }) {
     const origin = new URL(request.url).origin;
     const lang = langOf(request);
-    const [settings, games, upcoming, threads, posts, devlog, activity] = await Promise.all([
+    const [settings, games, upcoming, threads, devlog] = await Promise.all([
       getSettings(env),
       listGames(env, { upcoming: false }),
       listGames(env, { upcoming: true }),
       recentThreads(env, { limit: 6 }),
-      listPosts(env, { limit: 3 }),
-      listPosts(env, { kinds: ["devlog"], limit: 1 }),
-      env.DB.prepare(
-        `SELECT
-           (SELECT COUNT(*) FROM threads WHERE deleted_at IS NULL AND last_activity_at >= datetime('now', '-1 day')) AS topics_day,
-           (SELECT COUNT(*) FROM comments WHERE deleted_at IS NULL AND target_type = 'thread' AND created_at >= datetime('now', '-1 day')) AS replies_day`
-      ).first()
+      listPosts(env, { kinds: ["devlog"], limit: 1 })
     ]);
     const en = lang === "en";
+    const s = t(lang);
     const featured = games.find((g) => g.slug === settings.featuredGame) || games[0] || null;
     const discussion = featured ? await gameCategory(env, featured.id) : null;
 
+    // ==================== HERO ====================
     const hero = `
-    <section class="studio-hero" aria-labelledby="heroTitle">
-      <div class="studio-hero-bg" aria-hidden="true">${featured?.coverUrl ? `<img src="${e(featured.coverUrl)}" alt="" fetchpriority="high">` : ""}</div>
-      <div class="container studio-hero-inner">
-        <div class="rise">
-          <div class="eyebrow">ENDEMION — Create. Play. Connect.</div>
-          <h1 class="display-1" id="heroTitle"><span class="gradient-text">Welcome to Endemion</span></h1>
-          <p class="lead">${en ? "An independent game studio creating worlds, experiences, and communities." : "Независимая студия, которая делает игры и собирает вокруг них сообщество."}</p>
+    <section class="home-hero" aria-labelledby="heroTitle">
+      <div class="home-hero-bg" aria-hidden="true">${featured?.coverUrl ? `<img src="${e(featured.coverUrl)}" alt="" fetchpriority="high" decoding="async">` : ""}</div>
+      <div class="container home-hero-inner">
+        <div class="home-hero-content rise">
+          <div class="eyebrow">${e(s.homeEyebrow)}</div>
+          <h1 class="display-1" id="heroTitle"><span class="gradient-text">${e(s.homeTitle)}</span></h1>
+          <p class="lead">${e(s.homeLead)}</p>
           <div class="btn-row">
-            <a class="primary-btn btn-lg" href="/games">Explore Games</a>
-            <a class="ghost-btn btn-lg" href="/community">Join Community</a>
+            <a class="primary-btn btn-lg" href="/games">${e(s.homeExploreGames)}</a>
+            <a class="ghost-btn btn-lg" href="/community">${e(s.homeJoinCommunity)}</a>
           </div>
         </div>
-        ${featured ? `<a class="card rise rise-2" href="/games/${e(featured.slug)}" aria-label="${e(featured.title)}: ${en ? "the studio's featured game" : "главная игра студии"}">
-          <div class="card-media">${gameArt(featured, { eager: true, lang })}${statusBadge(featured.status, lang)}</div>
-          <div class="card-body"><span class="eyebrow">${en ? "Featured project" : "Главный проект"}</span><strong class="card-title">${e(featured.title)}</strong></div>
-        </a>` : ""}
       </div>
     </section>`;
 
+    // ==================== FEATURED PROJECT ====================
     const featuredBlock = featured ? `
-    <section class="studio-section container" aria-labelledby="featuredTitle">
-      <div class="featured">
-        <div class="card-media">${gameArt(featured)}</div>
-        <div class="featured-body">
-          <div class="eyebrow">Featured Game</div>
-          <h2 class="display-2" id="featuredTitle">${e(featured.title)}</h2>
-          <p class="lead">${e(featured.tagline || featured.description || (en ? "Description coming later." : "Описание появится позже."))}</p>
-          <dl class="featured-facts">
-            <dt>${en ? "Status" : "Статус"}</dt><dd>${statusBadge(featured.status, lang)}</dd>
-            <dt>${en ? "Platforms" : "Платформы"}</dt><dd>${e(featured.platforms.join(", ") || (en ? "not set" : "не указаны"))}</dd>
-          </dl>
-          <div class="btn-row">
-            ${featured.websiteUrl ? `<a class="primary-btn" href="${e(featured.websiteUrl)}" rel="noopener">${en ? "Play" : "Играть"}</a>` : ""}
-            <a class="ghost-btn" href="/games/${e(featured.slug)}">${en ? "About the game" : "Об игре"}</a>
-            ${discussion ? `<a class="ghost-btn" href="/community/c/${e(discussion.slug)}">${en ? "Discussion" : "Обсуждение"}</a>` : ""}
+    <section class="home-featured" aria-labelledby="featuredTitle">
+      <div class="container">
+        <div class="home-featured-grid">
+          <div class="home-featured-media">${gameArt(featured, { eager: true, lang })}</div>
+          <div class="home-featured-content rise rise-2">
+            <div class="eyebrow">${e(s.homeFeaturedProject)}</div>
+            <h2 class="display-2" id="featuredTitle">${e(featured.title)}</h2>
+            <p class="lead">${e(featured.tagline || featured.description || (en ? s.homeLead : featured.description || s.homeLead))}</p>
+            <dl class="featured-facts">
+              <dt>${e(s.homeStatus)}</dt><dd>${statusBadge(featured.status, lang)}</dd>
+              <dt>${e(s.homePlatforms)}</dt><dd>${e(featured.platforms.join(", ") || (en ? "not set" : "не указаны"))}</dd>
+            </dl>
+            <div class="btn-row">
+              ${featured.websiteUrl ? `<a class="primary-btn" href="${e(featured.websiteUrl)}" rel="noopener">${e(s.homePlayCTA)}</a>` : ""}
+              <a class="ghost-btn" href="/games/${e(featured.slug)}">${e(s.homeAboutGameCTA)}</a>
+              ${discussion ? `<a class="ghost-btn" href="/community/c/${e(discussion.slug)}">${e(s.homeDiscussionCTA)}</a>` : ""}
+            </div>
           </div>
         </div>
       </div>
     </section>` : "";
 
+    // ==================== OUR GAMES ====================
     const gamesBlock = `
-    <section class="studio-section container" aria-labelledby="gamesTitle">
-      <div class="section-head"><div><div class="eyebrow">Our Games</div><h2 id="gamesTitle">${en ? "Our games" : "Наши игры"}</h2></div>
-        <a class="ghost-btn small-btn" href="/games">${en ? "All games →" : "Все игры →"}</a></div>
-      ${games.length ? `<div class="grid-games">${games.map((g) => gameCard(g, lang)).join("")}</div>` : emptyCard(en ? "No games yet" : "Игр пока нет", en ? "The catalog will appear when the studio adds its first game." : "Каталог появится, когда студия добавит первую игру.")}
+    <section class="home-games" aria-labelledby="gamesTitle">
+      <div class="container">
+        <div class="section-head"><div>
+          <div class="eyebrow">${e(s.homeOurGames)}</div>
+          <h2 id="gamesTitle">${e(s.homeOurGames)}</h2>
+        </div>
+        <a class="ghost-btn small-btn" href="/games">${e(s.homeAllGames)}</a></div>
+      ${games.length ? `<div class="grid-games">${games.map((g) => gameCard(g, lang)).join("")}</div>` : emptyCard(e(s.homeGamesEmptyTitle), e(s.homeGamesEmptyText))}
+      </div>
     </section>`;
 
+    // ==================== COMMUNITY ====================
     const communityBlock = `
-    <section class="studio-section container" aria-labelledby="communityTitle">
-      <div class="section-head"><div><div class="eyebrow">Community</div><h2 id="communityTitle">${en ? "Latest forum topics" : "Последние темы форума"}</h2></div>
-        <a class="ghost-btn small-btn" href="/community">${en ? "Visit Community →" : "На форум →"}</a></div>
+    <section class="home-community" aria-labelledby="communityTitle">
+      <div class="container">
+        <div class="section-head"><div>
+          <div class="eyebrow">${e(s.homeCommunityLatest)}</div>
+          <h2 id="communityTitle">${e(s.homeCommunityLatest)}</h2>
+        </div>
+        <a class="ghost-btn small-btn" href="/community">${e(s.homeVisitCommunity)}</a></div>
       ${threads.length ? `<div class="list-panel">${threads.map((t) => threadRow(t, lang)).join("")}</div>`
-    : emptyCard(en ? "No topics yet" : "Тем пока нет", en ? "Start the first discussion — the forum is open to everyone." : "Начните первое обсуждение — форум открыт для всех участников.", `<a class="primary-btn" href="/community">${en ? "Visit Community" : "На форум"}</a>`)}
+    : emptyCard(e(s.homeCommunityEmptyTitle), e(s.homeCommunityEmptyText), `<a class="primary-btn" href="/community">${e(s.homeVisitCommunity)}</a>`)}
+      </div>
     </section>`;
 
-    const devBlock = `
-    <section class="studio-section container" aria-labelledby="devTitle">
-      <div class="section-head"><div><div class="eyebrow">Development Updates</div><h2 id="devTitle">${en ? "Development news" : "Новости разработки"}</h2></div>
-        <a class="ghost-btn small-btn" href="/studio">${en ? "All posts →" : "Все публикации →"}</a></div>
-      ${posts.posts.length ? `<div class="grid-posts">${posts.posts.map((p) => postCard(p, lang)).join("")}</div>`
-    : emptyCard(en ? "No posts yet" : "Публикаций пока нет", en ? "Devlogs, game news, updates and plans will appear here." : "Здесь появятся devlog, новости игр, обновления и планы студии.")}
-    </section>`;
-
+    // ==================== DEVELOPMENT ====================
     const latest = devlog.posts[0] || null;
-    const nowBlock = latest ? `
-    <section class="studio-section container" aria-labelledby="nowTitle">
-      <div class="section-head"><div><div class="eyebrow">Now in development</div><h2 id="nowTitle">${en ? "Now in development" : "Сейчас в разработке"}</h2></div>
-        <a class="ghost-btn small-btn" href="/studio?tab=devlog">${en ? "All entries →" : "Все записи →"}</a></div>
-      <article class="panel now-card">
+    const devBlock = latest ? `
+    <section class="home-devlog" aria-labelledby="devTitle">
+      <div class="container">
+        <div class="section-head"><div>
+          <div class="eyebrow">${e(s.homeDevUpdates)}</div>
+          <h2 id="devTitle">${e(s.homeDevNews)}</h2>
+        </div>
+        <a class="ghost-btn small-btn" href="/studio?tab=devlog">${e(s.homeAllEntries)}</a></div>
+      <article class="panel now-card rise">
         <div class="badge-list"><span class="badge plain">Devlog</span>${latest.game ? `<span class="badge plain">${e(latest.game.title)}</span>` : ""}</div>
         <h3 class="card-title"><a href="/studio/${e(latest.slug)}">${e(latest.title)}</a></h3>
         ${latest.summary ? `<p class="lead">${e(latest.summary)}</p>` : ""}
         <div class="card-meta"><time datetime="${e(isoDate(latest.publishedAt || latest.createdAt))}">${e(formatDate(latest.publishedAt || latest.createdAt))}</time></div>
       </article>
+      </div>
     </section>` : "";
 
-    const pulse = (activity?.topics_day || 0) + (activity?.replies_day || 0);
-    const pulseBlock = pulse ? `
-    <p class="container forum-pulse">${en
-      ? `Forum in the last day: ${activity.topics_day} ${activity.topics_day === 1 ? "topic" : "topics"} and ${activity.replies_day} ${activity.replies_day === 1 ? "reply" : "replies"}.`
-      : `За сутки на форуме: ${activity.topics_day} ${pluralTopics(activity.topics_day)} и ${activity.replies_day} ${pluralReplies(activity.replies_day)}.`}</p>` : "";
-
+    // ==================== UPCOMING PROJECTS ====================
     const upcomingBlock = upcoming.length ? `
-    <section class="studio-section container" aria-labelledby="upcomingTitle">
-      <div class="section-head"><div><div class="eyebrow">Upcoming Projects</div><h2 id="upcomingTitle">${en ? "Upcoming projects" : "Будущие проекты"}</h2></div></div>
+    <section class="home-upcoming" aria-labelledby="upcomingTitle">
+      <div class="container">
+        <div class="section-head"><div>
+          <div class="eyebrow">${e(s.homeUpcoming)}</div>
+          <h2 id="upcomingTitle">${e(s.homeUpcoming)}</h2>
+        </div></div>
       <div class="grid-games">${upcoming.map((g) => gameCard(g, lang)).join("")}</div>
+      </div>
     </section>` : "";
 
     const description = en
@@ -159,7 +167,7 @@ export const home = {
       path: "/", active: "home", styles: STYLES, scripts: SCRIPTS, description,
       head: head({ title: "ENDEMION — Create. Play. Connect.", description, url: `${origin}/`, image: `${origin}/assets/og-image.png` })
         + ld({ "@context": "https://schema.org", "@type": "Organization", name: "Endemion", url: `${origin}/` }),
-      body: hero + featuredBlock + nowBlock + gamesBlock + pulseBlock + communityBlock + devBlock + upcomingBlock
+      body: hero + featuredBlock + gamesBlock + communityBlock + devBlock + upcomingBlock
     });
   }
 };
@@ -168,24 +176,127 @@ export const home = {
 
 export const gamesPage = {
   async onRequestGet({ request, env }) {
+    const url = new URL(request.url);
     const lang = langOf(request);
     const en = lang === "en";
-    const [games, upcoming] = await Promise.all([listGames(env, { upcoming: false }), listGames(env, { upcoming: true })]);
+    const s = t(lang);
+
+    const status = url.searchParams.get("status") || undefined;
+    const platform = url.searchParams.get("platform") || undefined;
+    const search = url.searchParams.get("q") || undefined;
+    const sort = url.searchParams.get("sort") || "position";
+    const page = Math.max(1, Number.parseInt(url.searchParams.get("page") || "1", 10) || 1);
+    const pageSize = 24;
+    const offset = (page - 1) * pageSize;
+
+    const validStatuses = new Set(["in_development", "prototype", "released", "planned"]);
+    if (status && !validStatuses.has(status)) return notFoundPage(request, "games", en ? "No such filter." : "Такого фильтра нет.");
+
+    const { games, total } = await listGamesFiltered(env, { status, platform, search, sort, limit: pageSize, offset });
+    const pages = Math.max(1, Math.ceil(total / pageSize));
+
+    // Доступные платформы из найденных игр (для фильтра)
+    const allPlatforms = [...new Set(games.flatMap((g) => g.platforms).flat())].sort();
+
+    const query = new URLSearchParams();
+    if (status) query.set("status", status);
+    if (platform) query.set("platform", platform);
+    if (search) query.set("q", search);
+    if (sort !== "position") query.set("sort", sort);
+    const baseQuery = query.toString();
+    // Сброс только параметра поиска, остальные фильтры сохраняются
+    const resetQuery = new URLSearchParams();
+    if (status) resetQuery.set("status", status);
+    if (platform) resetQuery.set("platform", platform);
+    if (sort !== "position") resetQuery.set("sort", sort);
+    const resetHref = `/games${resetQuery.toString() ? `?${resetQuery.toString()}` : ""}`;
+    const pageQuery = (n) => `${baseQuery ? `${baseQuery}&` : ""}page=${n}`;
+
+    const pageHead = `
+      <div class="page-head"><div>
+        <div class="eyebrow">${e(s.gamesEyebrow)}</div>
+        <h1 class="display-2">${e(s.gamesTitle)}</h1>
+        <p class="section-text">${e(s.gamesDescription)}</p>
+      </div>
+      <div class="games-page-head-actions">
+        <span class="muted small">${e(s.gamesResults)}: <strong>${total}</strong></span>
+      </div></div>`;
+
+    const filterBar = `
+      <form class="games-filter-bar" role="search" action="/games" method="get">
+        <div class="filter-group">
+          <label class="filter-label">${e(s.gamesFilterStatus)}</label>
+          <div class="chips chips-is-scroll">
+            <a class="chip${!status ? " is-active" : ""}" href="/games${baseQuery ? `?${baseQuery}` : ""}">${en ? "All" : "Все"}</a>
+            ${["in_development", "prototype", "released", "planned"].map((st) => {
+              const active = status === st;
+              const label = en ? GAME_STATUS_LABELS_EN[st] : GAME_STATUS_LABELS[st];
+              const href = `/games?${new URLSearchParams({ ...(status ? { status } : {}), ...(platform ? { platform } : {}), ...(search ? { q: search } : {}), ...(sort !== "position" ? { sort } : {}), status: st }).toString()}`;
+              return `<a class="chip${active ? " is-active" : ""}" href="${e(href)}">${e(label)}</a>`;
+            }).join("")}
+          </div>
+        </div>
+        <div class="filter-group">
+          <label class="filter-label">${e(s.gamesFilterPlatform)}</label>
+          <div class="chips chips-is-scroll">
+            <a class="chip${!platform ? " is-active" : ""}" href="/games${baseQuery ? `?${baseQuery}` : ""}">${en ? "All" : "Все"}</a>
+            ${allPlatforms.map((p) => {
+              const active = platform === p;
+              const href = `/games?${new URLSearchParams({ ...(status ? { status } : {}), ...(platform ? { platform } : {}), ...(search ? { q: search } : {}), ...(sort !== "position" ? { sort } : {}), platform: p }).toString()}`;
+              return `<a class="chip${active ? " is-active" : ""}" href="${e(href)}">${e(p)}</a>`;
+            }).join("")}
+          </div>
+        </div>
+        <div class="filter-group filter-search">
+          <label class="visually-hidden" for="gamesSearch">${e(s.gamesFilterSearch)}</label>
+          <input class="input" id="gamesSearch" name="q" value="${e(search || "")}" maxlength="80" placeholder="${e(s.gamesFilterSearch)}" aria-label="${e(s.gamesFilterSearch)}">
+          ${search ? `<a class="ghost-btn small-btn" href="${e(resetHref)}">${e(s.gamesFilterReset)}</a>` : ""}
+          <button class="ghost-btn" type="submit">${e(s.find)}</button>
+        </div>
+        <div class="filter-group">
+          <label class="filter-label">${e(s.gamesSort)}</label>
+          <select class="select" name="sort" aria-label="${e(s.gamesSort)}">
+            <option value="position"${sort === "position" ? " selected" : ""}>${e(s.gamesSortPosition)}</option>
+            <option value="title_asc"${sort === "title_asc" ? " selected" : ""}>${e(s.gamesSortTitleAsc)}</option>
+            <option value="title_desc"${sort === "title_desc" ? " selected" : ""}>${e(s.gamesSortTitleDesc)}</option>
+            <option value="newest"${sort === "newest" ? " selected" : ""}>${e(s.gamesSortNewest)}</option>
+            <option value="oldest"${sort === "oldest" ? " selected" : ""}>${e(s.gamesSortOldest)}</option>
+          </select>
+          <noscript><button class="ghost-btn small-btn" type="submit">${en ? "Apply" : "Применить"}</button></noscript>
+        </div>
+      </form>`;
+
+    const gamesGrid = games.length
+      ? `<div class="grid-games">${games.map((g) => gameCard(g, lang)).join("")}</div>`
+      : emptyCard(e(s.gamesEmptyTitle), e(s.gamesEmptyText), `<a class="ghost-btn" href="/games">${e(s.gamesFilterReset)}</a>`);
+
+    const upcomingGames = games.filter((g) => g.isUpcoming);
+    const upcomingBlock = upcomingGames.length ? `
+    <section class="studio-section" aria-labelledby="upcomingTitle">
+      <div class="section-head"><div><h2 id="upcomingTitle">${e(s.homeUpcoming)}</h2></div></div>
+      <div class="grid-games">${upcomingGames.map((g) => gameCard(g, lang)).join("")}</div>
+    </section>` : "";
+
+    const pagination = pages > 1
+      ? `<nav class="btn-row pager" aria-label="${en ? "Pages" : "Страницы"}">${page > 1 ? `<a class="ghost-btn small-btn" href="/games?${pageQuery(page - 1)}">${en ? "← Back" : "← Назад"}</a>` : ""}<span class="muted">${en ? `Page ${page} of ${pages}` : `Страница ${page} из ${pages}`}</span>${page < pages ? `<a class="ghost-btn small-btn" href="/games?${pageQuery(page + 1)}">${en ? "Next →" : "Дальше →"}</a>` : ""}</nav>`
+      : "";
+
     const body = `
     <div class="container page">
-      <div class="page-head"><div>
-        <div class="eyebrow">Endemion Games</div>
-        <h1 class="display-2">${en ? "Studio games" : "Игры студии"}</h1>
-        <p class="section-text">${en ? "Endemion projects: in development, prototypes and released games." : "Проекты Endemion: в разработке, прототипы и вышедшие игры."}</p>
-      </div></div>
-      ${games.length ? `<div class="grid-games">${games.map((g) => gameCard(g, lang)).join("")}</div>` : emptyCard(en ? "No games yet" : "Игр пока нет", en ? "The catalog will appear when the studio adds its first game." : "Каталог появится, когда студия добавит первую игру.")}
-      ${upcoming.length ? `<section class="studio-section" aria-labelledby="upcomingTitle">
-        <div class="section-head"><div><h2 id="upcomingTitle">${en ? "Upcoming projects" : "Будущие проекты"}</h2></div></div>
-        <div class="grid-games">${upcoming.map((g) => gameCard(g, lang)).join("")}</div></section>` : ""}
+      ${pageHead}
+      ${filterBar}
+      ${gamesGrid}
+      ${upcomingBlock}
+      ${pagination}
     </div>`;
+
+    const description = en
+      ? "The Endemion game catalog: development status, platforms and links to game pages."
+      : "Каталог игр Endemion: статусы разработки, платформы и ссылки на страницы игр.";
     return renderPage(request, {
-      title: en ? "Games" : "Игры", path: "/games", active: "games", body, styles: STYLES, scripts: SCRIPTS,
-      description: en ? "The Endemion game catalog: development status, platforms and links to game pages." : "Каталог игр Endemion: статусы разработки, платформы и ссылки на страницы игр."
+      title: en ? "Games" : "Игры", path: `/games${baseQuery ? `?${baseQuery}` : ""}`, active: "games", body, styles: STYLES, scripts: SCRIPTS,
+      description,
+      head: head({ title: `${en ? "Games" : "Игры"} | ENDEMION`, description, url: `${url.origin}${url.pathname}${baseQuery ? `?${baseQuery}` : ""}` })
     });
   }
 };
@@ -198,13 +309,14 @@ export const gamePage = {
     const origin = url.origin;
     const lang = langOf(request);
     const en = lang === "en";
+    const s = t(lang);
     const game = await getGameBySlug(env, String(params.slug || "").toLowerCase());
-    const viewer = game && !game.published ? await currentUser(env, request) : null;
+    const viewer = await currentUser(env, request);
     if (!game || (!game.published && !hasRole(viewer, "admin"))) return notFoundPage(request, "games", en ? "No such game in the catalog." : "Такой игры нет в каталоге.");
 
     const profile = GAME_PROFILES[game.slug] || null;
     const devlogPage = Math.max(1, Math.min(1000, Number.parseInt(url.searchParams.get("devlog") || "1", 10) || 1));
-    const [media, news, devlog, roadmapPosts, categoryIds, category, ideas, bugs, lastUpdate] = await Promise.all([
+    const [media, news, devlog, roadmapPosts, categoryIds, category, ideas, bugs, lastUpdate, isFavorited, userReview, reviews, stats] = await Promise.all([
       listGameMedia(env, game.id),
       listPosts(env, { gameId: game.id, kinds: ["update", "news", "announcement"], limit: 3 }),
       listPosts(env, { gameId: game.id, kinds: ["devlog"], limit: DEVLOG_PAGE, offset: (devlogPage - 1) * DEVLOG_PAGE }),
@@ -213,7 +325,11 @@ export const gamePage = {
       gameCategory(env, game.id),
       getCategoryBySlug(env, "feature-requests"),
       getCategoryBySlug(env, "bug-reports"),
-      listPosts(env, { gameId: game.id, kinds: ["update", "devlog", "news", "announcement"], limit: 1 })
+      listPosts(env, { gameId: game.id, kinds: ["update", "devlog", "news", "announcement"], limit: 1 }),
+      viewer ? isGameFavorited(env, viewer.id, game.id) : false,
+      viewer ? getGameReview(env, viewer.id, game.id) : null,
+      listGameReviews(env, game.id),
+      getGameReviewStats(env, game.id)
     ]);
     const threads = await recentThreads(env, { limit: 5, categoryIds });
 
@@ -225,32 +341,294 @@ export const gamePage = {
     };
     const latest = lastUpdate.posts[0];
     const latestDate = latest ? latest.publishedAt || latest.createdAt : null;
+
+    // ==================== PREMIUM HERO ====================
+    const heroImage = cover
+      ? `<img src="${e(cover.src)}"${cover.srcset ? ` srcset="${e(cover.srcset)}" sizes="(max-width: 900px) 92vw, 560px"` : ""} alt="" width="${cover.width}" height="${cover.height}" decoding="async" fetchpriority="high">`
+      : `<div class="placeholder-art" role="img" aria-label="${e(s.gameAbout)} ${e(game.title)}"><strong>${e(game.title)}</strong><small>${en ? "Cover coming soon" : "Обложка скоро появится"}</small></div>`;
+
+    const hero = `
+    <section class="game-hero" aria-labelledby="gameHeroTitle">
+      <div class="game-hero-wrap">
+        <div class="game-hero-media rise">${heroImage}</div>
+        <div class="game-hero-content rise rise-2">
+          <div class="eyebrow">${e(s.gameAbout)}</div>
+          <h1 class="display-1" id="gameHeroTitle">${e(game.title)}</h1>
+          ${game.tagline ? `<p class="game-tagline lead">${e(game.tagline)}</p>` : ""}
+          ${game.description ? `<p class="game-lead">${e(game.description)}</p>` : ""}
+          <div class="game-hero-meta">
+            <span class="badge status-${game.status || "unknown"}">${e(statusBadge(game.status, lang).replace(/<[^>]*>/g, ""))}</span>
+            ${game.platforms.length ? `<span class="badge plain">${e(game.platforms.join(" · "))}</span>` : ""}
+            ${profile?.genre ? `<span class="badge plain">${e(profile.genre)}</span>` : ""}
+          </div>
+          <div class="game-hero-cta">
+            ${game.websiteUrl ? `<a class="primary-btn" href="${e(game.websiteUrl)}" rel="noopener" target="_blank">${e(s.gamePlayCTA)}</a>` : ""}
+            <a class="ghost-btn" href="#gameAbout">${e(s.gameAboutCTA)}</a>
+            ${links.discuss ? `<a class="ghost-btn" href="${e(links.discuss)}">${e(s.gameDiscussCTA)}</a>` : ""}
+            ${viewer ? `<button class="ghost-btn game-favorite-btn" data-game-id="${game.id}" data-favorited="${isFavorited ? 1 : 0}" data-favorited-short-added="${e(s.gameAddFavoriteShortCTA)}" data-favorited-short-removed="${e(s.gameRemoveFavoriteShortCTA)}" data-favorited-label-added="${e(s.gameRemoveFavoriteCTA)}" data-favorited-label-removed="${e(s.gameAddFavoriteCTA)}" aria-label="${isFavorited ? e(s.gameRemoveFavoriteCTA) : e(s.gameAddFavoriteCTA)}">${isFavorited ? e(s.gameRemoveFavoriteShortCTA) : e(s.gameAddFavoriteShortCTA)}</button>` : ""}
+          </div>
+        </div>
+      </div>
+    </section>`;
+
+    // ==================== СЕКЦИИ ====================
+    const aboutSectionHtml = game.description
+      ? `<section id="gameAbout" class="game-section" aria-labelledby="gameAboutTitle">
+        <div class="container">
+          <div class="section-head"><div>
+            <div class="eyebrow">${e(s.gameAbout)}</div>
+            <h2 id="gameAboutTitle">${e(s.gameAbout)}</h2>
+          </div></div>
+          <div class="game-about-text rich-text">${richText(game.description)}</div>
+        </div>
+      </section>` : "";
+
+    const worldsSectionHtml = profile?.worlds
+      ? `<section id="gameWorlds" class="game-section" aria-labelledby="gameWorldsTitle">
+        <div class="container">
+          <div class="section-head"><div>
+            <div class="eyebrow">${e(profile.worldsHeading?.title || (en ? "Worlds" : "Миры"))}</div>
+            <h2 id="gameWorldsTitle">${e(profile.worldsHeading?.title || (en ? "Worlds" : "Миры"))}</h2>
+            ${profile.worldsHeading?.text ? `<p class="section-text">${e(profile.worldsHeading.text)}</p>` : ""}
+          </div></div>
+          <div class="game-worlds-grid">
+            ${profile.worlds.map((w) => `<article class="card">
+              <div class="card-body">
+                <h3 class="card-title">${e(w.name)}</h3>
+                ${w.tag ? `<p class="card-meta">${e(w.tag)}</p>` : ""}
+                ${w.summary ? `<p class="card-text">${e(w.summary)}</p>` : ""}
+              </div>
+            </article>`).join("")}
+          </div>
+        </div>
+      </section>` : "";
+
+    const featuresSectionHtml = profile?.features
+      ? `<section id="gameFeatures" class="game-section" aria-labelledby="gameFeaturesTitle">
+        <div class="container">
+          <div class="section-head"><div>
+            <div class="eyebrow">${e(profile?.featuresHeading?.title || (en ? "Features" : "Особенности"))}</div>
+            <h2 id="gameFeaturesTitle">${e(profile?.featuresHeading?.title || (en ? "Features" : "Особенности"))}</h2>
+          </div></div>
+          <div class="game-features-grid">
+            ${profile.features.map((f) => `<article class="card">
+              <div class="card-body">
+                <h3 class="card-title">${e(f.title)}</h3>
+                ${f.subtitle ? `<p class="card-meta">${e(f.subtitle)}</p>` : ""}
+                ${f.text ? `<p class="card-text">${e(f.text)}</p>` : ""}
+              </div>
+            </article>`).join("")}
+          </div>
+        </div>
+      </section>` : "";
+
+    const screenshotsHtml = media.length
+      ? `<section id="gameScreenshots" class="game-section" aria-labelledby="gameScreenshotsTitle">
+        <div class="container">
+          <div class="section-head"><div>
+            <div class="eyebrow">${e(s.gameScreenshots)}</div>
+            <h2 id="gameScreenshotsTitle">${e(s.gameScreenshots)}</h2>
+          </div></div>
+          <div class="game-shots">
+            ${media.map((m) => `<figure>
+              <img src="${e(`/media/games/${game.id}/shots/${m.id}`)}" alt="${e(m.caption || game.title)}" loading="lazy" decoding="async" width="1280" height="720">
+              ${m.caption ? `<figcaption>${e(m.caption)}</figcaption>` : ""}
+            </figure>`).join("")}
+          </div>
+        </div>
+      </section>` : "";
+
+    const roadmapHtml = roadmapPosts.posts.length
+      ? `<section id="gameRoadmap" class="game-section" aria-labelledby="gameRoadmapTitle">
+        <div class="container">
+          <div class="section-head"><div>
+            <div class="eyebrow">${e(s.gameRoadmap)}</div>
+            <h2 id="gameRoadmapTitle">${e(s.gameRoadmap)}</h2>
+          </div></div>
+          <div class="grid-posts">${roadmapPosts.posts.map((p) => postCard(p, lang)).join("")}</div>
+        </div>
+      </section>` : `<section id="gameRoadmap" class="game-section" aria-labelledby="gameRoadmapTitle">
+        <div class="container">
+          <div class="section-head"><div>
+            <div class="eyebrow">${e(s.gameRoadmap)}</div>
+            <h2 id="gameRoadmapTitle">${e(s.gameRoadmap)}</h2>
+          </div></div>
+          ${emptyCard(e(s.gameNoRoadmap), "")}
+        </div>
+      </section>`;
+
+    const newsHtml = news.posts.length
+      ? `<section id="gameNews" class="game-section" aria-labelledby="gameNewsTitle">
+        <div class="container">
+          <div class="section-head"><div>
+            <div class="eyebrow">${e(s.gameNews)}</div>
+            <h2 id="gameNewsTitle">${e(s.gameNews)}</h2>
+          </div></div>
+          <div class="grid-posts">${news.posts.map((p) => postCard(p, lang)).join("")}</div>
+        </div>
+      </section>` : `<section id="gameNews" class="game-section" aria-labelledby="gameNewsTitle">
+        <div class="container">
+          <div class="section-head"><div>
+            <div class="eyebrow">${e(s.gameNews)}</div>
+            <h2 id="gameNewsTitle">${e(s.gameNews)}</h2>
+          </div></div>
+          ${emptyCard(e(s.gameNoNews), "")}
+        </div>
+      </section>`;
+
+    const devlogHtml = devlog.posts.length
+      ? `<section id="gameDevlog" class="game-section" aria-labelledby="gameDevlogTitle">
+        <div class="container">
+          <div class="section-head"><div>
+            <div class="eyebrow">${e(s.gameDevlog)}</div>
+            <h2 id="gameDevlogTitle">${e(s.gameDevlog)}</h2>
+          </div></div>
+          <div class="grid-posts">${devlog.posts.map((p) => postCard(p, lang)).join("")}</div>
+        </div>
+      </section>` : `<section id="gameDevlog" class="game-section" aria-labelledby="gameDevlogTitle">
+        <div class="container">
+          <div class="section-head"><div>
+            <div class="eyebrow">${e(s.gameDevlog)}</div>
+            <h2 id="gameDevlogTitle">${e(s.gameDevlog)}</h2>
+          </div></div>
+          ${emptyCard(e(s.gameNoDevlog), "")}
+        </div>
+      </section>`;
+
+    const communityHtml = links.discuss || threads.length
+      ? `<section id="gameCommunity" class="game-section" aria-labelledby="gameCommunityTitle">
+        <div class="container">
+          <div class="section-head"><div>
+            <div class="eyebrow">${e(s.gameCommunity)}</div>
+            <h2 id="gameCommunityTitle">${e(s.gameCommunity)}</h2>
+          </div></div>
+          ${links.discuss ? `<p class="game-community-intro"><a href="${e(links.discuss)}">${e(s.gameDiscussCTA)} →</a></p>` : ""}
+          ${threads.length ? `<div class="list-panel">${threads.map((t) => threadRow(t, lang)).join("")}</div>` : ""}
+        </div>
+      </section>` : `<section id="gameCommunity" class="game-section" aria-labelledby="gameCommunityTitle">
+        <div class="container">
+          <div class="section-head"><div>
+            <div class="eyebrow">${e(s.gameCommunity)}</div>
+            <h2 id="gameCommunityTitle">${e(s.gameCommunity)}</h2>
+          </div></div>
+          ${emptyCard(e(s.gameNoCommunity), "")}
+        </div>
+      </section>`;
+
+    // Статусная таблица (сохраняем существующую логику)
     const statusRows = [
-      [en ? "Development status" : "Статус разработки", statusBadge(game.status, lang)],
-      // Версия и дата обновления — только из реальных данных: публикаций студии о игре. Выдумывать их нельзя
-      [en ? "Current version" : "Текущая версия", profile?.version ? e(profile.version) : ""],
-      [en ? "Last update" : "Последнее обновление", latestDate ? `<a href="/studio/${e(latest.slug)}"><time datetime="${e(isoDate(latestDate))}">${e(formatDate(latestDate))}</time></a>` : ""],
-      [en ? "Platform" : "Платформа", e(game.platforms.join(", "))],
-      [en ? "Genre" : "Тип игры", e(profile?.genre || "")]
+      [e(s.gameStatus), statusBadge(game.status, lang)],
+      [e(s.gameVersionLabel), profile?.version ? e(profile.version) : ""],
+      [e(s.gameLastUpdateLabel), latestDate ? `<a href="/studio/${e(latest.slug)}"><time datetime="${e(isoDate(latestDate))}">${e(formatDate(latestDate))}</time></a>` : ""],
+      [e(s.gamePlatformsLabel), e(game.platforms.join(", ") || (en ? "not set" : "не указаны"))],
+      [e(s.gameGenreLabel), e(profile?.genre || (en ? "not set" : "не указан"))]
     ];
 
-    const sections = [
-      ["about", en ? "About" : "Об игре", aboutSection(game, profile, lang)],
-      ["worlds", en ? "Worlds" : "Миры", worldsSection(profile?.worlds, { ...(profile?.worldsHeading || { title: en ? "Worlds" : "Миры" }), lang })],
-      ["features", en ? "Features" : "Особенности", featuresSection(profile?.features, lang)],
-      ["screenshots", en ? "Screenshots" : "Скриншоты", screenshotsSection(game, media, lang)],
-      ["roadmap", "Roadmap", roadmapSection(game, roadmapPosts.posts, (p) => postCard(p, lang), { title: profile?.roadmapTitle || "Roadmap", lang })],
-      ["news", en ? "News" : "Новости", newsSection(news.posts, lang)],
-      ["devlog", "Devlog", devlogSection(game, devlog, { page: devlogPage, pageSize: DEVLOG_PAGE, lang })],
-      ["community", en ? "Community" : "Сообщество", communitySection(game, { links, threads, knownIssues: game.knownIssues, lang })],
-      ["status", en ? "Status" : "Статус", statusSection(statusRows, lang)]
-    ].filter(([, , html]) => html);
+    // ==================== ОТЗЫВЫ ====================
+    const reviewsHtml = `
+    <section id="gameReviews" class="game-section" aria-labelledby="gameReviewsTitle">
+      <div class="container">
+        <div class="section-head"><div>
+          <div class="eyebrow">${e(s.gameReviewsTitle)}</div>
+          <h2 id="gameReviewsTitle">${e(s.gameReviewsTitle)}</h2>
+          ${stats.reviewCount > 0 ? `
+          <div class="game-reviews-summary">
+            <span class="game-reviews-avg">${stats.avgScore?.toFixed(1) || "–"}</span>
+            <span class="game-reviews-avg-label">${e(s.gameReviewsAverage)}</span>
+            <span class="game-reviews-count">(${stats.reviewCount})</span>
+          </div>` : ""}
+        </div></div>
+        ${viewer ? `
+        <div class="game-review-form" id="gameReviewForm">
+          <div class="form-row">
+            <label class="form-label">${e(s.gameReviewScoreLabel)}</label>
+            <div class="game-score-select" role="radiogroup" aria-label="${e(s.gameReviewScoreLabel)}">
+              ${[10, 9, 8, 7, 6, 5, 4, 3, 2, 1].map((s) => `
+                <button type="button" class="score-btn${userReview?.score === s ? " active" : ""}" data-score="${s}" aria-pressed="${userReview?.score === s}">${s}</button>
+              `).join("")}
+            </div>
+            <input type="hidden" id="reviewScore" value="${userReview?.score ?? ""}">
+          </div>
+          <div class="form-row">
+            <label class="form-label">${e(s.gameReviewTextLabel)}</label>
+            <textarea class="textarea" id="reviewBody" maxlength="${REVIEW_BODY_MAX}" rows="4">${userReview?.body ?? ""}</textarea>
+            <div class="form-row">
+              <label class="check"><input type="checkbox" id="reviewSpoiler"${userReview?.spoiler ? " checked" : ""}> ${e(s.gameReviewSpoilerLabel)}</label>
+            </div>
+            <button class="primary-btn" id="reviewSubmitBtn" data-edit-text="${e(s.gameReviewEdit)}">${userReview ? e(s.gameReviewEdit) : e(s.gameReviewSubmit)}</button>
+            <button class="ghost-btn" id="reviewDeleteBtn"${!userReview ? " hidden" : ""}>${e(s.gameReviewDelete)}</button>
+            <button class="ghost-btn" id="reviewCancelBtn" hidden>Отмена</button>
+            <p class="form-error" id="reviewMessage" role="status"></p>
+          </div>
+        </div>
+        ` : `
+        <div class="game-review-signin">
+          <p>${e(s.gameReviewSignIn)}</p>
+          <a class="primary-btn" href="/auth?next=${encodeURIComponent(`/games/${game.slug}`)}">${en ? "Sign in" : "Войти"}</a>
+        </div>
+        `}
+        ${reviews.length ? `<div class="game-reviews-list">${reviews.map((r) => `
+          <div class="game-review-item${r.spoiler ? " spoiler" : ""}">
+            <div class="game-review-header">
+              <span class="game-review-author">${e(r.author.name)}</span>
+              <span class="game-review-score">${r.score}</span>
+              <span class="game-review-date">${e(formatDate(r.created_at))}</span>
+            </div>
+            <div class="game-review-body${r.spoiler ? " spoiler-hidden" : ""}">
+              ${r.spoiler ? `<button class="game-review-reveal" aria-expanded="false">${e(s.gameReviewReveal)}</button>` : ""}
+              ${r.body ? `<p${r.spoiler ? ' aria-hidden="true"' : ""}>${e(r.body).replace(/\n/g, "<br>")}</p>` : `<p class="muted"${r.spoiler ? ' aria-hidden="true"' : ""}>${en ? "No text." : "Без текста."}</p>`}
+            </div>
+            ${viewer && userReview?.id === r.id ? `<button class="ghost-btn small-btn" data-review-id="${r.id}">${e(s.gameReviewDelete)}</button>` : ""}
+          </div>
+        `).join("")}</div>` : `<div class="empty-card">${e(s.gameReviewsEmpty)}</div>`}
+      </div>
+    </section>`;
+    const statusHtml = `
+    <section id="gameStatus" class="game-section" aria-labelledby="gameStatusTitle">
+      <div class="container">
+        <div class="section-head"><div>
+          <div class="eyebrow">${e(s.gameStatus)}</div>
+          <h2 id="gameStatusTitle">${e(s.gameStatus)}</h2>
+        </div></div>
+        <div class="game-status-grid">
+          ${statusRows.map(([label, value]) => value ? `<div class="game-status-row"><span class="game-status-label">${label}</span><span class="game-status-value">${value}</span></div>` : "").join("")}
+        </div>
+      </div>
+    </section>`;
+
+    const sectionIds = [
+      [aboutSectionHtml, "gameAbout", s.gameAbout],
+      [worldsSectionHtml, "gameWorlds", profile?.worldsHeading?.title || (en ? "Worlds" : "Миры")],
+      [featuresSectionHtml, "gameFeatures", profile?.featuresHeading?.title || (en ? "Features" : "Особенности")],
+      [screenshotsHtml, "gameScreenshots", s.gameScreenshots],
+      [roadmapHtml, "gameRoadmap", s.gameRoadmap],
+      [newsHtml, "gameNews", s.gameNews],
+      [devlogHtml, "gameDevlog", s.gameDevlog],
+      [communityHtml, "gameCommunity", s.gameCommunity],
+      [reviewsHtml, "gameReviews", s.gameReviewsTitle],
+      [statusHtml, "gameStatus", s.gameStatus]
+    ].filter(([html]) => html.trim().length > 0);
+
+    const sectionNavHtml = sectionIds.length
+      ? `<nav class="game-section-nav" aria-label="${en ? "Sections" : "Разделы"}">
+        ${sectionIds.map(([, id, label]) => `<a href="#${id}">${e(label)}</a>`).join("")}
+      </nav>`
+      : "";
 
     const body = `
-    ${heroSection(game, profile, { cover, discussionHref: links.discuss, lang })}
-    ${sectionNav(sections.map(([id, label]) => [id, label]), lang)}
+    ${hero}
+    ${sectionNavHtml}
     <div class="container">
-      ${sections.map(([, , html]) => html).join("")}
+      ${aboutSectionHtml}
+      ${worldsSectionHtml}
+      ${featuresSectionHtml}
+      ${screenshotsHtml}
+      ${roadmapHtml}
+      ${newsHtml}
+      ${devlogHtml}
+      ${communityHtml}
+      ${reviewsHtml}
+      ${statusHtml}
       <div class="gp-page-end"></div>
     </div>`;
 

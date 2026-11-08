@@ -75,6 +75,18 @@
   --font-display: "Unbounded", "Manrope", "Segoe UI", sans-serif;
   --font-body: "Manrope", "Segoe UI", system-ui, sans-serif;
   --header-height: 72px;
+
+  /* ==================== SEMANTIC DESIGN TOKENS (Stage 01) ====================
+     Алиасы на базовые переменные выше. Единый источник истины для компонентов. */
+  --primary-text: var(--text);
+  --secondary-text: var(--muted);
+  --muted-text: var(--muted);
+  --elevated-surface: var(--surface-elevated);
+  --primary-accent: var(--primary);
+  --secondary-accent: var(--secondary);
+  --success: var(--green);
+  --warning: var(--yellow);
+  --error: var(--red);
 }
 
 * {
@@ -778,7 +790,8 @@ img {
   right: 16px;
   bottom: 16px;
   z-index: 50;
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 10px;
   width: min(440px, calc(100% - 32px));
   padding: 18px;
@@ -808,12 +821,8 @@ img {
 
 /* ==================== ПЛАНШЕТЫ И ТЕЛЕФОНЫ ==================== */
 
-/* На средних экранах «Регистрация» не помещается рядом с разделами: она есть на странице входа */
+/* На средних экранах «Регистрация» остаётся доступной на странице входа */
 @media (max-width: 1679px) {
-  .register-btn {
-    display: none;
-  }
-
   .profile-btn .account-name {
     display: none;
   }

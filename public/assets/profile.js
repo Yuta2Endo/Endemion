@@ -92,6 +92,48 @@ async function renderAchievements() {
   }));
 }
 
+// ==================== ИЗБРАННЫЕ ИГРЫ ====================
+
+async function renderFavorites() {
+  const box = $("#profileFavoritesList");
+  if (!box) return;
+  const result = await api(`/api/users/${encodeURIComponent(profile.username)}/library`);
+  if (!result.ok) return box.replaceChildren(errorBox("Избранное не загрузилось.", renderFavorites));
+  const games = result.data.games || [];
+  if (!games.length) {
+    box.replaceChildren(el("div", "profile-favorites-empty",
+      el("strong", null, "Избранных игр пока нет"),
+      el("p", null, "Добавляйте игры в избранное на их страницах, и они появятся здесь.")
+    ));
+    return;
+  }
+  box.replaceChildren(...games.map((g) => {
+    const article = el("article", "card");
+    const media = el("div", "card-media");
+    if (g.coverUrl) {
+      const img = el("img");
+      img.src = g.coverUrl;
+      img.alt = "";
+      img.loading = "lazy";
+      img.decoding = "async";
+      img.width = 1280;
+      img.height = 720;
+      media.append(img);
+    } else {
+      media.append(el("div", "placeholder-art", `${g.title}\nОбложка скоро появится`));
+    }
+    const body = el("div", "card-body");
+    body.append(link(`/games/${g.slug}`, "card-title", g.title));
+    if (g.tagline) body.append(el("p", "card-text", g.tagline));
+    const meta = el("div", "card-meta");
+    if (g.platforms.length) meta.append(el("span", null, g.platforms.join(" · ")));
+    else meta.append(el("span", null, "Платформы не указаны"));
+    body.append(meta);
+    article.append(media, body);
+    return article;
+  }));
+}
+
 // ==================== НАСТРОЙКИ ====================
 
 function renderSettings() {
@@ -210,7 +252,7 @@ $("#logoutButton").addEventListener("click", async () => {
 // ==================== ВКЛАДКИ ====================
 
 const tabs = [...document.querySelectorAll("[data-tab]")];
-const RENDER = { overview: renderOverview, achievements: renderAchievements, settings: renderSettings };
+const RENDER = { overview: renderOverview, achievements: renderAchievements, settings: renderSettings, favorites: renderFavorites };
 
 function open(name) {
   const tab = RENDER[name] ? name : "overview";
@@ -267,6 +309,21 @@ async function init() {
   renderHead();
   $("#profileLoading").remove();
   $("#profile").hidden = false;
+  // Добавить вкладку «Избранные»
+  const tabsBar = document.querySelector("[data-tab]")?.closest(".tabs-bar");
+  if (tabsBar && !tabsBar.querySelector("[data-tab=favorites]")) {
+    const btn = el("button", null, "Избранные");
+    btn.type = "button";
+    btn.role = "tab";
+    btn.dataset.tab = "favorites";
+    btn.setAttribute("aria-selected", "false");
+    tabsBar.append(btn);
+    const panel = el("section", null);
+    panel.dataset.panel = "favorites";
+    panel.hidden = true;
+    panel.innerHTML = `<div class="container"><div class="section-head"><div><h2>Избранные игры</h2></div></div><div id="profileFavoritesList"></div></div>`;
+    document.querySelector("main").append(panel);
+  }
   open(location.hash.slice(1));
 }
 

@@ -83,7 +83,7 @@ async function signIn(user, cookies, action = {}, next = "/profile") {
   if (!result.final) {
     const uid = interactionUid(result.text);
     result = action.register
-      ? await user.follow(`/interaction/${uid}/register`, { method: "POST", form: { consent: "1", ...action.register } })
+      ? await user.follow(`/interaction/${uid}/register`, { method: "POST", form: { consent: "1", ...action.register, confirmPassword: action.register.password } })
       : await user.follow(`/interaction/${uid}/login`, { method: "POST", form: { login: action.login, password: action.password } });
   }
   assert.ok(result.final, `Endemion ID не вернул на сайт: ${result.status} ${result.text?.slice(0, 200)}`);

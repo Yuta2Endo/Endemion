@@ -49,7 +49,7 @@ ${scripts.map((src) => `  <script type="module" src="${escapeHtml(src)}"></scrip
 
 /**
  * Поле формы с подписью, подсказкой или ошибкой
- * @param {{ name: string, label: string, type?: string, value?: string, autocomplete?: string, required?: boolean, hint?: string, error?: string, extra?: string }} options
+ * @param {{ name: string, label: string, type?: string, value?: string, autocomplete?: string, required?: boolean, hint?: string, error?: string, extra?: string, id?: string }} options
  */
 function field({ name, label, type = "text", value = "", autocomplete, required = true, hint, error, extra = "", id = `f-${name}` }) {
   const reveal = type === "password" ? `<label class="reveal"><input type="checkbox" data-reveal="${id}"><span>Показать</span></label>` : "";
@@ -290,14 +290,14 @@ function accountNav(active) {
   return `<nav class="tabs" aria-label="Разделы аккаунта">${item("/account", "Профиль")}${item("/account/security", "Безопасность")}${item("/sessions", "Сессии")}${item("/account/apps", "Приложения")}${item("/account/data", "Данные")}${item("/logout", "Выйти")}</nav>`;
 }
 
-/**
- * Пароль и внешние провайдеры: что привязано, кнопки привязать и отвязать
- * @param {{ id: string, name: string, enabled: boolean, identity: Record<string, any> | null }[]} methods
- */
 function codeField(suffix) {
   return field({ name: "code", id: `f-code-${suffix}`, label: "Код из приложения", autocomplete: "one-time-code", extra: 'inputmode="numeric" maxlength="6" pattern="[0-9]{6}"' });
 }
 
+/**
+ * Пароль и внешние провайдеры: что привязано, кнопки привязать и отвязать
+ * @param {{ id: string, name: string, enabled: boolean, identity: Record<string, any> | null }[]} methods
+ */
 function loginMethodsPanel(methods, hasPassword, csrf, totp) {
   const rows = methods.map((method) => {
     const identity = method.identity;
@@ -330,7 +330,7 @@ function loginMethodsPanel(methods, hasPassword, csrf, totp) {
         </section>`;
 }
 
-/** @param {Record<string, any>} options */
+/** @param {Record<string, any>} account */
 function protectionList(account) {
   const items = [
     [account.verified, "Почта подтверждена", "/account"],
@@ -341,7 +341,7 @@ function protectionList(account) {
   return `<ul class="checklist">${items.map(([ok, text, href]) => `<li><a href="${href}"><span class="badge ${ok ? "ok" : "warn"}">${ok ? "есть" : "нет"}</span> ${escapeHtml(text)}</a></li>`).join("")}</ul>`;
 }
 
-export function accountPage({ account, avatarUrl, csrf, notice, error, links, mailEnabled, hasPassword = true, totp = false, passkeys = 0, loginMethods = [] }) {
+export function accountPage({ account, avatarUrl, csrf, notice, error, links, mailEnabled, hasPassword = true, totp = false, passkeys = 0, _loginMethods = [] }) {
   const verified = Boolean(account.email_verified_at);
   return layout({
     title: "Аккаунт",
@@ -393,7 +393,7 @@ export function accountPage({ account, avatarUrl, csrf, notice, error, links, ma
 
 const SCOPE_LABELS = { openid: "идентификатор", email: "почта", profile: "имя и аватар", offline_access: "оставаться в системе" };
 
-/** @param {Record<string, any>} options */
+/** @param {string} csrf @param {Record<string, any> | null} totp */
 function totpPanel(csrf, totp) {
   if (totp?.enabled) {
     return `<section class="id-panel" aria-labelledby="totpTitle">

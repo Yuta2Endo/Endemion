@@ -72,6 +72,49 @@ export async function listGames(env, { upcoming = undefined, withHidden = false 
   return (await env.DB.prepare(sql).all()).results.map(toGame);
 }
 
+/**
+ * Игры с фильтрацией, поиском, сортировкой и пагинацией.
+ * Возвращает { games, total }.
+ * @param {any} env
+ * @param {{ status?: string, platform?: string, search?: string, sort?: string, limit?: number, offset?: number }} [options]
+ */
+export async function listGamesFiltered(env, {
+  status = undefined,
+  platform = undefined,
+  search = undefined,
+  sort = "position",
+  limit = undefined,
+  offset = undefined
+} = {}) {
+  const where = ["published = 1"];
+  const binds = [];
+  if (status) { where.push("status = ?"); binds.push(status); }
+  if (platform) { where.push("platforms LIKE ?"); binds.push(`%${platform}%`); }
+  if (search) {
+    where.push("(title LIKE ? OR tagline LIKE ? OR description LIKE ?)");
+    binds.push(`%${search}%`, `%${search}%`, `%${search}%`);
+  }
+
+  let orderBy = "position, id";
+  if (sort === "title_asc") orderBy = "title COLLATE NOCASE, id";
+  else if (sort === "title_desc") orderBy = "title COLLATE NOCASE DESC, id";
+  else if (sort === "newest") orderBy = "created_at DESC, id";
+  else if (sort === "oldest") orderBy = "created_at ASC, id";
+
+  const whereClause = where.join(" AND ");
+  const limitSql = limit !== undefined ? ` LIMIT ${Number(limit)}${offset !== undefined ? ` OFFSET ${Number(offset)}` : ""}` : "";
+  const rows = await env.DB.prepare(
+    `SELECT * FROM games WHERE ${whereClause} ORDER BY ${orderBy}${limitSql}`
+  ).bind(...binds).all();
+
+  const countRow = await env.DB.prepare(`SELECT COUNT(*) AS n FROM games WHERE ${whereClause}`).bind(...binds).all();
+
+  return {
+    games: rows.results.map(toGame),
+    total: countRow.results[0].n
+  };
+}
+
 export async function getGameBySlug(env, slug) {
   const row = await env.DB.prepare("SELECT * FROM games WHERE slug = ?").bind(slug).first();
   return row ? toGame(row) : null;
@@ -410,3 +453,121 @@ export function categoryIndex(categories, lang = "ru") {
       </section>`;
   }).join("");
 }
+
+// ==================== ИЗБРАННЫЕ ИГРЫ ====================
+
+/** Любимые игры пользователя с данными из каталога */
+export async function listGameLibrary(env, userId) {
+  const { results } = await env.DB.prepare(
+    `SELECT g.id, g.slug, g.title, g.tagline, g.status, g.platforms, g.cover_version, g.is_upcoming
+     FROM game_library l JOIN games g ON g.id = l.game_id
+     WHERE l.user_id = ? ORDER BY l.created_at DESC`
+  ).bind(userId).all();
+  return results.map((row) => ({
+    id: row.id,
+    slug: row.slug,
+    title: row.title,
+    tagline: row.tagline,
+    status: row.status,
+    platforms: row.platforms ? row.platforms.split(",").map((p) => p.trim()).filter(Boolean) : [],
+    coverUrl: row.cover_version ? `/media/games/${row.id}/cover?v=${row.cover_version}` : null,
+    isUpcoming: row.is_upcoming === 1
+  }));
+}
+
+/** Добавить игру в избранное. Возвращает true, если добавлено, false, если уже было */
+export async function addGameFavorite(env, userId, gameId) {
+  const result = await env.DB.prepare(
+    "INSERT OR IGNORE INTO game_library (user_id, game_id) VALUES (?, ?)"
+  ).bind(userId, gameId).run();
+  return result.meta.changes > 0;
+}
+
+/** Удалить игру из избранного. Возвращает true, если удалено */
+export async function removeGameFavorite(env, userId, gameId) {
+  const result = await env.DB.prepare(
+    "DELETE FROM game_library WHERE user_id = ? AND game_id = ?"
+  ).bind(userId, gameId).run();
+  return result.meta.changes > 0;
+}
+
+/** Проверяет, добавлена ли игра в избранное пользователем */
+export async function isGameFavorited(env, userId, gameId) {
+  const row = await env.DB.prepare(
+    "SELECT 1 FROM game_library WHERE user_id = ? AND game_id = ? LIMIT 1"
+  ).bind(userId, gameId).first();
+  return Boolean(row);
+}
+
+// ==================== ОЦЕНКИ И ОТЗЫВЫ ИГР ====================
+
+/** Публичные отзывы к игре (не скрытые модератором), с данными об авторе */
+export async function listGameReviews(env, gameId) {
+  const { results } = await env.DB.prepare(
+    `SELECT r.id, r.score, r.body, r.spoiler, r.created_at, r.updated_at,
+           u.id AS user_id, u.name AS author_name, p.username AS author_username
+     FROM game_reviews r
+     JOIN users u ON u.id = r.user_id
+     LEFT JOIN user_profiles p ON p.user_id = u.id
+     WHERE r.game_id = ? AND r.hidden_at IS NULL
+     ORDER BY r.created_at DESC`
+  ).bind(gameId).all();
+  return results.map((row) => ({
+    id: row.id,
+    score: row.score,
+    body: row.body,
+    spoiler: Boolean(row.spoiler),
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    author: {
+      id: row.user_id,
+      name: row.author_name,
+      username: row.author_username || null
+    }
+  }));
+}
+
+/** Отзыв пользователя для игры (включая скрытый, для владельца) */
+export async function getGameReview(env, userId, gameId) {
+  return env.DB.prepare(
+    "SELECT id, score, body, spoiler, created_at, updated_at, hidden_at FROM game_reviews WHERE user_id = ? AND game_id = ? LIMIT 1"
+  ).bind(userId, gameId).first();
+}
+
+/** Добавить отзыв к игре. Возвращает id созданного отзыва */
+export async function addGameReview(env, userId, gameId, score, body, spoiler) {
+  const result = await env.DB.prepare(
+    "INSERT INTO game_reviews (user_id, game_id, score, body, spoiler) VALUES (?, ?, ?, ?, ?)"
+  ).bind(userId, gameId, score, body, spoiler ? 1 : 0).run();
+  return result.meta.last_row_id;
+}
+
+/** Обновить отзыв пользователя. Возвращает true, если обновлено */
+export async function updateGameReview(env, reviewId, userId, score, body, spoiler) {
+  const result = await env.DB.prepare(
+    "UPDATE game_reviews SET score = ?, body = ?, spoiler = ?, updated_at = datetime('now') WHERE id = ? AND user_id = ? AND hidden_at IS NULL"
+  ).bind(score, body, spoiler ? 1 : 0, reviewId, userId).run();
+  return result.meta.changes > 0;
+}
+
+/** Удалить отзыв пользователя (физическое удаление). Возвращает true, если удалено */
+export async function deleteGameReview(env, reviewId, userId) {
+  const result = await env.DB.prepare(
+    "DELETE FROM game_reviews WHERE id = ? AND user_id = ?"
+  ).bind(reviewId, userId).run();
+  return result.meta.changes > 0;
+}
+
+/** Средняя оценка и количество видимых отзывов для игры */
+export async function getGameReviewStats(env, gameId) {
+  const row = await env.DB.prepare(
+    `SELECT AVG(r.score) AS avg_score, COUNT(*) AS review_count
+     FROM game_reviews r
+     WHERE r.game_id = ? AND r.hidden_at IS NULL`
+  ).bind(gameId).first();
+  return {
+    avgScore: row.avg_score ? Number(row.avg_score.toFixed(1)) : null,
+    reviewCount: row.review_count
+  };
+}
+

@@ -572,3 +572,779 @@
 .forum-pulse{margin:-8px auto 0;color:var(--muted);font-size:14px}
 .forum-search{display:flex;gap:10px;margin:0 0 18px}
 .forum-search .input{flex:1;min-width:0}
+
+/* ==================== ГЛАВНАЯ: HERO ==================== */
+
+.home-hero {
+  position: relative;
+  overflow: hidden;
+  padding: clamp(64px, 10vw, 120px) 0 clamp(56px, 9vw, 104px);
+  border-bottom: 1px solid var(--border);
+}
+
+.home-hero-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background:
+    radial-gradient(ellipse 60% 70% at 80% 30%, rgba(var(--accent-rgb), 0.25), transparent 70%),
+    radial-gradient(ellipse 40% 50% at 95% 80%, rgba(var(--highlight-rgb), 0.1), transparent 70%),
+    linear-gradient(to bottom, transparent 55%, var(--bg));
+}
+
+.home-hero-bg img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.45;
+  filter: blur(28px);
+  transform: scale(1.08);
+  mask-image: linear-gradient(90deg, transparent 20%, black 75%);
+}
+
+.home-hero-inner {
+  position: relative;
+  z-index: 2;
+}
+
+.home-hero-content {
+  max-width: 720px;
+}
+
+.home-hero .eyebrow {
+  margin-bottom: 16px;
+}
+
+.home-hero .display-1 {
+  margin-bottom: 20px;
+}
+
+.home-hero .lead {
+  margin-bottom: 32px;
+  max-width: 64ch;
+}
+
+.home-hero .btn-row {
+  gap: 14px;
+}
+
+.home-hero .btn-lg {
+  min-height: 56px;
+  padding: 0 28px;
+  font-size: 16px;
+}
+
+/* ==================== ГЛАВНАЯ: FEATURED PROJECT ==================== */
+
+.home-featured {
+  padding: clamp(64px, 10vw, 104px) 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.home-featured-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+  gap: 48px;
+  align-items: center;
+  overflow: hidden;
+  border-radius: calc(var(--radius) + 8px);
+  background:
+    radial-gradient(ellipse 80% 80% at 100% 0%, rgba(var(--accent-rgb), 0.12), transparent 60%),
+    var(--surface);
+  border: 1px solid var(--border-strong);
+}
+
+.home-featured-media {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  min-height: 340px;
+  overflow: hidden;
+  background: var(--surface-elevated);
+}
+
+.home-featured-media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.5s ease;
+}
+
+.home-featured-media:hover img {
+  transform: scale(1.04);
+}
+
+.home-featured-media .badge {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  backdrop-filter: blur(10px);
+  background: rgba(8, 10, 16, 0.75);
+}
+
+.home-featured-content {
+  padding: clamp(32px, 6vw, 64px);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.home-featured .eyebrow {
+  margin-bottom: 14px;
+}
+
+.home-featured .display-2 {
+  margin-bottom: 16px;
+}
+
+.home-featured .lead {
+  margin-bottom: 24px;
+  max-width: 56ch;
+}
+
+.home-featured .featured-facts {
+  margin-bottom: 28px;
+}
+
+.home-featured .btn-row {
+  gap: 14px;
+}
+
+@media (max-width: 900px) {
+  .home-featured-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .home-featured-media {
+    min-height: 220px;
+    aspect-ratio: auto;
+  }
+
+  .home-featured-content {
+    padding: clamp(24px, 4vw, 40px);
+  }
+}
+
+/* ==================== ГЛАВНАЯ: СЕКЦИИ ==================== */
+
+.home-games,
+.home-community,
+.home-devlog,
+.home-upcoming {
+  padding: clamp(64px, 10vw, 96px) 0;
+}
+
+.home-games {
+  border-bottom: 1px solid var(--border);
+}
+
+.home-community {
+  border-bottom: 1px solid var(--border);
+}
+
+.home-devlog {
+  border-bottom: 1px solid var(--border);
+}
+
+.home-upcoming {
+  border-bottom: 0;
+}
+
+.home-games .section-head,
+.home-community .section-head,
+.home-devlog .section-head,
+.home-upcoming .section-head {
+  margin-bottom: 28px;
+}
+
+.home-games .grid-games,
+.home-upcoming .grid-games {
+  margin-top: 8px;
+}
+
+/* ==================== ГЛАВНАЯ: АДАПТИВ ==================== */
+
+@media (max-width: 680px) {
+  .home-hero {
+    padding: clamp(48px, 8vw, 88px) 0 clamp(40px, 7vw, 80px);
+  }
+
+  .home-hero-bg img {
+    filter: blur(20px);
+  }
+
+  .home-hero .display-1 {
+    font-size: clamp(32px, 10vw, 56px);
+  }
+
+  .home-hero .lead {
+    font-size: clamp(15px, 4vw, 17px);
+  }
+
+  .home-hero .btn-row {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .home-hero .btn-lg {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .home-featured {
+    padding: clamp(48px, 8vw, 80px) 0;
+  }
+
+  .home-featured-content {
+    padding: clamp(24px, 4vw, 32px);
+  }
+
+  .home-games,
+  .home-community,
+  .home-devlog,
+  .home-upcoming {
+    padding: clamp(48px, 8vw, 72px) 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-hero-bg img,
+  .home-featured-media img {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+/* ==================== КАТАЛОГ ИГР (/games) ==================== */
+
+.games-page-head-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 26px;
+}
+
+.games-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 32px;
+  padding: 22px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.filter-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 200px;
+}
+
+.filter-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  white-space: nowrap;
+}
+
+.filter-search {
+  max-width: 320px;
+}
+
+.filter-search .input {
+  max-width: 260px;
+}
+
+/* ==================== СТРАНИЦА ИГРЫ (/games/:slug) ==================== */
+
+.game-hero {
+  position: relative;
+  overflow: hidden;
+  padding: clamp(56px, 8vw, 104px) 0 clamp(48px, 7vw, 88px);
+  border-bottom: 1px solid var(--border);
+}
+
+.game-hero-wrap {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+  gap: 48px;
+  align-items: center;
+  overflow: hidden;
+  border-radius: calc(var(--radius) + 8px);
+  background:
+    radial-gradient(ellipse 80% 80% at 100% 0%, rgba(var(--accent-rgb), 0.12), transparent 60%),
+    var(--surface);
+  border: 1px solid var(--border-strong);
+}
+
+.game-hero-media {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  min-height: 360px;
+  overflow: hidden;
+  background: var(--surface-elevated);
+}
+
+.game-hero-media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.5s ease;
+}
+
+.game-hero-media:hover img {
+  transform: scale(1.04);
+}
+
+.game-hero-content {
+  padding: clamp(32px, 6vw, 64px);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.game-hero .eyebrow {
+  margin-bottom: 14px;
+}
+
+.game-hero .display-1 {
+  margin-bottom: 16px;
+}
+
+.game-tagline {
+  margin-bottom: 20px;
+  color: var(--muted);
+  font-size: clamp(16px, 1.8vw, 20px);
+  line-height: 1.6;
+}
+
+.game-lead {
+  margin-bottom: 28px;
+  color: var(--text);
+  line-height: 1.7;
+  max-width: 56ch;
+}
+
+.game-hero-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 24px;
+}
+
+.game-hero-cta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.game-hero-cta .primary-btn,
+.game-hero-cta .ghost-btn {
+  min-height: 48px;
+  padding: 0 24px;
+}
+
+.game-section {
+  padding: clamp(48px, 8vw, 80px) 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.game-section-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: rgba(5, 7, 12, 0.5);
+}
+
+.game-section-nav a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 0 14px;
+  border-radius: 10px;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 600;
+  transition: color 0.2s ease, background 0.2s ease;
+}
+
+.game-section-nav a:hover {
+  color: var(--text);
+}
+
+.game-about-text {
+  max-width: 72ch;
+  line-height: 1.75;
+}
+
+.game-shots {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
+  gap: 16px;
+}
+
+.game-shots figure {
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.game-shots img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+}
+
+.game-shots figcaption {
+  padding: 10px 14px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.game-worlds-grid,
+.game-features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
+  gap: 20px;
+}
+
+.game-community-intro {
+  margin-bottom: 16px;
+  color: var(--muted);
+}
+
+.game-status-grid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 10px 24px;
+}
+
+.game-status-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.game-status-row:last-child {
+  border-bottom: 0;
+}
+
+.game-status-label {
+  color: var(--faint);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.game-status-value {
+  color: var(--text);
+  font-size: 14px;
+}
+
+/* ==================== АДАПТИВ ДЛЯ ИГР ==================== */
+
+@media (max-width: 900px) {
+  .game-hero-wrap {
+    grid-template-columns: 1fr;
+  }
+
+  .game-hero-media {
+    min-height: 240px;
+    aspect-ratio: auto;
+  }
+
+  .game-hero-content {
+    padding: clamp(24px, 4vw, 40px);
+  }
+
+  .game-shots {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 680px) {
+  .games-filter-bar {
+    padding: 16px;
+  }
+
+  .filter-group {
+    min-width: 100%;
+  }
+
+  .filter-search {
+    max-width: 100%;
+  }
+
+  .filter-search .input {
+    max-width: 100%;
+  }
+
+  .game-hero {
+    padding: clamp(40px, 6vw, 72px) 0 clamp(32px, 5vw, 64px);
+  }
+
+  .game-hero .display-1 {
+    font-size: clamp(32px, 10vw, 52px);
+  }
+
+  .game-hero-cta {
+    flex-direction: column;
+  }
+
+  .game-hero-cta .primary-btn,
+  .game-hero-cta .ghost-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .game-section {
+    padding: clamp(32px, 6vw, 56px) 0;
+  }
+
+  .game-status-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .game-hero-media img {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+/* ==================== ИЗБРАННАЯ ИГРА: КНОПКА ==================== */
+
+.game-favorite-btn {
+  min-height: 48px;
+  padding: 0 24px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.game-favorite-btn[data-favorited="1"] {
+  color: var(--text);
+  background: rgba(var(--accent-rgb), 0.22);
+  border-color: rgba(var(--accent-rgb), 0.7);
+}
+
+.game-favorite-btn[data-favorited="1"]:hover {
+  background: rgba(var(--accent-rgb), 0.3);
+}
+
+/* ==================== ПРОФИЛЬ: ИЗБРАННЫЕ ИГРЫ ==================== */
+
+.profile-favorites {
+  padding: clamp(48px, 8vw, 80px) 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.profile-favorites-empty {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  padding: 40px 24px;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius);
+  color: var(--muted);
+  background: var(--panel-soft);
+  text-align: center;
+}
+
+.profile-favorites-empty strong {
+  color: var(--text);
+  font-size: 16px;
+}
+
+.profile-favorites-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
+  gap: 20px;
+}
+
+/* ==================== ОТЗЫВЫ К ИГРЕ ==================== */
+
+.game-reviews-summary {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 22px;
+}
+
+.game-reviews-avg {
+  font-family: var(--font-display);
+  font-size: clamp(32px, 6vw, 48px);
+  font-weight: 800;
+  color: var(--text);
+}
+
+.game-reviews-avg-label {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.game-reviews-count {
+  color: var(--faint);
+  font-size: 13px;
+}
+
+.game-review-form {
+  margin-top: 28px;
+}
+
+.game-review-form .form-row {
+  margin-bottom: 16px;
+}
+
+.game-score-select {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.score-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--muted);
+  background: var(--panel-light);
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.score-btn:hover {
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+
+.score-btn.active {
+  color: #fff;
+  background: var(--primary-accent);
+  border-color: var(--primary-accent);
+  box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.3);
+}
+
+.score-btn[aria-pressed="true"] {
+  color: #fff;
+  background: var(--primary-accent);
+  border-color: var(--primary-accent);
+}
+
+.game-reviews-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 28px;
+}
+
+.game-review-item {
+  display: grid;
+  gap: 10px;
+  padding: 18px 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.game-review-item.spoiler {
+  opacity: 0.6;
+}
+
+.game-review-header {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.game-review-author {
+  font-weight: 700;
+  color: var(--text);
+}
+
+.game-review-score {
+  color: var(--accent-light);
+  font-weight: 800;
+  font-size: 15px;
+}
+
+.game-review-date {
+  color: var(--faint);
+  font-size: 12px;
+  margin-left: auto;
+}
+
+.game-review-body {
+  color: var(--text);
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+/* Спойлер: текст действительно скрыт (цвет совпадает с фоном), а не просто полупрозрачен */
+.spoiler,
+.game-review-body.spoiler-hidden > p,
+.game-review-body.spoiler-hidden > .muted {
+  color: var(--surface);
+  user-select: none;
+}
+
+.game-review-reveal {
+  color: var(--accent-light);
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+}
+
+.game-review-reveal:hover {
+  opacity: 0.8;
+}
+
+@media (max-width: 680px) {
+  .game-reviews-summary {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .game-score-select {
+    gap: 6px;
+  }
+
+  .score-btn {
+    width: 36px;
+    height: 36px;
+    font-size: 14px;
+  }
+}
+

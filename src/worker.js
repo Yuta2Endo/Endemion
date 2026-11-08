@@ -22,6 +22,8 @@ import * as adminAccounts from "../functions/api/admin/accounts.js";
 import * as robots from "../functions/robots.txt.js";
 import * as sitemap from "../functions/sitemap.xml.js";
 import * as profile from "../functions/api/profile.js";
+import * as library from "../functions/api/users/library.js";
+import * as gameReviews from "../functions/api/games/reviews.js";
 import * as pulse from "../functions/api/pulse.js";
 import * as community from "../functions/api/community.js";
 import * as searchApi from "../functions/api/search.js";
@@ -67,6 +69,14 @@ const ROUTE_LIST = [
   ["/api/users/:username/follows", profile.userFollows],
   ["/api/users/:username/follow", profile.userFollow],
   ["/api/users/:username/forum", profile.userForum],
+  // Избранные игры пользователя
+  ["/api/users/:username/library", library.userLibrary],
+  ["/api/users/:username/library/add", library.userLibraryAdd],
+  ["/api/users/:username/library/:game_id", library.userLibraryRemove],
+  // Отзывы к играм
+  ["/api/games/:slug/reviews", gameReviews.gameReviews],
+  ["/api/games/:slug/reviews/add", gameReviews.gameReviewAdd],
+  ["/api/games/:slug/reviews/:review_id", gameReviews.gameReviewUpdateDelete],
   // Уведомления
   ["/api/notifications", pulse.notifications],
   ["/api/notifications/count", pulse.notificationCount],

@@ -4,8 +4,7 @@
 import { expect, test } from "@playwright/test";
 import { apiClient, BASE, state } from "./helpers.mjs";
 
-test.beforeEach(async ({ context }, testInfo) => {
-  test.skip(testInfo.project.name !== "chromium", "проверяется в одном браузере");
+test.beforeEach(async ({ context }) => {
   const [name, value] = state().cookie.split("=");
   await context.addCookies([{ name, value, url: BASE }]);
 });

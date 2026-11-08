@@ -2,8 +2,7 @@
 
 import { expect, test } from "@playwright/test";
 
-test.beforeEach(async ({}, testInfo) => {
-  test.skip(testInfo.project.name !== "chromium", "проверяется в одном браузере");
+test.beforeEach(async ({}) => {
 });
 
 test("манифест и значки", async ({ page, request }) => {
