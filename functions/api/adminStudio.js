@@ -7,6 +7,7 @@ import { error, json, readJson } from "../_lib/http.js";
 import {
   FORUM_SECTIONS, GAME_STATUSES, getGame, getPost, getSettings, listGameMedia, listGames, listPosts, POST_KINDS, POST_STATUSES, SLUG, toCategory
 } from "../_lib/studio.js";
+import { announceRelease, formatAnnouncement, pendingReleases, previewRelease, releaseFromPost, releaseProblems } from "../_lib/telegram-announce.js";
 import { cleanLine, cleanText, intParam, lengthProblem, parseId } from "../_lib/validate.js";
 import { gameCoverKey, gameShotKey, postImageKey } from "../media.js";
 
@@ -257,7 +258,9 @@ async function parsePost(env, body) {
   const title = cleanLine(body.title);
   const summary = cleanLine(body.summary ?? "");
   const text = cleanText(body.body ?? "");
-  const problem = lengthProblem(title, "Заголовок", 3, 160) || lengthProblem(summary, "Краткое описание", 0, 400) || lengthProblem(text, "Текст", 0, 50000);
+  const version = cleanLine(body.version ?? "");
+  const problem = lengthProblem(title, "Заголовок", 3, 160) || lengthProblem(summary, "Краткое описание", 0, 400) || lengthProblem(text, "Текст", 0, 50000) ||
+    lengthProblem(version, "Версия", 0, 40);
   if (problem) return { problem };
   if (body.status === "published" && !text) return { problem: "Нельзя опубликовать пустой текст: сохраните как черновик." };
   let gameId = null;
@@ -266,7 +269,7 @@ async function parsePost(env, body) {
     const game = gameId ? await env.DB.prepare("SELECT id FROM games WHERE id = ?").bind(gameId).first() : null;
     if (!game) return { problem: "Игра не найдена." };
   }
-  return { post: { slug: body.slug, kind: body.kind, status: body.status, title, summary, body: text, gameId } };
+  return { post: { slug: body.slug, kind: body.kind, status: body.status, title, summary, body: text, gameId, version } };
 }
 
 export const adminPosts = {
@@ -289,9 +292,9 @@ export const adminPosts = {
     let id;
     try {
       const result = await env.DB.prepare(
-        `INSERT INTO studio_posts (slug, kind, status, title, summary, body, game_id, author_id, published_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, CASE WHEN ? = 'published' THEN datetime('now') END)`
-      ).bind(post.slug, post.kind, post.status, post.title, post.summary, post.body, post.gameId, user.id, post.status).run();
+        `INSERT INTO studio_posts (slug, kind, status, title, summary, body, game_id, author_id, version, published_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CASE WHEN ? = 'published' THEN datetime('now') END)`
+      ).bind(post.slug, post.kind, post.status, post.title, post.summary, post.body, post.gameId, user.id, post.version, post.status).run();
       id = result.meta.last_row_id;
     } catch (err) {
       if (isUnique(err)) return error(`Адрес «${post.slug}» уже занят.`, 409);
@@ -320,10 +323,10 @@ export const adminPost = {
     try {
       // Дата ставится при первой публикации и дальше не меняется: снятие с публикации и возврат не двигают запись в ленте
       await env.DB.prepare(
-        `UPDATE studio_posts SET slug = ?, kind = ?, status = ?, title = ?, summary = ?, body = ?, game_id = ?,
+        `UPDATE studio_posts SET slug = ?, kind = ?, status = ?, title = ?, summary = ?, body = ?, game_id = ?, version = ?,
          published_at = CASE WHEN ? = 'published' THEN COALESCE(published_at, datetime('now')) ELSE published_at END,
          updated_at = datetime('now') WHERE id = ?`
-      ).bind(post.slug, post.kind, post.status, post.title, post.summary, post.body, post.gameId, post.status, found.post.id).run();
+      ).bind(post.slug, post.kind, post.status, post.title, post.summary, post.body, post.gameId, post.version, post.status, found.post.id).run();
     } catch (err) {
       if (isUnique(err)) return error(`Адрес «${post.slug}» уже занят.`, 409);
       throw err;
@@ -511,5 +514,49 @@ export const adminSiteSettings = {
     await env.DB.batch([upsert("featured_game", featured), upsert("social_links", JSON.stringify(links)), upsert("about_text", aboutText)]);
     await audit(env, user, "settings.update", "настройки сайта");
     return json({ settings: await getSettings(env) });
+  }
+};
+
+// ==================== АНОНСЫ В ТЕЛЕГРАМ ====================
+
+/** Предварительный просмотр текста анонса без отправки. */
+export const adminPostTelegramPreview = {
+  async onRequestGet({ request, env, params }) {
+    const { response } = await requireAdmin(env, request);
+    if (response) return response;
+    const id = parseId(params.id);
+    const result = id ? await previewRelease(env, id) : { ok: false, error: "Публикация не найдена.", notFound: true };
+    if (!result.ok) {
+      if (result.problems) return json({ ok: false, problems: result.problems }, 400);
+      if (result.notFound) return error(result.error, 404);
+      return error(result.error, 400);
+    }
+    return json({ ok: true, text: result.text, release: result.release });
+  }
+};
+
+/** Явная публикация анонса в канал (только при TELEGRAM_PUBLISH=1). dryRun = true — без отправки. */
+export const adminPostTelegramPublish = {
+  async onRequestPost({ request, env, params }) {
+    const { response } = await requireAdmin(env, request);
+    if (response) return response;
+    const id = parseId(params.id);
+    const body = await readJson(request) || {};
+    const result = await announceRelease(env, id, { dryRun: body.dryRun === true });
+    if (!result.ok) {
+      if (result.configure) return json(result, 409);
+      if (result.notFound) return json(result, 404);
+      return json(result, 400);
+    }
+    return json(result, result.duplicate ? 200 : 201);
+  }
+};
+
+/** Опубликованные обновления игр, ещё не отправленные в Телеграм. */
+export const adminTelegramPending = {
+  async onRequestGet({ request, env }) {
+    const { response } = await requireAdmin(env, request);
+    if (response) return response;
+    return json({ pending: await pendingReleases(env) });
   }
 };

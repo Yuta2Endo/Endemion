@@ -39,6 +39,11 @@ MAIL_FROM = ""
 # Токен Cloudflare Web Analytics (Web Analytics → Add a site → токен из JS-сниппета). Публичный, не секрет.
 # Пустой — статистика не собирается
 WEB_ANALYTICS_TOKEN = "17c0bf0efcb1443e9cb740a20b5fd615"
+# Анонсы в Телеграм: канал по умолчанию @EndemionOfficial. Токен бота НЕ здесь — секрет:
+# npx wrangler secret put TELEGRAM_BOT_TOKEN
+TELEGRAM_CHANNEL = "@EndemionOfficial"
+# 1 — разрешить публикацию анонсов в канал (только явным действием администратора). 0 — только предварительный просмотр.
+TELEGRAM_PUBLISH = "0"
 
 [observability]
 enabled = true

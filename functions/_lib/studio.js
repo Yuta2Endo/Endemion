@@ -142,6 +142,7 @@ export function toPost(row, full = false) {
     slug: row.slug,
     kind: row.kind,
     status: row.status,
+    version: row.version || null,
     title: row.title,
     summary: row.summary,
     body: full ? row.body : undefined,

@@ -27,7 +27,9 @@ const WORKER_VARS = [
   // Вход через Endemion ID (auth.endemion.online), см. functions/_lib/endemionId.js
   "ENDEMION_ID", "ENDEMION_ID_ISSUER", "ENDEMION_ID_CLIENT_ID", "ENDEMION_ID_CLIENT_SECRET", "ENDEMION_ID_TOKEN_KEY", "ENDEMION_LIFE_URL",
   // Список аккаунтов Endemion ID в админке, см. functions/api/admin/accounts.js
-  "ENDEMION_ID_INTERNAL_URL", "AUTH_ADMIN_TOKEN"
+  "ENDEMION_ID_INTERNAL_URL", "AUTH_ADMIN_TOKEN",
+  // Анонсы обновлений в Телеграм (@EndemionOfficial). Токен бота — как другой секрет окружения.
+  "TELEGRAM_BOT_TOKEN", "TELEGRAM_CHANNEL", "TELEGRAM_PUBLISH"
 ];
 
 /**

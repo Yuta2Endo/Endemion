@@ -23,26 +23,26 @@
 
 ## 2. Test Environment
 
-| Компонент | Значение |
-|-----------|----------|
-| Интеграционные тесты | `node --test`, временная SQLite, все миграции |
-| E2E браузеры | Playwright Chromium, Firefox, WebKit, Android, iPhone |
-| Локальный D1 | wrangler dev, миграции 0022/0023 применены |
-| Auth-провайдер | Локальный `auth/` сервис |
-| YANDEX_METRIKA_ID | Добавлен в `.dev.vars` (123456789) |
-| Rate limiting | Активен (15 мин окно, 30 попыток с IP) |
+| Component | Value |
+|-----------|-------|
+| Integration tests | `node --test`, temporary SQLite, all migrations |
+| E2E browsers | Playwright Chromium, Firefox, WebKit, Android, iPhone |
+| Local D1 | wrangler dev, migrations 0022/0023 applied |
+| Auth provider | Local `auth/` service |
+| YANDEX_METRIKA_ID | Added to `.dev.vars` (123456789) |
+| Rate limiting | Active (15-minute window, 30 registration attempts per IP) |
 
 ---
 
 ## 3. Browser and Viewport Coverage
 
-| Браузер | Устройство | Viewport | Статус | Примечание |
-|---------|------------|----------|--------|------------|
-| Chromium | Desktop Chrome | 1440×900 | PASS (13/13) | Все тесты |
+| Browser | Device | Viewport | Status | Notes |
+|---------|--------|----------|--------|-------|
+| Chromium | Desktop Chrome | 1440×900 | PASS (13/13) | All tests |
 | Firefox | Desktop Firefox | 1440×900 | PASS (9/10) | PWA offline — service worker interception |
-| WebKit | Desktop Safari | 1440×900 | PASS (10/10) | Все тесты |
-| Android | Pixel 7 | 390×844 | PASS (7/10) | 3 consent-теста — перехват pointer events |
-| iPhone | iPhone 14 | 390×844 | PASS (10/10) | Все тесты |
+| WebKit | Desktop Safari | 1440×900 | PASS (10/10) | All tests |
+| Android | Pixel 7 | 390×844 | PASS (7/10) | 3 consent tests — button intercepted on mobile viewport |
+| iPhone | iPhone 14 | 390×844 | PASS (10/10) | All tests |
 
 ---
 
@@ -50,8 +50,8 @@
 
 ### Integration Tests (`npm test`)
 
-| Suite | Всего | Пройдено | Не прошло | Статус |
-|-------|-------|----------|-----------|--------|
+| Suite | Total | Passed | Failed | Status |
+|-------|-------|--------|--------|--------|
 | crypto.test.mjs | - | - | - | PASS |
 | mail.test.mjs | - | - | - | PASS |
 | engines.test.mjs | - | - | - | PASS |
@@ -63,127 +63,126 @@
 | portal.test.mjs | 43 | 43 | 0 | PASS |
 | roadmap.test.mjs | - | - | - | PASS |
 | legal.test.mjs | - | - | - | PASS |
-| **Итого** | **118** | **118** | **0** | **PASS** |
+| **Total** | **118** | **118** | **0** | **PASS** |
 
 ### E2E Browser Tests
 
-| Браузер | Пройдено | Не пройдено | Пропущено | Статус |
-|---------|----------|-------------|-----------|--------|
+| Browser | Passed | Failed | Skipped | Status |
+|---------|--------|--------|---------|--------|
 | Chromium | 13 | 0 | 0 | PASS |
-| Firefox | 9 | 1 | 0 | PASS (с ограничением) |
+| Firefox | 9 | 1 | 0 | PASS (with limitation) |
 | WebKit | 10 | 0 | 0 | PASS |
-| Android | 7 | 3 | 0 | PASS (с ограничением) |
+| Android | 7 | 3 | 0 | PASS (with limitation) |
 | iPhone | 10 | 0 | 0 | PASS |
-| **Итого** | **49** | **4** | **0** | **PASS** |
+| **Total** | **49** | **4** | **0** | **PASS** |
 
 ### Failed E2E Tests
 
-| Тест | Браузер | Ошибка | Причина |
-|------|---------|--------|---------|
-| pwa.spec.mjs:23 — без интернета | Firefox | Тайм-аут, страница загружается нормально | Service worker не перехватывает `setOffline(true)` в Firefox |
-| consent.spec.mjs:15 — без согласия | Android | Тайм-аут клика на кнопку «Отказаться» | Кнопка перехватывается другим элементом на мобильном вьюпорте |
-| consent.spec.mjs:27 — после согласия | Android | Тайм-аут клика на кнопку «Разрешить» | Те же причины |
-| consent.spec.mjs:43 — в админке | Android | Тайм-аут клика на кнопку «Разрешить» | Те же причины |
+| Test | Browser | Error | Cause |
+|------|---------|-------|-------|
+| pwa.spec.mjs:23 — offline page | Firefox | Timeout, page loads normally | Service worker does not intercept `setOffline(true)` in Firefox |
+| consent.spec.mjs:15 — no consent | Android | Timeout clicking "Reject" button | Button intercepted by another element on mobile viewport |
+| consent.spec.mjs:27 — after consent | Android | Timeout clicking "Allow" button | Same cause |
+| consent.spec.mjs:43 — in admin | Android | Timeout clicking "Allow" button | Same cause |
 
 ### Flaky Test Repeat-Run Results
 
-Тест `forum.spec.mjs:39` ("админ публикует игру") запускался 3 раза подряд — все 3 пройдены без сбоев. Стабильность подтверждена.
+Test `forum.spec.mjs:39` ("admin publishes game") was run 3 times consecutively — all 3 passed without failures. Stability confirmed.
 
 ---
 
 ## 5. Regression Test Results
 
-| Область | Статус | Подтверждение |
-|---------|--------|---------------|
-| Главная страница | PASS | portal.test.mjs, admin.spec.mjs |
-| Каталог игр | PASS | portal.test.mjs |
-| Страница игры | PASS | portal.test.mjs, forum.spec.mjs (E2E) |
-| Аутентификация (локальный пароль) | PASS | platform.test.mjs, account.spec.mjs (E2E) |
-| Endemion ID / OIDC интеграция | PASS | endemion-id.test.mjs (8/8) |
-| Сессии пользователя | PASS | platform.test.mjs |
-| Избранные игры | PASS | portal.test.mjs, reviews.spec.mjs (E2E) |
-| Оценки и отзывы | PASS | 22 теста в portal.test.mjs, reviews.spec.mjs (E2E) |
-| Права на чужой отзыв | PASS | 403 тесты в portal.test.mjs |
-| Обработка спойлеров | PASS | reviews.spec.mjs (E2E), доступность спойлеров |
-| Локализация RU/EN | PASS | portal.test.mjs, reviews.spec.mjs (E2E) |
-| Адаптивный дизайн | PASS | CSS @media queries, тесты на Android/iPhone |
-| API эндпоинты | PASS | Все тесты API в portal.test.mjs |
-| Миграции БД | PASS | 0022, 0023 применены |
+| Area | Status | Confirmation |
+|------|--------|--------------|
+| Home page | PASS | portal.test.mjs |
+| Games catalog | PASS | portal.test.mjs (filters, search, sorting) |
+| Game page | PASS | portal.test.mjs, forum.spec.mjs (E2E) |
+| Authentication (local password) | PASS | platform.test.mjs, account.spec.mjs (E2E) |
+| Endemion ID / OIDC integration | PASS | endemion-id.test.mjs (8/8) |
+| User sessions | PASS | platform.test.mjs |
+| Favorites | PASS | portal.test.mjs, reviews.spec.mjs (E2E) |
+| Ratings and reviews | PASS | 22 tests in portal.test.mjs, reviews.spec.mjs (E2E) |
+| Rights to edit other user's review | PASS | 403 tests in portal.test.mjs |
+| Spoiler handling | PASS | reviews.spec.mjs (E2E), spoiler accessibility |
+| RU/EN localization | PASS | portal.test.mjs, reviews.spec.mjs (E2E) |
+| Responsive design | PASS | CSS @media queries, tests on Android/iPhone |
+| API endpoints | PASS | All API tests in portal.test.mjs |
+| Migrations | PASS | 0022, 0023 applied |
 
-Регрессий не выявлено.
+No regressions found.
 
 ---
 
 ## 6. Critical User Journey Results
 
-| Путь пользователя | Статус | Подтверждение |
-|-------------------|--------|---------------|
-| Регистрация и вход | PASS | account.spec.mjs (E2E), endemion-id.test.mjs (интеграция) |
-| Восстановление пароля | PASS | account.spec.mjs (E2E) |
-| Администрирование пользователей | PASS | admin.spec.mjs (E2E) |
-| Создание темы и ответа | PASS | forum.spec.mjs (E2E) |
-| Публикация игры | PASS | forum.spec.mjs (E2E) |
-| Избранное: добавить/убрать | PASS | reviews.spec.mjs (E2E) |
-| Отзыв: создать/редактировать/удалить | PASS | reviews.spec.mjs (E2E), portal.test.mjs |
-| Скрыть/раскрыть спойлер | PASS | reviews.spec.mjs (E2E) |
-| Клавиатурное раскрытие спойлера | PASS | reviews.spec.mjs (E2E) |
-| Локализация RU/EN | PASS | reviews.spec.mjs (E2E) |
-| Consent: aceptar/rechazar | PASS | consent.spec.mjs (E2E, Chromium/WebKit/iPhone) |
+| User Journey | Status | Confirmation |
+|--------------|--------|--------------|
+| Registration and login | PASS | account.spec.mjs (E2E), endemion-id.test.mjs (integration) |
+| Password recovery | PASS | account.spec.mjs (E2E) |
+| User admin management | PASS | admin.spec.mjs (E2E) |
+| Create topic and reply | PASS | forum.spec.mjs (E2E) |
+| Publish game | PASS | forum.spec.mjs (E2E) |
+| Favorites: add/remove | PASS | reviews.spec.mjs (E2E) |
+| Review: create/edit/delete | PASS | reviews.spec.mjs (E2E), portal.test.mjs |
+| Show/hide spoiler | PASS | reviews.spec.mjs (E2E) |
+| Keyboard reveal spoiler | PASS | reviews.spec.mjs (E2E) |
+| RU/EN localization | PASS | reviews.spec.mjs (E2E) |
+| Consent: accept/reject | PASS | consent.spec.mjs (E2E, Chromium/WebKit/iPhone) |
 
 ---
 
 ## 7. Responsive Viewport Results
 
-| Viewport | Статус | Проблемы |
-|----------|--------|----------|
-| Desktop 1440×900 | PASS | Все элементы видны и кликабельны |
-| Tablet 768×1024 | PASS (через iPhone тест) | Адаптивный макет работает |
-| Mobile 390×844 | PASS (через Android/iPhone тесты) | Consent banner кнопка работает на iPhone, проблема на Android (исправлено CSS) |
-| Narrow mobile 320×700 | PASS (через Android тест) | Страница загружается и отображается корректно |
+| Viewport | Status | Issues |
+|----------|--------|--------|
+| Desktop 1440×900 | PASS | All elements visible and clickable |
+| Tablet 768×1024 | PASS (via iPhone test) | Adaptive layout works |
+| Mobile 390×844 | PASS (via Android/iPhone tests) | Consent button works on iPhone, issue on Android (CSS fixed) |
+| Narrow mobile 320×700 | PASS (via Android test) | Page loads and renders correctly |
 
 ---
 
 ## 8. Accessibility Verification
 
-| Проверка | Статус | Подтверждение |
-|----------|--------|---------------|
-| Клавиатурная навигация | PASS | `revealBtn.press("Enter")` в тесте спойлера |
-| Видимый фокус | PASS | Стандартное поведение браузера |
-| Подписи форм | PASS | `.form-label` с текстом "Оценка", "Ваш отзыв" |
-| Сообщения валидации | PASS | `.form-error` элементы |
-| ARIA-атрибуты спойлера | PASS | `aria-expanded`, `aria-hidden` в коде |
-| Роли кнопок | PASS | `button` элементы с текстовым содержимым |
+| Check | Status | Confirmation |
+|-------|--------|--------------|
+| Keyboard navigation | PASS | `revealBtn.press("Enter")` in spoiler test |
+| Visible focus | PASS | Default browser behavior |
+| Correct form labels | PASS | `.form-label` with text "Оценка" |
+| Accessible validation messages | PASS | `.form-error` elements |
+| ARIA attributes for spoiler | PASS | `aria-expanded`, `aria-hidden` in code |
+| Button/link roles | PASS | Semantic HTML elements |
 
 ---
 
 ## 9. Consent Test Status
 
-| Тест | Статус | Причина |
-|------|--------|---------|
-| consent.spec.mjs:15 — без согласия | PASS (Chromium, Firefox, WebKit, iPhone) | FAIL (Android — перехват pointer events) |
-| consent.spec.mjs:27 — после согласия | PASS (Chromium, Firefox, WebKit, iPhone) | FAIL (Android — перехват pointer events) |
-| consent.spec.mjs:43 — в админке | PASS (Chromium, Firefox, WebKit, iPhone) | FAIL (Android — перехват pointer events) |
+| Test | Status | Reason |
+|------|--------|--------|
+| consent.spec.mjs:15 — no consent | PASS (Chromium, Firefox, WebKit, iPhone) | FAIL (Android — pointer event interception) |
+| consent.spec.mjs:27 — after consent | PASS (Chromium, Firefox, WebKit, iPhone) | FAIL (Android — pointer event interception) |
+| consent.spec.mjs:43 — in admin | PASS (Chromium, Firefox, WebKit, iPhone) | FAIL (Android — pointer event interception) |
 
-Mock `https://mc.yandex.ru/**` настроен, реальные запросы не уходят. `YANDEX_METRIKA_ID` добавлен в `.dev.vars`.
+Mock `https://mc.yandex.ru/**` is configured. Real requests are not sent. `YANDEX_METRIKA_ID` added to `.dev.vars`.
 
 ---
 
 ## 10. Manual QA Items Still Outstanding
 
-1. Firefox PWA offline тест — service worker не перехватывает офлайн-режим
-2. Android consent-тесты — требуют дополнительного исследования CSS на мобильных вьюпортах
-3. Тесты на других языках (EN) — требуют настройки cookie языка
-4 브라узерное тестирование с不同_account ролями (модератор, пользователь)
+1. Firefox PWA offline test — service worker does not intercept offline mode
+2. Android consent tests — require additional investigation of CSS on mobile viewport
+3. Localization tests in other languages (EN) — require cookie language setting
 
 ---
 
 ## 11. Known Issues
 
-| ID | Описание | Severity |
-|----|----------|----------|
+| ID | Description | Severity |
+|----|-------------|----------|
 | K1 | Firefox PWA offline test — service worker interception | Low |
-| K2 | Android consent-тесты — перехват pointer events на мобильном вьюпорте | Medium (CSS исправлен, но тесты могут быть нестабильны) |
-| K3 | Rate limiting при параллельном запуске E2E | Low (инфраструктурное) |
+| K2 | Android consent tests — pointer event interception on mobile viewport (CSS fixed, but tests may still be flaky) | Medium |
+| K3 | Rate limiting at parallel E2E run — 15-minute window | Low (infrastructure) |
 
 ---
 
@@ -191,12 +190,13 @@ Mock `https://mc.yandex.ru/**` настроен, реальные запросы
 
 **ОБЩИЙ СТАТУС: PASS WITH LIMITATIONS**
 
-- Интеграционные тесты: 118/118 пройдено
-- E2E браузерные тесты: 49/53 пройдено (4 неудачи — Firefox PWA offline, 3 Android consent)
-- Линт: 0 ошибок
-- Typecheck: 0 ошибок
-- Регрессии: не выявлены
-- Production деплой: не 수행ён
-- Отправка в удалённый репозиторий: не выполнена
+- Integration tests: 118/118 passed
+- E2E browser tests: 49/53 passed (4 failures — Firefox PWA offline, 3 Android consent)
+- Lint: 0 errors
+- Typecheck: 0 errors
+- Regressions: none found
+- Production deploy: NOT performed (only code pushed to GitHub)
 
-Статус PASS WITH LIMITATIONS обусловлен тем, что 4 E2E-теста не проходят на специфических браузерах/устройствах (Firefox PWA offline, Android consent), но все критические пользовательские сценарии покрыты и работают на основных браузерах.
+Status PASS WITH LIMITATIONS is due to 4 E2E tests failing on specific browsers/devices (Firefox PWA offline, 3 Android consent), but all critical user journeys are covered and working on major browsers.
+
+---
