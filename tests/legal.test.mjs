@@ -16,7 +16,7 @@ after(async () => {
   await app.close();
 });
 
-const SLUGS = ["tetrus", "little-weather", "liforae", "block-city", "endemion-life"];
+const SLUGS = ["block-city", "endemion-life"];
 const DOCS = ["privacy-policy", "terms-of-service"];
 
 const PRIVACY_SECTIONS = ["information-collected", "automatic", "device", "advertising", "analytics", "third-party", "usage", "sharing",
@@ -25,7 +25,7 @@ const TERMS_SECTIONS = ["acceptance", "eligibility", "license", "accounts", "use
   "purchases", "refunds", "intellectual-property", "availability", "updates", "termination", "disclaimers", "liability", "governing-law",
   "changes", "contact"];
 
-test("в Legal Center ровно пять игр, без OS Developer Simulator", () => {
+test("в Legal Center две игры: Block City и Endemion Life", () => {
   assert.deepEqual(LEGAL_GAMES.map((g) => g.slug), SLUGS);
 });
 
@@ -70,13 +70,13 @@ test("в документах есть все обязательные разд�
 
 test("навигация: вкладки между документами, переключатель языка, ссылка на Legal Center", async () => {
   const guest = app.client();
-  const { text } = await guest.call("GET", "/legal/tetrus/terms-of-service?lang=en");
-  assert.match(text, /<a href="\/legal\/tetrus\/privacy-policy\?lang=en">Privacy Policy<\/a>/);
-  assert.match(text, /<a href="\/legal\/tetrus\/terms-of-service\?lang=en" aria-current="page">Terms of Service<\/a>/);
-  assert.match(text, /href="\/legal\/tetrus\/terms-of-service" hreflang="ru" lang="ru">Русский<\/a>/);
-  assert.match(text, /href="\/legal\/tetrus\/terms-of-service\?lang=en" hreflang="en" lang="en" aria-current="true">English<\/a>/);
+  const { text } = await guest.call("GET", "/legal/block-city/terms-of-service?lang=en");
+  assert.match(text, /<a href="\/legal\/block-city\/privacy-policy\?lang=en">Privacy Policy<\/a>/);
+  assert.match(text, /<a href="\/legal\/block-city\/terms-of-service\?lang=en" aria-current="page">Terms of Service<\/a>/);
+  assert.match(text, /href="\/legal\/block-city\/terms-of-service" hreflang="ru" lang="ru">Русский<\/a>/);
+  assert.match(text, /href="\/legal\/block-city\/terms-of-service\?lang=en" hreflang="en" lang="en" aria-current="true">English<\/a>/);
   assert.match(text, /class="legal-breadcrumbs"[^>]*><a href="\/legal\?lang=en">Legal Center<\/a>/);
-  assert.match(text, /<div class="eyebrow">TETRUS<\/div>/);
+  assert.match(text, /<div class="eyebrow">BLOCK CITY<\/div>/);
 });
 
 test("главная Legal Center ссылается на оба документа каждой игры и на документы сайта", async () => {
@@ -101,11 +101,8 @@ test("неизвестные игра и документ — 404 с noindex, а
     assert.equal(r.status, 404, path);
     if (r.text.startsWith("<!doctype")) assert.match(r.text, /<meta name="robots" content="noindex/, path);
   }
-  const redirect = await guest.call("GET", "/legal/liforae?lang=en");
-  assert.equal(redirect.status, 302);
-  assert.equal(redirect.headers.get("location"), "/legal/liforae/privacy-policy?lang=en");
-  // Адрес со слешем в конце открывает ту же страницу
-  assert.equal((await guest.call("GET", "/legal/liforae/privacy-policy/")).status, 200);
+  const unknown = await guest.call("GET", "/legal/nonexistent-game?lang=en");
+  assert.equal(unknown.status, 404);
   // Любое значение lang, кроме en, — русская версия
   assert.match((await guest.call("GET", "/legal?lang=de")).text, /<html lang="ru">/);
 });
@@ -123,7 +120,7 @@ test("заполнители видны и помечены, документы 
 
 test("страницы Legal Center публичные, с заголовками безопасности и без встроенных скриптов", async () => {
   const guest = app.client();
-  const r = await guest.call("GET", "/legal/little-weather/privacy-policy");
+  const r = await guest.call("GET", "/legal/block-city/privacy-policy");
   assert.equal(r.status, 200);
   assert.match(r.headers.get("content-security-policy"), /default-src 'self'/);
   assert.equal(r.headers.get("x-frame-options"), "DENY");
@@ -143,7 +140,7 @@ test("в подвале сайта есть ссылка на Legal Center, пр
 test("карта сайта содержит все адреса Legal Center на обоих языках", async () => {
   const guest = app.client();
   const { text } = await guest.call("GET", "/sitemap.xml");
-  assert.equal(legalPaths().length, 22);
+  assert.equal(legalPaths().length, 10);
   for (const path of legalPaths()) assert.ok(text.includes(`${path.replace("?", "?")}</loc>`), path);
   const robots = await guest.call("GET", "/robots.txt");
   assert.doesNotMatch(robots.text, /Disallow: \/legal/);
