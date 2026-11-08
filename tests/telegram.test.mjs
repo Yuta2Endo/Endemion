@@ -5,8 +5,8 @@ import assert from "node:assert/strict";
 import { after, before, beforeEach, afterEach, test } from "node:test";
 import { createApp } from "./helpers/app.mjs";
 import {
-  formatAnnouncement, releaseProblems, releaseFromPost, announceRelease, previewRelease,
-  pendingReleases, isPublishingAllowed, channelOf
+  formatAnnouncement, releaseProblems, announceRelease,
+  isPublishingAllowed, channelOf
 } from "../functions/_lib/telegram-announce.js";
 import { maskToken } from "../functions/_lib/telegram.js";
 
@@ -22,6 +22,7 @@ function stubFetch() {
   fetchCalls = [];
   responseQueue = [];
   realFetch = globalThis.fetch;
+  // @ts-ignore — подмена fetch в тестах
   globalThis.fetch = async (url, init) => {
     fetchCalls.push({ url: String(url), method: init && init.method, body: init && init.body });
     const next = responseQueue.shift() || okResponse();

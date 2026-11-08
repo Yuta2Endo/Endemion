@@ -7,7 +7,7 @@ import { error, json, readJson } from "../_lib/http.js";
 import {
   FORUM_SECTIONS, GAME_STATUSES, getGame, getPost, getSettings, listGameMedia, listGames, listPosts, POST_KINDS, POST_STATUSES, SLUG, toCategory
 } from "../_lib/studio.js";
-import { announceRelease, formatAnnouncement, pendingReleases, previewRelease, releaseFromPost, releaseProblems } from "../_lib/telegram-announce.js";
+import { announceRelease, pendingReleases, previewRelease } from "../_lib/telegram-announce.js";
 import { cleanLine, cleanText, intParam, lengthProblem, parseId } from "../_lib/validate.js";
 import { gameCoverKey, gameShotKey, postImageKey } from "../media.js";
 
