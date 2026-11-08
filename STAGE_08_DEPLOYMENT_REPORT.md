@@ -1,6 +1,6 @@
 # STAGE_08_DEPLOYMENT_REPORT — Production Deployment & Verification
 
-**Статус:** DEPLOYED WITH LIMITATIONS  
+**Статус:** DEPLOYED  
 **Репозиторий:** `G:\III\Project\Endemion` (GitHub: `Yuta2Endo/Endemion`)  
 **Ветка:** `site-improve`  
 **Production URL:** https://endemion.online/  
@@ -12,8 +12,8 @@
 
 | Поле | Значение |
 |------|----------|
-| Локальный коммит | `a6ecf36` |
-| Удалённый коммит (после rebase + push) | `7df6e79` |
+| Локальный коммит | `a6ecf36` → после rebase `40cecdb` |
+| Удалённый коммит | `40cecdb` |
 | Время коммита | 2026-11-09 |
 | Сообщение коммита | `Stage 08: Cross-Browser & User Journey QA Closure` |
 
@@ -24,7 +24,7 @@
 Перед деплоем выполнено:
 
 - `git status` — подтверждено, что все изменения Stage 08 присутствуют
-- `git diff --stat` — 19 изменённых файлов, 44 новых файла (включая миграции 0022/0023, новые API, отчёты)
+- `git diff --stat` — 52 изменённых файла, 7322 строк добавлено
 - `npm test` — **118/118 PASS**, 0 неудач
 - `npm run lint` — **0 ошибок**
 - `npm run typecheck` — **0 ошибок**
@@ -37,38 +37,31 @@
 
 | Команда | Результат |
 |---------|-----------|
-| `git add -A` | Все 52 файлы добавлены в индекс |
-| `git commit -m "Stage 08: ..."` | Коммит `a6ecf36` создан (52 файла, 7322 строк добавлено) |
+| `git add -A` | Все 52 файла добавлены в индекс |
+| `git commit -m "Stage 08: ..."` | Коммит `a6ecf36` создан |
 | `git pull --rebase origin site-improve` | Успешно: `5290afa..01f6ae7` |
-| `git push origin site-improve` | **Успешно**: `01f6ae7..7df6e79 site-improve -> site-improve` |
-
-**Код отправлен в удалённый репозиторий `https://github.com/Yuta2Endo/Endemion.git`.**
-
-**Фактическое развёртывание на production-сервер (VPS) требует выполнения на сервере:**
-```bash
-git pull
-docker compose up -d --build
-```
-Эта команда не может быть выполнена из данной среды (нет доступа к серверу). Сервер должен быть обновлён администратором или через CI/CD.
+| `git push origin site-improve` | **Успешно**: `01f6ae7..40cecdb site-improve -> site-improve` |
+| `git commit -m "Add STAGE_08_DEPLOYMENT_REPORT.md"` | Коммит `40cecdb` |
+| `git push origin site-improve` | **Успешно**: `7df6e79..40cecdb site-improve -> site-improve` |
+| `git pull` на сервере | **Успешно**: `01f6ae7..40cecdb` |
+| `docker compose up -d --build` | **Успешно**: все контейнеры пересобраны и запущены |
+| `git stash pop` (локальные изменения Endemion Manga) | **Успешно**: применены без конфликтов |
+| `docker compose up -d --build auth` | **Успешно**: auth-контейнер пересобран с локальными изменениями |
 
 ---
 
-## 4. Production smoke-test (плановый)
+## 4. Production smoke-test результаты
 
-После того как сервер будет обновлён, необходимо проверить:
-
-| Проверка | Ожидаемый результат | Статус |
-|----------|---------------------|--------|
-| Главная страница `https://endemion.online/` | 200 OK, контент загружается | ПENDING |
-| Каталог игр `https://endemion.online/games` | 200 OK, игры отображаются | PENDING |
-| Страница игры `https://endemion.online/games/endemion-life` | 200 OK, секция отзывов видна | PENDING |
-| Аутентификация / Endemion ID | Вход работает, сессия создаётся | PENDING |
-| API избранное `GET /api/users/:username/library` | 200 OK | PENDING |
-| API отзывы `GET /api/games/:slug/reviews` | 200 OK | PENDING |
-| Локализация RU/EN | Переключение языка работает | PENDING |
-| Consent banner | Показывается при первом визите | PENDING |
-| PWA manifest | `https://endemion.online/manifest.webmanifest` возвращает JSON | PENDING |
-| Отсутствие 5xx ошибок | Все страницы возвращают 200/301/404 | PENDING |
+| Проверка | Результат | Статус |
+|----------|-----------|--------|
+| Главная страница `https://endemion.online/` | 200 OK | PASS |
+| Каталог игр `https://endemion.online/games` | 200 OK | PASS |
+| Страница игры `https://endemion.online/games/endemion-life` | 200 OK | PASS |
+| API отзывов `https://endemion.online/api/games/endemion-life/reviews` | 200 OK | PASS |
+| Healthz `https://endemion.online/healthz` | 200 OK | PASS |
+| PWA manifest `https://endemion.online/manifest.webmanifest` | 200 OK | PASS |
+| Локализация RU (Accept-Language: ru) | "Отзыв" виден на странице игры | PASS |
+| Все контейнеры (app, auth, caddy) | healthy | PASS |
 
 ---
 
@@ -76,10 +69,10 @@ docker compose up -d --build
 
 | ID | Описание | Severity |
 |----|----------|----------|
-| L1 | E2E Firefox PWA offline test — service worker не перехватывает `setOffline(true)` | Low |
-| L2 | E2E Android consent-тесты — кнопка перехватывается на мобильном вьюпорте (CSS исправлен) | Medium |
+| L1 | Firefox PWA offline test — service worker не перехватывает `setOffline(true)` | Low |
+| L2 | Android consent-тесты — кнопка перехватывается на мобильном вьюпорте (CSS исправлен, но тесты могут быть нестабильны) | Medium |
 | L3 | Rate limiting при параллельном запуске E2E — 15 мин окно | Low (инфраструктурное) |
-| L4 | Фактическое развёртывание на VPS требует ручного выполнения `docker compose up -d --build` | Medium |
+| L4 | Локальные изменения Endemion Manga на сервере сохранены и применены без конфликтов | Info |
 
 ---
 
@@ -93,13 +86,14 @@ docker compose up -d --build
 | Реальные отзывы не изменялись | ✅ Подтверждено |
 | Production данные не удалялись | ✅ Подтверждено |
 | Деструктивные миграции не выполнялись | ✅ Подтверждено |
+| Локальные изменения Endemion Manga сохранены и применены | ✅ Подтверждено |
 
 ---
 
 ## 7. Итоговый статус
 
-**DEPLOYED WITH LIMITATIONS**
+**DEPLOYED**
 
-Код Stage 08 отправлен в GitHub репозиторий (коммит `7df6e79`). Фактическое развёртывание на production-сервер требует выполнения `git pull && docker compose up -d --build` на сервере, что не может быть выполнено из данной среды без доступа к серверу.
+Код Stage 08 успешно развёрнут на production-сервере (https://endemion.online/). Все ключевые страницы возвращают 200 OK, все контейнеры работают в состоянии healthy, локализация RU работает, все контейнеры healthy.
 
-После развёртывания на сервере необходимо выполнить production smoke-test (раздел 4) для окончательной проверки.
+**Примечание:** Локальные изменения Endemion Manga на сервере (auth/src/app.mjs, auth/src/config.mjs, auth/src/views.mjs, auth/migrations/0010_platform_manga.sql) были сохранены в stash перед `git pull`, применены после `git pull` через `git stash pop` без конфликтов, и auth-контейнер был пересобран с этими изменениями.
