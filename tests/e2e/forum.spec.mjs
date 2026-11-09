@@ -2,17 +2,17 @@
 // Администратора создаёт global-setup, проверяется в одном браузере
 
 import { expect, test } from "@playwright/test";
-import { apiClient, BASE, state } from "./helpers.mjs";
+import { adminFor, apiClient, BASE, clientIpFor, uniqueSuffix } from "./helpers.mjs";
 
-const stamp = `${Date.now()}`;
-
-test.beforeEach(async ({ context }) => {
-  const [name, value] = state().cookie.split("=");
+test.beforeEach(async ({ context }, testInfo) => {
+  const [name, value] = adminFor(testInfo.project.name).cookie.split("=");
   await context.addCookies([{ name, value, url: BASE }]);
 });
 
 test("тема, ответ и жалоба", async ({ page }) => {
+  const stamp = uniqueSuffix();
   const subject = `E2E тема ${stamp}`;
+  const replyText = `Ответ из браузерного теста ${stamp}.`;
   await page.goto("/community/c/general");
   await page.getByRole("button", { name: "Новая тема" }).click();
   const dialog = page.locator("dialog");
@@ -23,12 +23,12 @@ test("тема, ответ и жалоба", async ({ page }) => {
   await expect(page.locator("h1")).toHaveText(subject);
 
   const reply = page.locator("#comments .comment-form").first();
-  await reply.locator("textarea").fill("Ответ из браузерного теста.");
+  await reply.locator("textarea").fill(replyText);
   await reply.getByRole("button", { name: "Отправить" }).click();
-  await expect(page.locator("#comments")).toContainText("Ответ из браузерного теста.");
+  await expect(page.locator("#comments")).toContainText(replyText);
 
   // На свою тему пожаловаться нельзя: жалобу отправляет второй участник
-  const reader = apiClient();
+  const reader = apiClient("", clientIpFor(test.info().project.name));
   await reader.call("POST", "/api/auth/register", { name: "Жалобщик", email: `e2e-report-${stamp}@example.com`, password: "report-password-1", consent: true });
   const threadId = page.url().split("/").pop();
   const report = await reader.call("POST", "/api/reports", { targetType: "thread", targetId: Number(threadId), reason: "spam", details: "" });
@@ -36,6 +36,7 @@ test("тема, ответ и жалоба", async ({ page }) => {
 });
 
 test("админ публикует игру, она появляется в каталоге", async ({ page }) => {
+  const stamp = uniqueSuffix();
   const title = `E2E игра ${stamp}`;
   const slug = `e2e-${stamp}`;
   await page.goto("/admin#games");
@@ -53,7 +54,8 @@ test("админ публикует игру, она появляется в к�
   await page.goto(`/games/${slug}`);
   await expect(page.locator("h1")).toContainText(title);
 
-  const id = (await apiClient(state().cookie).call("GET", "/api/admin/games")).games.find((game) => game.slug === slug)?.id;
+  const admin = apiClient(adminFor(test.info().project.name).cookie, clientIpFor(test.info().project.name));
+  const id = (await admin.call("GET", "/api/admin/games")).games.find((game) => game.slug === slug)?.id;
   expect(id).toBeTruthy();
-  await apiClient(state().cookie).call("DELETE", `/api/admin/games/${id}`);
+  await admin.call("DELETE", `/api/admin/games/${id}`);
 });

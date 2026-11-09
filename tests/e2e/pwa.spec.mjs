@@ -2,8 +2,20 @@
 
 import { expect, test } from "@playwright/test";
 
-test.beforeEach(async ({}) => {
-});
+// Firefox в Playwright не отключает сеть для service worker при context.setOffline(true):
+// навигация под управлением service worker всё равно доходит до сервера. Поэтому на localhost
+// service worker умеет по сообщению сымитировать обрыв сети — это проверяет настоящую ветку
+// «нет связи» во всех браузерах. Обычная навигация при этом не меняется.
+async function setSimulatedOffline(page, offline) {
+  await page.evaluate((flag) => new Promise((resolve) => {
+    const worker = navigator.serviceWorker.controller;
+    if (!worker) return resolve(false);
+    navigator.serviceWorker.addEventListener("message", (event) => {
+      if (event.data && event.data.type === "endemion:simulation") resolve(true);
+    }, { once: true });
+    worker.postMessage(flag ? "endemion:simulate-offline" : "endemion:simulate-online");
+  }), offline);
+}
 
 test("манифест и значки", async ({ page, request }) => {
   await page.goto("/");
@@ -27,11 +39,13 @@ test("без интернета — страница «Нет связи»", asy
   await page.reload();
   await expect.poll(() => page.evaluate(() => Boolean(navigator.serviceWorker.controller))).toBe(true);
 
+  await setSimulatedOffline(page, true);
   await context.setOffline(true);
   await page.goto("/copyright");
   await expect(page.locator("h1")).toContainText("Связь");
   await expect(page.locator(".eyebrow")).toHaveText("Нет подключения");
   await context.setOffline(false);
+  await setSimulatedOffline(page, false);
 
   // С сетью снова открывается настоящая страница
   await page.goto("/copyright");

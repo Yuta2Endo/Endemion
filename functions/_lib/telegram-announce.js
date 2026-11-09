@@ -81,35 +81,11 @@ export async function telegramRecord(env, postId) {
   return await env.DB.prepare("SELECT * FROM telegram_posts WHERE post_id = ?").bind(postId).first();
 }
 
-/** Установить запись в состояние pending (создать или сбросить после неудачи). */
-async function setPending(env, postId, chatId) {
-  const exists = await telegramRecord(env, postId);
-  if (exists) {
-    await env.DB.prepare(
-      `UPDATE telegram_posts SET status = 'pending', chat_id = ?, message_id = NULL, error = NULL,
-       attempts = 0, updated_at = datetime('now') WHERE post_id = ?`
-    ).bind(chatId, postId).run();
-  } else {
-    await env.DB.prepare(
-      `INSERT INTO telegram_posts (post_id, status, chat_id, attempts, created_at, updated_at)
-       VALUES (?, 'pending', ?, 0, datetime('now'), datetime('now'))`
-    ).bind(postId, chatId).run();
-  }
-}
-
-/** Пометить запись как опубликованную. */
-async function setPublished(env, postId, messageId) {
-  await env.DB.prepare(
-    `UPDATE telegram_posts SET status = 'published', message_id = ?, published_at = datetime('now'),
-     updated_at = datetime('now') WHERE post_id = ?`
-  ).bind(messageId, postId).run();
-}
-
-/** Пометить запись как неудачную. */
+/** Пометить запись как неудачную. Попытка уже учтена при переходе в 'pending'. */
 async function setFailed(env, postId, error) {
   await env.DB.prepare(
-    `UPDATE telegram_posts SET status = 'failed', error = ?, attempts = attempts + 1,
-     updated_at = datetime('now') WHERE post_id = ?`
+    `UPDATE telegram_posts SET status = 'failed', error = ?, updated_at = datetime('now')
+     WHERE post_id = ? AND status = 'pending'`
   ).bind(error, postId).run();
 }
 
@@ -118,6 +94,9 @@ async function setFailed(env, postId, error) {
  * dryRun = true — только сформировать текст, не отправлять и не писать в базу.
  * Возвращает { ok, messageId, error, retryAfter, duplicate, dryRun, text, postId }.
  * Неудачная отправка не создаёт дубля: запись остаётся failed и повторит попытку при следующем вызове.
+ * Защита от дублей: атомарно переводит запись в статус 'pending' — только один конкурентный
+ * вызов сможет перевести запись из любого статуса, отличного от 'pending'/'published', в 'pending'.
+ * Остальные получат существующую запись и не будут слать повторно.
  */
 export async function announceRelease(env, postId, { dryRun = false } = {}) {
   const post = await getPost(env, postId);
@@ -142,24 +121,56 @@ export async function announceRelease(env, postId, { dryRun = false } = {}) {
   }
   if (!env || !env.TELEGRAM_BOT_TOKEN) {
     return {
-      ok: false, error: "Telegram бот не настроен: задайте TELEGRAM_BOT_TOKEN.",
+      ok: false, error: "Телеграм бот не настроен: задайте TELEGRAM_BOT_TOKEN.",
       configure: true, postId, text
     };
   }
 
-  const existing = await telegramRecord(env, postId);
-  if (existing && existing.status === "published") {
-    return { ok: true, duplicate: true, messageId: existing.message_id, chatId: existing.chat_id, postId, text };
-  }
+  // Атомарно создаём запись или переводим её в 'pending'. Только один конкурентный вызов
+  // сможет занять запись: INSERT для нового поста или DO UPDATE для 'failed'.
+  // 'pending' и 'published' не перезаписываются, поэтому повторной отправки не будет.
+  const pendingResult = await env.DB.prepare(
+    `INSERT INTO telegram_posts (post_id, status, chat_id, message_id, error, attempts)
+     VALUES (?, 'pending', ?, NULL, NULL, 1)
+     ON CONFLICT(post_id) DO UPDATE SET
+       status = 'pending', chat_id = excluded.chat_id, message_id = NULL, error = NULL,
+       published_at = NULL, attempts = telegram_posts.attempts + 1, updated_at = datetime('now')
+     WHERE telegram_posts.status NOT IN ('pending', 'published')`
+  ).bind(postId, chatId).run();
 
-  await setPending(env, postId, chatId);
+  if (pendingResult.meta.changes === 0) {
+    // Другой запрос уже перевёл запись в pending или published.
+    const current = await telegramRecord(env, postId);
+    if (current && current.status === "published") {
+      return { ok: true, duplicate: true, messageId: current.message_id, chatId: current.chat_id, postId, text };
+    }
+    // Запись в pending, но ещё не отправлена — другой запрос уже её обрабатывает.
+    return { ok: false, error: "Отправка уже выполняется другим запросом. Попробуйте позже.", postId, retryAfter: null };
+  }
 
   const result = await sendTelegramMessage(env, chatId, text);
   // Токен не попадает в логи: ошибка содержит только статус API или сообщение сети.
   if (result.ok) {
-    await setPublished(env, postId, result.messageId || null);
+    // Проверяем, что запись всё ещё в состоянии pending — иначе другой запрос уже обновил её.
+    const updateResult = await env.DB.prepare(
+      `UPDATE telegram_posts
+       SET status = 'published', message_id = ?, published_at = datetime('now'), updated_at = datetime('now')
+       WHERE post_id = ? AND status = 'pending'`
+    ).bind(result.messageId, postId).run();
+
+    if (updateResult.meta.changes === 0) {
+      // Другой запрос уже пометил запись как published или failed.
+      const current = await telegramRecord(env, postId);
+      if (current && current.status === "published") {
+        return { ok: true, duplicate: true, messageId: current.message_id, chatId: current.chat_id, postId, text };
+      }
+      // Сообщение ушло в Telegram, но запись уже в другом состоянии — считаем отправленным.
+      return { ok: true, messageId: result.messageId || null, chatId, postId, text, note: "concurrent_update" };
+    }
+
     return { ok: true, messageId: result.messageId, chatId, postId, text };
   }
+
   await setFailed(env, postId, result.error || "Неизвестная ошибка Telegram API.");
   console.error(`Телеграм: анонс публикации #${postId} не доставлен: ${result.error}`);
   return { ok: false, error: result.error, retryAfter: result.retryAfter, postId, text };

@@ -537,10 +537,17 @@ export async function getGameReview(env, userId, gameId) {
 
 /** Добавить отзыв к игре. Возвращает id созданного отзыва */
 export async function addGameReview(env, userId, gameId, score, body, spoiler) {
-  const result = await env.DB.prepare(
-    "INSERT INTO game_reviews (user_id, game_id, score, body, spoiler) VALUES (?, ?, ?, ?, ?)"
-  ).bind(userId, gameId, score, body, spoiler ? 1 : 0).run();
-  return result.meta.last_row_id;
+  try {
+    const result = await env.DB.prepare(
+      "INSERT INTO game_reviews (user_id, game_id, score, body, spoiler) VALUES (?, ?, ?, ?, ?)"
+    ).bind(userId, gameId, score, body, spoiler ? 1 : 0).run();
+    return result.meta.last_row_id;
+  } catch (err) {
+    if (err.message && err.message.includes("UNIQUE")) {
+      return null; // Дубликат отзыва
+    }
+    throw err;
+  }
 }
 
 /** Обновить отзыв пользователя. Возвращает true, если обновлено */

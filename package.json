@@ -10,7 +10,7 @@
     "db:migrate:remote": "wrangler d1 migrations apply endemion --remote",
     "predeploy": "npm test",
     "deploy": "wrangler deploy",
-    "test": "node --test --test-concurrency=1 tests/crypto.test.mjs tests/mail.test.mjs tests/engines.test.mjs tests/platform.test.mjs tests/endemion-id.test.mjs tests/forum.test.mjs tests/studio-admin.test.mjs tests/admin-accounts.test.mjs tests/portal.test.mjs tests/roadmap.test.mjs tests/legal.test.mjs",
+    "test": "node --test --test-concurrency=1 tests/crypto.test.mjs tests/mail.test.mjs tests/engines.test.mjs tests/platform.test.mjs tests/endemion-id.test.mjs tests/forum.test.mjs tests/studio-admin.test.mjs tests/admin-accounts.test.mjs tests/portal.test.mjs tests/roadmap.test.mjs tests/legal.test.mjs tests/telegram.test.mjs",
     "test:auth": "npm --prefix auth test",
     "test:api": "node tests/api.smoke.mjs",
     "test:e2e": "playwright test",

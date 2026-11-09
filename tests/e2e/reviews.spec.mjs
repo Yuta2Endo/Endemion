@@ -2,12 +2,12 @@
 // Требует аутентифицированного пользователя (администратор создаётся в global-setup).
 
 import { expect, test } from "@playwright/test";
-import { BASE, state } from "./helpers.mjs";
+import { adminFor, BASE } from "./helpers.mjs";
 
 const GAME_SLUG = "endemion-life";
 
-test.beforeEach(async ({ context }) => {
-  const [name, value] = state().cookie.split("=");
+test.beforeEach(async ({ context }, testInfo) => {
+  const [name, value] = adminFor(testInfo.project.name).cookie.split("=");
   await context.addCookies([{ name, value, url: BASE }]);
   await context.addCookies([{ name: "lang", value: "ru", url: BASE }]);
 });

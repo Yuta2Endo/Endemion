@@ -2,7 +2,14 @@
 // Браузеры для тестов ставятся один раз: `npx playwright install chromium firefox webkit`
 
 import { defineConfig, devices } from "@playwright/test";
-import { BASE } from "./tests/e2e/helpers.mjs";
+import { BASE, PROJECT_IPS } from "./tests/e2e/helpers.mjs";
+
+// Отдельный CF-Connecting-IP на проект: лимиты входа не мешают параллельным браузерам.
+// В продакшене этот заголовок задаёт Cloudflare, подменить его снаружи нельзя.
+const project = (name, device) => ({
+  name,
+  use: { ...device, extraHTTPHeaders: { "CF-Connecting-IP": PROJECT_IPS[name] } }
+});
 
 export default defineConfig({
   testDir: "tests/e2e",
@@ -20,11 +27,11 @@ export default defineConfig({
     trace: "retain-on-failure"
   },
   projects: [
-    { name: "chromium", use: { ...devices["Desktop Chrome"] } },
-    { name: "firefox", use: { ...devices["Desktop Firefox"] } },
-    { name: "webkit", use: { ...devices["Desktop Safari"] } },
-    { name: "android", use: { ...devices["Pixel 7"] } },
-    { name: "iphone", use: { ...devices["iPhone 14"] } }
+    project("chromium", devices["Desktop Chrome"]),
+    project("firefox", devices["Desktop Firefox"]),
+    project("webkit", devices["Desktop Safari"]),
+    project("android", devices["Pixel 7"]),
+    project("iphone", devices["iPhone 14"])
   ],
   webServer: {
     command: "npx wrangler dev --port 8787 --ip 127.0.0.1",

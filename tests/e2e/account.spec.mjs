@@ -2,14 +2,15 @@
 // а ссылка из него показывается на странице
 
 import { expect, test } from "@playwright/test";
-import { apiClient } from "./helpers.mjs";
+import { apiClient, clientIpFor, uniqueSuffix } from "./helpers.mjs";
 
-test("новый пароль по ссылке из письма", async ({ page }) => {
-  const config = await apiClient().call("GET", "/api/config");
+test("новый пароль по ссылке из письма", async ({ page }, testInfo) => {
+  const ip = clientIpFor(testInfo.project.name);
+  const config = await apiClient("", ip).call("GET", "/api/config");
   test.skip(!config.passwordReset, "нужен MAIL_DEV_MODE=1 в .dev.vars");
 
-  const email = `reset-${Date.now()}@example.com`;
-  await apiClient().call("POST", "/api/auth/register", { name: "Сброс", email, password: "old-password-1", consent: true });
+  const email = `reset-${uniqueSuffix()}@example.com`;
+  await apiClient("", ip).call("POST", "/api/auth/register", { name: "Сброс", email, password: "old-password-1", consent: true });
 
   await page.goto("/auth");
   await page.locator("#forgotLink").click();
@@ -31,7 +32,7 @@ test("новый пароль по ссылке из письма", async ({ pag
   await expect(page.locator("#profileEmail")).toHaveText(email);
 
   // Старый пароль больше не подходит, новый подходит. В конце тестовый пользователь удаляется
-  const client = apiClient();
+  const client = apiClient("", ip);
   await expect(client.call("POST", "/api/auth/login", { email, password: "old-password-1" })).rejects.toThrow(/401/);
   await client.call("POST", "/api/auth/login", { email, password: "new-password-1" });
   await client.call("DELETE", "/api/me", { password: "new-password-1" });

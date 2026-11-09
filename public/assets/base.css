@@ -792,6 +792,9 @@ img {
   z-index: 50;
   display: block;
   width: min(440px, calc(100% - 32px));
+  max-height: calc(100vh - 32px);
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
   padding: 18px;
   border: 1px solid var(--border-strong);
   border-radius: 18px;
@@ -826,18 +829,13 @@ img {
 
 .consent-actions {
   display: flex;
-  gap: 10px;
+  flex-wrap: wrap;
+  gap: 8px;
   margin-top: 10px;
 }
 
 .consent-actions button {
   flex: 1;
-}
-
-.consent-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
 }
 
 /* ==================== ПЛАНШЕТЫ И ТЕЛЕФОНЫ ==================== */
@@ -927,6 +925,12 @@ img {
   }
 
   .profile-btn .account-name {
+    display: none;
+  }
+
+  /* На телефоне строка поиска не помещается рядом с остальными кнопками шапки
+     и растягивает страницу по горизонтали. Поиск остаётся на планшетах и десктопе. */
+  .nav-search {
     display: none;
   }
 

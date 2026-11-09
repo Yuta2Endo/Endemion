@@ -2,10 +2,10 @@
 // Администратора создаёт global-setup
 
 import { expect, test } from "@playwright/test";
-import { apiClient, BASE, state } from "./helpers.mjs";
+import { adminFor, apiClient, BASE, clientIpFor, state, uniqueSuffix } from "./helpers.mjs";
 
 test.beforeEach(async ({ context }) => {
-  const [name, value] = state().cookie.split("=");
+  const [name, value] = adminFor(test.info().project.name).cookie.split("=");
   await context.addCookies([{ name, value, url: BASE }]);
 });
 
@@ -26,8 +26,8 @@ test("разделы портала и журнал", async ({ page }) => {
 });
 
 test("пользователи: права через окно с паролем", async ({ page }) => {
-  const email = `e2e-member-${Date.now()}@example.com`;
-  await apiClient().call("POST", "/api/auth/register", { name: "Участник", email, password: "member-password-1", consent: true });
+  const email = `e2e-member-${uniqueSuffix()}@example.com`;
+  await apiClient("", clientIpFor(test.info().project.name)).call("POST", "/api/auth/register", { name: "Участник", email, password: "member-password-1", consent: true });
   page.on("dialog", (dialog) => dialog.accept());
 
   await page.goto("/admin#users");

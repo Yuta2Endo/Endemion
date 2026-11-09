@@ -2,10 +2,10 @@
 // Запросы к mc.yandex.ru в тестах не уходят в интернет: отвечает заглушка
 
 import { expect, test } from "@playwright/test";
-import { apiClient, BASE, state } from "./helpers.mjs";
+import { adminFor, apiClient, BASE, clientIpFor } from "./helpers.mjs";
 
-test.beforeEach(async ({ page }) => {
-  const config = await apiClient().call("GET", "/api/config");
+test.beforeEach(async ({ page }, testInfo) => {
+  const config = await apiClient("", clientIpFor(testInfo.project.name)).call("GET", "/api/config");
   test.skip(!config.yandexMetrikaId, "нужен YANDEX_METRIKA_ID на сервере");
   await page.route("https://mc.yandex.ru/**", (route) => route.fulfill({ status: 200, contentType: "text/javascript", body: "" }));
 });
@@ -42,7 +42,7 @@ test("после согласия Метрика загружается, выб�
 
 test("в админке и на странице нового пароля Метрики нет", async ({ page, context }) => {
   // Вход администратором: без него /admin перенаправляет на страницу входа
-  const [name, value] = state().cookie.split("=");
+  const [name, value] = adminFor(test.info().project.name).cookie.split("=");
   await context.addCookies([{ name, value, url: BASE }]);
   await page.goto("/");
   await page.getByRole("button", { name: "Разрешить" }).click();

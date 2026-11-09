@@ -82,6 +82,7 @@ export const gameReviewAdd = {
     if (existing) return error("Вы уже оставили отзыв к этой игре.", 409);
 
     const reviewId = await addGameReview(env, user.id, game.id, score, text, spoiler);
+    if (!reviewId) return error("Вы уже оставили отзыв к этой игре.", 409);
     return json({ id: reviewId, score, body: text, spoiler }, 201);
   }
 };
