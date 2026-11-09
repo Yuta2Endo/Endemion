@@ -13,7 +13,7 @@ export function langOf(request) {
 
 const STRINGS = {
   ru: {
-    nav: { home: "Главная", games: "Игры", community: "Сообщество", studio: "Разработка", about: "О студии" },
+    nav: { home: "Главная", games: "Игры", community: "Сообщество", studio: "Разработка", about: "О студии", telegram: "Телеграм" },
     search: "Поиск",
     searchPlaceholder: "Поиск…",
     searchLabel: "Поиск по сайту",
@@ -136,7 +136,7 @@ const STRINGS = {
     gameReviewDuplicate: "Вы уже оставили отзыв к этой игре.",
   },
   en: {
-    nav: { home: "Home", games: "Games", community: "Community", studio: "Development", about: "About" },
+    nav: { home: "Home", games: "Games", community: "Community", studio: "Development", about: "About", telegram: "Telegram" },
     search: "Search",
     searchPlaceholder: "Search…",
     searchLabel: "Search the site",

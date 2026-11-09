@@ -32,13 +32,18 @@ const ICONS = {
   telegram: '<path d="M5.623 13.232V9.065L13.332 6.77l-3.23-5.823-6.945 6.945L1.73 13.232z"/>',
 };
 
+/** Название навигационной ссылки с безопасным fallback, чтобы никогда не выводить undefined. */
+export function navLabel(s, key) {
+  return s.nav[key] ?? key;
+}
+
 export function svgIcon(name, className = "") {
   return `<svg${className ? ` class="${className}"` : ""} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" ` +
     `stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name]}</svg>`;
 }
 
 export function siteHeader(active, s) {
-  const item = ([href, , key]) => `<a href="${href}"${key === active ? ' aria-current="page"' : ""}>${e(s.nav[key])}</a>`;
+  const item = ([href, , key]) => `<a href="${href}"${key === active ? ' aria-current="page"' : ""}>${e(navLabel(s, key))}</a>`;
   return `<header class="header">
     <div class="container nav">
       <a class="logo" href="/" aria-label="${e(s.homeAria)}"><span class="logo-mark" aria-hidden="true">E</span><span class="logo-text">ENDEMION</span></a>
@@ -73,7 +78,7 @@ export function siteFooter(s) {
       </div>
       <nav class="footer-col" aria-label="${e(s.sections)}">
         <h2 class="footer-title">${e(s.sections)}</h2>
-        ${NAV.map(([href, , key]) => `<a href="${href}">${e(s.nav[key])}</a>`).join("")}
+        ${NAV.map(([href, , key]) => `<a href="${href}">${e(navLabel(s, key))}</a>`).join("")}
       </nav>
       <nav class="footer-col" aria-label="${e(s.projects)}">
         <h2 class="footer-title">${e(s.projects)}</h2>
