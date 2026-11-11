@@ -10,6 +10,7 @@ import * as reset from "../functions/api/auth/reset.js";
 import * as endemionId from "../functions/api/auth/oidc.js";
 import * as me from "../functions/api/me/index.js";
 import * as mePassword from "../functions/api/me/password.js";
+import * as meSessions from "../functions/api/me/sessions.js";
 import * as config from "../functions/api/config.js";
 import * as adminComplaints from "../functions/api/admin/complaints/index.js";
 import * as adminComplaint from "../functions/api/admin/complaints/[id].js";
@@ -19,6 +20,8 @@ import * as adminUsers from "../functions/api/admin/users/index.js";
 import * as adminUser from "../functions/api/admin/users/[id].js";
 import * as adminAudit from "../functions/api/admin/audit.js";
 import * as adminAccounts from "../functions/api/admin/accounts.js";
+import * as robokassaResult from "../functions/api/robokassa/result.js";
+import * as robokassaCreate from "../functions/api/robokassa/create.js";
 import * as robots from "../functions/robots.txt.js";
 import * as sitemap from "../functions/sitemap.xml.js";
 import * as profile from "../functions/api/profile.js";
@@ -34,6 +37,7 @@ import * as adminStudio from "../functions/api/adminStudio.js";
 import * as studioPages from "../functions/studio.js";
 import * as legal from "../functions/legal.js";
 import * as media from "../functions/media.js";
+import * as jwks from "../functions/jwks.js";
 import { error } from "../functions/_lib/http.js";
 
 // Эти же пути перечислены в run_worker_first в wrangler.toml
@@ -51,7 +55,10 @@ const ROUTE_LIST = [
   ["/reset", endemionId.legacyPage],
   ["/api/me", me],
   ["/api/me/password", mePassword],
+  ["/api/me/sessions", meSessions],
   ["/api/config", config],
+  ["/api/robokassa/result", robokassaResult],
+  ["/api/robokassa/create", robokassaCreate],
   ["/api/complaints", complaints],
   ["/api/admin/complaints", adminComplaints],
   ["/api/admin/complaints/:id", adminComplaint],
@@ -132,6 +139,7 @@ const ROUTE_LIST = [
   ["/media/games/:id/shots/:mediaId", media.gameShot],
   ["/media/posts/:id", media.postImage],
   ["/profile", site.profile],
+  ["/account", site.account],
   ["/notifications", site.notificationsPage],
   ["/search", site.searchPage],
   ["/community", site.community],
@@ -140,7 +148,9 @@ const ROUTE_LIST = [
   ["/users/:username", site.userPage],
   ["/u/:username", site.userRedirect],
   ["/robots.txt", robots],
-  ["/sitemap.xml", sitemap]
+  ["/sitemap.xml", sitemap],
+  // Stage 11.2: публичные ключи портала для проверки утверждений Endemion Life
+  ["/.well-known/jwks.json", jwks]
 ];
 
 // Разделы, удалённые при переходе на портал студии (2026-11-04): энциклопедия, читалка манги, Nexus, Oracle, Pulse, Арена, подборки.

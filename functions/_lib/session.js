@@ -73,6 +73,7 @@ export async function currentUser(env, request) {
   return {
     authTime: row.auth_time,
     viaEndemionId: Boolean(row.refresh_token),
+    endemionSub: row.endemion_sub || null,
     id: row.id,
     name: row.name,
     email: row.email,

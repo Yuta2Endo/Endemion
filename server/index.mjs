@@ -28,10 +28,14 @@ const WORKER_VARS = [
   "YANDEX_ADS_PAGE_ID",
   // Вход через Endemion ID (auth.endemion.online), см. functions/_lib/endemionId.js
   "ENDEMION_ID", "ENDEMION_ID_ISSUER", "ENDEMION_ID_CLIENT_ID", "ENDEMION_ID_CLIENT_SECRET", "ENDEMION_ID_TOKEN_KEY", "ENDEMION_LIFE_URL",
+  // Stage 11.2: утверждения для Endemion Life. Выключено, пока ENDEMION_LIFE_ASSERTION не равен "1"
+  "ENDEMION_LIFE_ASSERTION", "ENDEMION_LIFE_JWT_KID", "ENDEMION_LIFE_JWT_PRIVATE_KEY", "ENDEMION_LIFE_JWT_PREVIOUS_PUBLIC_JWKS",
   // Список аккаунтов Endemion ID в админке, см. functions/api/admin/accounts.js
   "ENDEMION_ID_INTERNAL_URL", "AUTH_ADMIN_TOKEN",
   // Анонсы обновлений в Телеграм (@EndemionOfficial). Токен бота — как другой секрет окружения.
-  "TELEGRAM_BOT_TOKEN", "TELEGRAM_CHANNEL", "TELEGRAM_PUBLISH"
+  "TELEGRAM_BOT_TOKEN", "TELEGRAM_CHANNEL", "TELEGRAM_PUBLISH",
+  // Robokassa: приём уведомлений об оплате (Result URL). Секреты только на сервере
+  "ROBOKASSA_MERCHANT_LOGIN", "ROBOKASSA_PASSWORD_1", "ROBOKASSA_PASSWORD_2", "ROBOKASSA_SIGNATURE_ALGO", "ROBOKASSA_IS_TEST"
 ];
 
 /**
