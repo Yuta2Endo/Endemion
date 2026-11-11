@@ -3,12 +3,15 @@
 import { error } from "../_lib/http.js";
 
 const SAFE_METHODS = ["GET", "HEAD", "OPTIONS"];
+// Серверные callback-и внешних систем: вызываются не из браузера и без Origin нашего сайта
+const CSRF_EXEMPT_PATHS = new Set(["/api/robokassa/result"]);
 
 export async function onRequest(context) {
   const { request, env } = context;
 
   // Изменяющие запросы принимаем только со своего сайта. Браузер всегда отправляет Origin для POST, PUT и DELETE
-  if (!SAFE_METHODS.includes(request.method)) {
+  const path = new URL(request.url).pathname;
+  if (!SAFE_METHODS.includes(request.method) && !CSRF_EXEMPT_PATHS.has(path)) {
     const origin = request.headers.get("Origin");
     if (!origin || origin !== new URL(request.url).origin) {
       return error("Запрос отклонён.", 403);
