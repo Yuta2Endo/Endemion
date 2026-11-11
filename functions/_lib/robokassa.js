@@ -18,7 +18,7 @@ export function signatureAlgo(env) {
 }
 
 export function hashHex(algo, text) {
-  return createHash(algo).update(text, "utf8").digest("hex");
+  return createHash(algo).update(text, "utf8").digest("hex").toUpperCase();
 }
 
 // Shp_* параметры в алфавитном порядке по имени (ключ=значение через :).
@@ -31,18 +31,27 @@ export function shpTail(params) {
   return entries.map(([k, v]) => `${k}=${v}`).join(":");
 }
 
+function formatOutSum(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return String(value);
+  // Robokassa часто ожидает сумму в формате с двумя знаками; используем единый формат в подписи и параметре
+  return n.toFixed(2);
+}
+
 // Подпись для старта оплаты: MerchantLogin:OutSum:InvId:Password1[:Shp_*]
 export function startSignature(env, { outSum, invId, shp }) {
   const login = String(env.ROBOKASSA_MERCHANT_LOGIN || "").trim();
   const pass1 = String(env.ROBOKASSA_PASSWORD_1 || "").trim();
   const algo = signatureAlgo(env);
-  let base = `${login}:${outSum}:${invId}:${pass1}`;
+  const sum = formatOutSum(outSum);
+  let base = `${login}:${sum}:${invId}:${pass1}`;
   const tail = shpTail(shp);
   if (tail) base += `:${tail}`;
-  return { signature: hashHex(algo, base), algo };
+  return { signature: hashHex(algo, base), algo, outSum: sum };
 }
 
 // Подпись Result URL: OutSum:InvId:Password2[:Shp_*]
+// OutSum берём как прислал Robokassa (строкой), т.к. подпись считается по фактическому значению
 export function resultSignature(env, { outSum, invId, shp }) {
   const pass2 = String(env.ROBOKASSA_PASSWORD_2 || "").trim();
   const algo = signatureAlgo(env);
@@ -54,11 +63,11 @@ export function resultSignature(env, { outSum, invId, shp }) {
 
 export function buildPaymentUrl(env, { invId, outSum, description, shp }) {
   const login = String(env.ROBOKASSA_MERCHANT_LOGIN || "").trim();
-  const { signature } = startSignature(env, { outSum, invId, shp });
+  const { signature, outSum: sum } = startSignature(env, { outSum, invId, shp });
   const isTest = String(env.ROBOKASSA_IS_TEST || "1") === "1";
   const url = new URL("https://auth.robokassa.ru/Merchant/Index.aspx");
   url.searchParams.set("MerchantLogin", login);
-  url.searchParams.set("OutSum", String(outSum));
+  url.searchParams.set("OutSum", sum);
   url.searchParams.set("InvId", String(invId));
   url.searchParams.set("Description", description || "Пополнение баланса");
   url.searchParams.set("SignatureValue", signature);
