@@ -91,6 +91,7 @@ export function siteFooter(s) {
         <a href="/legal">${e(s.legal)}</a>
         <a href="/privacy">${e(s.privacy)}</a>
         <a href="/terms">${e(s.terms)}</a>
+        <a href="/offer">${e(s.offer)}</a>
         <a href="/copyright">${e(s.copyright)}</a>
         <a href="/privacy#cookie" data-cookie-settings hidden>${e(s.cookies)}</a>
       </nav>

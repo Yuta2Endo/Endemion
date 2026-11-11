@@ -18,7 +18,7 @@ export async function onRequestGet({ request, env }) {
 
   const urls = [
     { loc: `${origin}/` },
-    ...["games", "studio", "about", "community", "terms", "privacy", "copyright"].map((path) => ({ loc: `${origin}/${path}` })),
+    ...["games", "studio", "about", "community", "terms", "privacy", "offer", "copyright"].map((path) => ({ loc: `${origin}/${path}` })),
     ...games.map((g) => ({ loc: `${origin}/games/${g.slug}`, lastmod: g.updated_at })),
     ...posts.map((p) => ({ loc: `${origin}/studio/${p.slug}`, lastmod: p.updated_at })),
     ...categories.map((c) => ({ loc: `${origin}/community/c/${c.slug}` })),
