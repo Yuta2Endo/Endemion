@@ -1,5 +1,7 @@
 // Общий код страниц: запросы к API, шапка, состояния загрузки, элементы форм, диалоги и жалобы
 
+import { adsStarted, loadAds } from "./ads.js";
+
 /** Запрос к API. Возвращает { ok, status, data } и не бросает исключение при ошибке сети */
 export async function api(path, { method = "GET", body } = {}) {
   const options = { method, credentials: "same-origin", headers: {} };
@@ -75,9 +77,9 @@ function loadMetrika(id) {
   window.ym(Number(id), "init", { clickmap: true, trackLinks: true, accurateTrackBounce: true, webvisor: false });
 }
 
-/** Cookie Метрики (_ym_uid и другие) на этом сайте. Удаляются, если посетитель передумал */
-function removeMetrikaCookies() {
-  const names = document.cookie.split(";").map((part) => part.split("=")[0].trim()).filter((name) => name.startsWith("_ym"));
+/** Cookie Яндекса (Метрика и реклама): _ym* и yandex*. Удаляются, если посетитель передумал */
+function removeYandexCookies() {
+  const names = document.cookie.split(";").map((part) => part.split("=")[0].trim()).filter((name) => name.startsWith("_ym") || name.startsWith("yandex") || name.startsWith("_yandex"));
   const domain = location.hostname.split(".").slice(-2).join(".");
   for (const name of names) {
     for (const suffix of ["", `; domain=${location.hostname}`, `; domain=.${domain}`]) {
@@ -86,8 +88,19 @@ function removeMetrikaCookies() {
   }
 }
 
+/** Текст вопроса про cookie: что именно посетитель разрешает */
+function consentText(metrikaId, adsPageId) {
+  if (metrikaId && adsPageId) {
+    return "Мы хотим считать посещения через Яндекс Метрику и показывать рекламу из Яндекс.РСЯ, чтобы сайт оставался бесплатным. Яндекс ставит свои cookie. ";
+  }
+  if (adsPageId) {
+    return "Мы показываем рекламу из Яндекс.РСЯ, чтобы сайт оставался бесплатным. Яндекс ставит свои cookie. ";
+  }
+  return "Мы хотим считать посещения через Яндекс Метрику, чтобы понимать, что читают и что работает плохо. Метрика ставит cookie. ";
+}
+
 /** Плашка с вопросом про cookie. Показывается, пока посетитель не выбрал, и по ссылке «Настройки cookie» */
-function showConsent(id) {
+function showConsent(metrikaId, adsPageId) {
   document.querySelector(".consent-banner")?.remove();
   const banner = document.createElement("section");
   banner.className = "consent-banner";
@@ -96,13 +109,13 @@ function showConsent(id) {
 
   const title = document.createElement("strong");
   title.id = "consentTitle";
-  title.textContent = "Cookie и статистика";
+  title.textContent = adsPageId ? "Cookie, статистика и реклама" : "Cookie и статистика";
   const text = document.createElement("p");
   const link = document.createElement("a");
   link.href = "/privacy#cookie";
   link.textContent = "политике конфиденциальности";
   text.append(
-    "Мы хотим считать посещения через Яндекс Метрику, чтобы понимать, что читают и что работает плохо. Метрика ставит cookie. ",
+    consentText(metrikaId, adsPageId),
     "Подробнее — в ",
     link,
     "."
@@ -123,14 +136,15 @@ function showConsent(id) {
   accept.addEventListener("click", () => {
     writeConsent("granted");
     banner.remove();
-    loadMetrika(id);
+    if (metrikaId) loadMetrika(metrikaId);
+    if (adsPageId) loadAds();
   });
   decline.addEventListener("click", () => {
-    const wasLoaded = Boolean(window.ym);
+    const wasLoaded = Boolean(window.ym) || adsStarted();
     writeConsent("denied");
     banner.remove();
-    removeMetrikaCookies();
-    // Загруженный счётчик сам не остановится: страница открывается заново уже без него
+    removeYandexCookies();
+    // Загруженный счётчик и реклама сами не остановятся: страница открывается заново уже без них
     if (wasLoaded) location.reload();
   });
 
@@ -139,24 +153,26 @@ function showConsent(id) {
 }
 
 async function initAnalytics() {
-  const { webAnalyticsToken, yandexMetrikaId } = await getConfig();
-  // Ссылка «Настройки cookie» в подвале видна, только если Метрика включена
-  document.querySelectorAll("[data-cookie-settings]").forEach((node) => (node.hidden = !yandexMetrikaId));
+  const { webAnalyticsToken, yandexMetrikaId, yandexAdsPageId } = await getConfig();
+  // Ссылка «Настройки cookie» в подвале видна, только если Метрика или реклама включены
+  document.querySelectorAll("[data-cookie-settings]").forEach((node) => (node.hidden = !yandexMetrikaId && !yandexAdsPageId));
   if (NO_ANALYTICS.test(location.pathname)) return;
 
   if (webAnalyticsToken) loadCloudflareAnalytics(webAnalyticsToken);
-  if (!yandexMetrikaId) return;
+  if (!yandexMetrikaId && !yandexAdsPageId) return;
   const consent = readConsent();
-  if (consent === "granted") loadMetrika(yandexMetrikaId);
-  else if (consent !== "denied") showConsent(yandexMetrikaId);
+  if (consent === "granted") {
+    if (yandexMetrikaId) loadMetrika(yandexMetrikaId);
+    if (yandexAdsPageId) loadAds();
+  } else if (consent !== "denied") showConsent(yandexMetrikaId, yandexAdsPageId);
 }
 
 document.addEventListener("click", async (event) => {
   const link = event.target.closest("[data-cookie-settings]");
   if (!link) return;
   event.preventDefault();
-  const { yandexMetrikaId } = await getConfig();
-  if (yandexMetrikaId) showConsent(yandexMetrikaId);
+  const { yandexMetrikaId, yandexAdsPageId } = await getConfig();
+  if (yandexMetrikaId || yandexAdsPageId) showConsent(yandexMetrikaId, yandexAdsPageId);
 });
 
 initAnalytics();

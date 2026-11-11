@@ -57,6 +57,22 @@ test("главная: приветствие, игры из каталога, с
   assert.doesNotMatch(home.text, /play\.google\.com|apps\.apple\.com|store\.steampowered\.com/);
 });
 
+test("рекламный блок Яндекс.РСЯ стоит между «Избранным проектом» и «Нашими играми»", async () => {
+  const ads = await createApp({ extraEnv: { YANDEX_ADS_PAGE_ID: "20404024" } });
+  try {
+    const home = await ads.client().call("GET", "/");
+    assert.match(home.text, /data-ads-slot/);
+    assert.match(home.text, /data-ads-page-id="20404024"/);
+    // Место блока — между избранным проектом и каталогом игр
+    assert.ok(home.text.indexOf("data-ads-slot") > home.text.indexOf('id="featuredTitle"'), "после избранного проекта");
+    assert.ok(home.text.indexOf("data-ads-slot") < home.text.indexOf('id="gamesTitle"'), "перед нашими играми");
+    // Без номера кампании рекламы на сайте нет
+    assert.doesNotMatch((await app.client().call("GET", "/")).text, /data-ads-slot/);
+  } finally {
+    await ads.close();
+  }
+});
+
 test("«Будущие проекты» появляются только для игр, отмеченных администратором", async () => {
   assert.doesNotMatch((await app.client().call("GET", "/")).text, /id="upcomingTitle"/);
   await app.db.prepare("UPDATE games SET is_upcoming = 1 WHERE slug = 'liforae'").run();

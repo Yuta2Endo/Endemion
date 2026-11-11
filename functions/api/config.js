@@ -2,6 +2,7 @@
 
 import { json } from "../_lib/http.js";
 import { accountUrl, endemionIdEnabled } from "../_lib/endemionId.js";
+import { adsPageId } from "../_lib/ads.js";
 import { mailConfigured } from "../_lib/mail.js";
 import { getSettings } from "../_lib/studio.js";
 
@@ -19,6 +20,7 @@ export async function onRequestGet({ env, request }) {
       webAnalyticsToken: env.WEB_ANALYTICS_TOKEN || "",
       // Номер счётчика Яндекс Метрики тоже публичный. Только цифры: он подставляется в адрес скрипта
       yandexMetrikaId: /^\d{5,12}$/.test(metrika) ? metrika : "",
+      yandexAdsPageId: adsPageId(env),
       // Без отправки писем ссылка «Забыли пароль?» не показывается
       passwordReset: mailConfigured(env, request),
       // Вход через Endemion ID: адреса страницы аккаунта и игры для ссылок в интерфейсе

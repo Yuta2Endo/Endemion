@@ -9,10 +9,13 @@ export const SECURITY_HEADERS = {
   // Тот же CSP, что в public/_headers
   "Content-Security-Policy":
     // Яндекс Метрика (mc.yandex.ru) загружается только после согласия посетителя, см. public/assets/app.js
-    "default-src 'self'; script-src 'self' https://challenges.cloudflare.com https://static.cloudflareinsights.com https://mc.yandex.ru https://yastatic.net; " +
-    "style-src 'self'; img-src 'self' data: https://mc.yandex.ru; connect-src 'self' https://cloudflareinsights.com https://mc.yandex.ru; " +
+    // Реклама Яндекс.РСЯ: контекст и загрузчик с yandex.ru, блоки и картинки с yastatic.net и yandex.ru
+    "default-src 'self'; script-src 'self' https://challenges.cloudflare.com https://static.cloudflareinsights.com https://mc.yandex.ru https://yastatic.net https://yandex.ru https://*.yandex.ru; " +
+    "style-src 'self'; img-src 'self' data: https://mc.yandex.ru https://yastatic.net https://*.yastatic.net https://yandex.ru https://*.yandex.ru https://*.mds.yandex.net; " +
+    "connect-src 'self' https://cloudflareinsights.com https://mc.yandex.ru https://an.yandex.ru https://yandex.ru https://*.yandex.ru https://yastatic.net; " +
     // worker-src задан явно: иначе браузер берёт его из child-src, и service worker (/sw.js) с этого сайта блокируется
-    "frame-src https://challenges.cloudflare.com blob: https://mc.yandex.ru; child-src blob: https://mc.yandex.ru; worker-src 'self' blob:; " +
+    "frame-src https://challenges.cloudflare.com blob: https://mc.yandex.ru https://yandex.ru https://*.yandex.ru https://*.mds.yandex.net; " +
+    "child-src blob: https://mc.yandex.ru https://yandex.ru https://*.yandex.ru; worker-src 'self' blob:; " +
     "frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'"
 };
 

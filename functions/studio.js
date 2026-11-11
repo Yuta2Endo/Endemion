@@ -2,6 +2,7 @@
 // «О студии» и условия использования. HTML собирается на сервере из базы (SEO, работает без скриптов)
 
 import { escapeHtml as e } from "./_lib/html.js";
+import { adsBlock } from "./_lib/ads.js";
 import { renderPage } from "./_lib/layout.js";
 import {
   categoryThreads, emptyCard, FORUM_PAGE, formatDate, gameArt, gameCard, gameCategory, gameCategoryIds, getCategoryBySlug,
@@ -102,6 +103,11 @@ export const home = {
       </div>
     </section>` : "";
 
+    // ==================== РЕКЛАМА ====================
+    // Блок Яндекс.РСЯ между «Избранным проектом» и «Нашими играми»: реклама не должна отодвигать
+    // главное — первый экран и каталог игр — и не должна прятаться в конце страницы
+    const adsSection = adsBlock(env, { id: "yandex-ads-home" });
+
     // ==================== OUR GAMES ====================
     const gamesBlock = `
     <section class="home-games" aria-labelledby="gamesTitle">
@@ -167,7 +173,7 @@ export const home = {
       path: "/", active: "home", styles: STYLES, scripts: SCRIPTS, description,
       head: head({ title: "ENDEMION — Create. Play. Connect.", description, url: `${origin}/`, image: `${origin}/assets/og-image.png` })
         + ld({ "@context": "https://schema.org", "@type": "Organization", name: "Endemion", url: `${origin}/` }),
-      body: hero + featuredBlock + gamesBlock + communityBlock + devBlock + upcomingBlock
+      body: hero + featuredBlock + adsSection + gamesBlock + communityBlock + devBlock + upcomingBlock
     });
   }
 };

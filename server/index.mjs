@@ -24,6 +24,8 @@ const WORKER_VARS = [
   "TURNSTILE_SITE_KEY", "TURNSTILE_SECRET_KEY",
   "MAIL_FROM", "UNISENDER_API_KEY", "UNISENDER_API_URL", "MAIL_SKIP_UNSUBSCRIBE", "RESEND_API_KEY", "MAIL_DEV_MODE",
   "WEB_ANALYTICS_TOKEN", "YANDEX_METRIKA_ID",
+  // Реклама Яндекс.РСЯ: номер страницы (page-id) из кабинета Яндекс.Директа. Пусто — рекламы нет
+  "YANDEX_ADS_PAGE_ID",
   // Вход через Endemion ID (auth.endemion.online), см. functions/_lib/endemionId.js
   "ENDEMION_ID", "ENDEMION_ID_ISSUER", "ENDEMION_ID_CLIENT_ID", "ENDEMION_ID_CLIENT_SECRET", "ENDEMION_ID_TOKEN_KEY", "ENDEMION_LIFE_URL",
   // Список аккаунтов Endemion ID в админке, см. functions/api/admin/accounts.js
