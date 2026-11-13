@@ -18,6 +18,8 @@ function checks(env) {
     { name: "API входа", url: `${site}/api/me`, expect: (res) => res.status === 200 },
     { name: "sitemap", url: `${site}/sitemap.xml`, expect: (res) => res.status === 200 },
     { name: "healthz", url: `${site}/healthz`, expect: async (res) => res.status === 200 && (await res.text()).trim() === "ok" },
+    // Свежесть резервных копий: сервер отвечает 503, если бэкап старше суток с лишним
+    { name: "бэкапы", url: `${site}/healthz/backup`, expect: (res) => res.status === 200 },
     { name: "Endemion ID", url: `${auth}/.well-known/openid-configuration`, expect: (res) => res.status === 200 }
   ];
 }

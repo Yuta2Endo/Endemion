@@ -15,9 +15,24 @@
 | API входа | `/api/me` | 200 |
 | sitemap | `/sitemap.xml` | 200 |
 | healthz | `/healthz` | 200 и тело `ok` |
+| бэкапы | `/healthz/backup` | 200 (503 — копия устарела или выгрузка в хранилище не удалась) |
 | Endemion ID | `https://auth.endemion.online/.well-known/openid-configuration` | 200 |
 
 Таймаут на запрос — 10 секунд. Список задан в `monitor/src/index.js` в функции `checks()`, адреса сайта и провайдера можно переопределить переменными `SITE_URL` и `AUTH_URL`.
+
+## Проверка резервных копий
+
+`/healthz/backup` отдаёт JSON о состоянии бэкапов и код 503, если что-то не так:
+
+```json
+{"ok":true,"latest":"2026-11-14T03:17:08.548Z","ageHours":0,"maxAgeHours":30,"remote":{"at":"2026-11-14T03:17:10.000Z","ok":true,"key":"s3://endemio/backups/endemion-...sqlite"},"problems":[]}
+```
+
+- Бэкап старше `BACKUP_HOURS + 6` часов (по умолчанию 30) — `ok: false` и причина в `problems`.
+- После каждой копии в `data/backups/last-remote.json` пишется отчёт о выгрузке в S3: успешная (`ok: true`, ключ объекта) или неудачная (`ok: false`, текст ошибки). Ошибка выгрузки тоже даёт 503 — иначе копия могла бы годами лежать только на диске сервера.
+- Если S3 не настроен (`BACKUP_S3_BUCKET` пуст), отчёта нет и проверяется только свежесть локального файла.
+
+Логика вынесена в `server/backupStatus.mjs` и покрыта тестами `tests/backup-status.test.mjs`.
 
 ## Состояние и антиспам
 

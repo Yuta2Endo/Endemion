@@ -3,11 +3,12 @@
 // Вручную: `node server/backup.mjs` (в Docker: `docker compose exec app node server/backup.mjs`).
 // Копия делается средствами SQLite и не мешает работе сайта
 
-import { mkdirSync, readdirSync, readFileSync, rmSync, statSync } from "node:fs";
+import { mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { backup, DatabaseSync } from "node:sqlite";
 import { pathToFileURL } from "node:url";
 import { BACKUP_DIR, DB_FILE } from "./config.mjs";
+import { REMOTE_REPORT } from "./backupStatus.mjs";
 import { createS3Client } from "./storage.mjs";
 
 const NAME = /^endemion-.+\.sqlite$/;
@@ -52,11 +53,24 @@ export async function backupDatabase(db, keep = 14, env = process.env) {
 
   try {
     const remote = await uploadBackup(file, env);
-    if (remote) console.log(`Копия отправлена в хранилище: ${remote}`);
+    if (remote) {
+      console.log(`Копия отправлена в хранилище: ${remote}`);
+      writeRemoteReport({ at: new Date().toISOString(), ok: true, key: remote });
+    }
   } catch (err) {
     console.error("Копия не отправлена в хранилище, она осталась только на диске сервера:", err.message);
+    writeRemoteReport({ at: new Date().toISOString(), ok: false, error: err.message });
   }
   return file;
+}
+
+/** Отчёт о выгрузке читает /healthz/backup: по нему видно, что копия ушла не только на диск */
+function writeRemoteReport(report) {
+  try {
+    writeFileSync(path.join(BACKUP_DIR, REMOTE_REPORT), JSON.stringify(report));
+  } catch (err) {
+    console.error("Не удалось записать отчёт о выгрузке копии:", err.message);
+  }
 }
 
 /** Время последней копии в миллисекундах или 0, если копий нет */

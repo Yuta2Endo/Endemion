@@ -8,7 +8,8 @@ import { Readable, Transform } from "node:stream";
 import worker from "../src/worker.js";
 import { createAssets } from "./assets.mjs";
 import { backupDatabase, startScheduledBackups } from "./backup.mjs";
-import { DATA_DIR, DB_FILE, FILES_DIR, MIGRATIONS_DIR, PUBLIC_DIR } from "./config.mjs";
+import { backupStatus } from "./backupStatus.mjs";
+import { BACKUP_DIR, DATA_DIR, DB_FILE, FILES_DIR, MIGRATIONS_DIR, PUBLIC_DIR } from "./config.mjs";
 import { openDatabase } from "./d1.mjs";
 import { applyMigrations, pendingMigrations } from "./migrate.mjs";
 import { createStorage } from "./storage.mjs";
@@ -157,6 +158,12 @@ function plain(res, status, text) {
   res.end(text);
 }
 
+/** Маленький JSON-ответ без кеша: состояние бэкапов меняется, прокси его запоминать не должен */
+function jsonResponse(res, status, data) {
+  res.writeHead(status, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
+  res.end(JSON.stringify(data));
+}
+
 const server = createServer(async (req, res) => {
   try {
     // Только путь: адрес вида http://чужой-сайт/... в строке запроса подменил бы адрес сайта
@@ -164,6 +171,12 @@ const server = createServer(async (req, res) => {
     if (req.url === "/healthz") {
       db.raw.prepare("SELECT 1").get();
       return plain(res, 200, "ok");
+    }
+    // Свежесть резервных копий: монитор проверяет этот адрес и пишет в канал, если бэкап не обновлялся
+    if (req.url === "/healthz/backup") {
+      const maxAgeHours = Number(process.env.BACKUP_HOURS || 24) + 6;
+      const status = backupStatus(BACKUP_DIR, { maxAgeHours });
+      return jsonResponse(res, status.ok ? 200 : 503, status);
     }
     if (Number(req.headers["content-length"] || 0) > MAX_BODY_BYTES) return plain(res, 413, "Payload Too Large");
 
