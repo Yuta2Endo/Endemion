@@ -19,7 +19,7 @@ function parseParams(request, bodyText) {
 
 function get(params, name) {
   const v = params.get(name);
-  return v == null ? "" : String(v);
+  return v === null ? "" : String(v);
 }
 
 function safeEqualHex(a, b) {
@@ -59,7 +59,8 @@ async function handle({ request, env }) {
     return plain("error", 500);
   }
 
-  let bodyText = "";
+  /** @type {string} */
+  let bodyText;
   try {
     bodyText = await request.text();
   } catch {
