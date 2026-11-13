@@ -16,13 +16,13 @@ const KEEP = 300;
  * Запрос, который создаёт уведомление, если получатель его не выключил.
  * Возвращает prepared statement, чтобы его можно было выполнить в одном batch с основным действием
  */
-export function notifyStatement(env, { userId, kind, text, link = "", titleId = null, actorId = null }) {
+export function notifyStatement(env, { userId, kind, text, link = "", actorId = null }) {
   const column = PREFERENCE[kind];
   const allowed = column ? `AND COALESCE((SELECT ${column} FROM user_profiles WHERE user_id = ?), 1) = 1` : "AND ? IS NOT NULL";
   return env.DB.prepare(
-    `INSERT INTO notifications (user_id, kind, title_id, actor_id, text, link)
-     SELECT ?, ?, ?, ?, ?, ? WHERE EXISTS (SELECT 1 FROM users WHERE id = ?) ${allowed}`
-  ).bind(userId, kind, titleId, actorId, text.slice(0, 300), link, userId, userId);
+    `INSERT INTO notifications (user_id, kind, actor_id, text, link)
+     SELECT ?, ?, ?, ?, ? WHERE EXISTS (SELECT 1 FROM users WHERE id = ?) ${allowed}`
+  ).bind(userId, kind, actorId, text.slice(0, 300), link, userId, userId);
 }
 
 export async function notify(env, options) {
@@ -64,7 +64,7 @@ export async function listNotifications(env, userId, { limit = 30, before = null
   if (unreadOnly) where.push("read_at IS NULL");
   const [list, unread] = await env.DB.batch([
     env.DB.prepare(
-      `SELECT n.id, n.kind, n.title_id, n.text, n.link, n.created_at, n.read_at, a.name AS actor_name, p.username AS actor_username
+      `SELECT n.id, n.kind, n.text, n.link, n.created_at, n.read_at, a.name AS actor_name, p.username AS actor_username
        FROM notifications n LEFT JOIN users a ON a.id = n.actor_id LEFT JOIN user_profiles p ON p.user_id = n.actor_id
        WHERE ${where.map((part) => `n.${part}`).join(" AND ")} ORDER BY n.id DESC LIMIT ?`
     ).bind(...binds, limit),
@@ -74,7 +74,6 @@ export async function listNotifications(env, userId, { limit = 30, before = null
     notifications: list.results.map((row) => ({
       id: row.id,
       kind: row.kind,
-      titleId: row.title_id,
       text: row.text,
       link: row.link,
       createdAt: row.created_at,

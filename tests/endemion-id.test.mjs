@@ -130,12 +130,15 @@ test("регистрация в Endemion ID, вход на сайт, профи�
   assert.equal(replay.status, 400, "ответ провайдера нельзя использовать второй раз и в другом браузере");
 });
 
-test("смена имени и username в Endemion ID появляется на сайте, полка остаётся", async () => {
+test("смена имени и username в Endemion ID появляется на сайте, избранное остаётся", async () => {
   const user = browser(auth.issuer);
   const cookies = new Map();
   await signIn(user, cookies, { login: "new_reader", password: "correct-horse-1" });
   const me = (await siteRequest(cookies, "/api/me")).data.user;
-  const shelfBefore = await site.db.prepare("SELECT COUNT(*) AS n FROM library WHERE user_id = ?").bind(me.id).first();
+  const game = (await site.db.prepare("SELECT id FROM games ORDER BY id LIMIT 1").first())
+    || (await site.db.prepare("INSERT INTO games (slug, title, published) VALUES ('endemion-id-shelf', 'Полка', 1) RETURNING id").first());
+  await site.db.prepare("INSERT OR IGNORE INTO game_library (user_id, game_id) VALUES (?, ?)").bind(me.id, game.id).run();
+  const shelfBefore = await site.db.prepare("SELECT COUNT(*) AS n FROM game_library WHERE user_id = ?").bind(me.id).first();
 
   const sub = auth.accounts.findByEmail("new@example.com").sub;
   auth.accounts.updateProfile(sub, { username: "renamed_reader", displayName: "Другое имя" });
@@ -144,7 +147,7 @@ test("смена имени и username в Endemion ID появляется на
   assert.equal(updated.id, me.id, "тот же пользователь сайта");
   assert.equal(updated.username, "renamed_reader");
   assert.equal(updated.name, "Другое имя");
-  const shelfAfter = await site.db.prepare("SELECT COUNT(*) AS n FROM library WHERE user_id = ?").bind(me.id).first();
+  const shelfAfter = await site.db.prepare("SELECT COUNT(*) AS n FROM game_library WHERE user_id = ?").bind(me.id).first();
   assert.equal(shelfAfter.n, shelfBefore.n);
 });
 
