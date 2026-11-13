@@ -610,3 +610,95 @@ a.tag:hover {
 .skeleton-row {
   height: 76px;
 }
+
+/* ==================== ТЕМА ФОРУМА ==================== */
+
+.breadcrumbs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 18px;
+  color: var(--faint);
+  font-size: 13px;
+}
+
+.breadcrumbs a {
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.breadcrumbs a:hover,
+.breadcrumbs a:focus-visible {
+  color: var(--text);
+  text-decoration: underline;
+}
+
+.breadcrumbs span[aria-hidden="true"] {
+  opacity: 0.5;
+}
+
+.post {
+  padding: clamp(22px, 3vw, 34px);
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) + 6px);
+  background: var(--panel);
+  box-shadow: var(--shadow);
+}
+
+.post h1 {
+  margin: 14px 0 12px;
+  font-size: clamp(22px, 2.6vw, 32px);
+  line-height: 1.22;
+  overflow-wrap: anywhere;
+}
+
+/* Значки раздела, закрепления и спойлера над заголовком */
+.post > .thread-meta {
+  gap: 8px;
+  margin-bottom: 2px;
+}
+
+/* Строка автора: аватар, имя и время всегда в один ряд */
+.post > .thread-meta:not(:first-child) {
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.thread-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.thread-meta .avatar,
+.thread-meta .avatar-dot {
+  flex: 0 0 auto;
+}
+
+.post-body {
+  margin-top: 18px;
+  font-size: 16px;
+  line-height: 1.75;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.post + .panel {
+  margin-top: 22px;
+}
+
+/* Правая колонка не растягивается на всю высоту темы */
+.split > aside {
+  align-self: start;
+}
+
+/* Пустой блок комментариев не занимает экран */
+#comments:empty {
+  min-height: 0;
+  padding: 0;
+}
+

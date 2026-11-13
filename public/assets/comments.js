@@ -283,7 +283,7 @@ export async function mountComments(container, { targetType, targetId, placehold
     if (reset) list.replaceChildren();
     const { comments, hasMore } = result.data;
     total.textContent = result.data.total ? `Комментариев: ${result.data.total}` : "";
-    if (reset && !comments.length) {
+    if (reset && !comments.length && user) {
       list.append(stateBox({ icon: "💬", title: "Пока тихо", text: "Начните обсуждение первым." }));
     }
     for (const comment of comments) list.append(commentNode(comment, ctx));

@@ -513,6 +513,25 @@
   font-size: 16px;
 }
 
+/* На странице игры пустое состояние — одна строка, а не карточка на пол-экрана */
+.game-section .empty-card {
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-start;
+  gap: 12px;
+  padding: 16px 20px;
+  text-align: left;
+}
+
+.game-section .empty-card strong {
+  font-size: 14px;
+}
+
+.game-section .empty-card p {
+  margin: 0;
+  font-size: 14px;
+}
+
 /* ==================== ПОЯВЛЕНИЕ ==================== */
 
 @keyframes rise {
@@ -1118,7 +1137,7 @@
 .game-hero {
   position: relative;
   overflow: hidden;
-  padding: clamp(56px, 8vw, 104px) 0 clamp(48px, 7vw, 88px);
+  padding: clamp(20px, 3vw, 36px) 0 clamp(40px, 6vw, 72px);
   border-bottom: 1px solid var(--border);
 }
 
@@ -1127,7 +1146,8 @@
   display: grid;
   grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
   gap: 48px;
-  align-items: center;
+  /* Медиа тянется по высоте карточки: иначе у высокого текста остаются пустые поля */
+  align-items: stretch;
   overflow: hidden;
   border-radius: calc(var(--radius) + 8px);
   background:
@@ -1138,7 +1158,6 @@
 
 .game-hero-media {
   position: relative;
-  aspect-ratio: 16 / 9;
   min-height: 360px;
   overflow: hidden;
   background: var(--surface-elevated);
@@ -1317,7 +1336,7 @@
 
   .game-hero-media {
     min-height: 240px;
-    aspect-ratio: auto;
+    aspect-ratio: 16 / 10;
   }
 
   .game-hero-content {
