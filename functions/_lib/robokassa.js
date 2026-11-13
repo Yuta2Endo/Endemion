@@ -39,7 +39,7 @@ function formatOutSum(value) {
 }
 
 // Подпись для старта оплаты: MerchantLogin:OutSum:InvId:Password1[:Shp_*]
-export function startSignature(env, { outSum, invId, shp }) {
+export function startSignature(env, { outSum, invId, shp = {} }) {
   const login = String(env.ROBOKASSA_MERCHANT_LOGIN || "").trim();
   const pass1 = String(env.ROBOKASSA_PASSWORD_1 || "").trim();
   const algo = signatureAlgo(env);
@@ -52,7 +52,7 @@ export function startSignature(env, { outSum, invId, shp }) {
 
 // Подпись Result URL: OutSum:InvId:Password2[:Shp_*]
 // OutSum берём как прислал Robokassa (строкой), т.к. подпись считается по фактическому значению
-export function resultSignature(env, { outSum, invId, shp }) {
+export function resultSignature(env, { outSum, invId, shp = {} }) {
   const pass2 = String(env.ROBOKASSA_PASSWORD_2 || "").trim();
   const algo = signatureAlgo(env);
   let base = `${outSum}:${invId}:${pass2}`;
