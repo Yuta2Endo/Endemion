@@ -49,6 +49,13 @@
   gap: 20px;
 }
 
+/* Каталог: карточки не растягиваются на всю ширину, а сетка стоит по центру.
+   Иначе единственная игра занимает 1240 px и страница выглядит пустой. */
+.grid-games-catalog {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 340px));
+  justify-content: center;
+}
+
 .grid-posts {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
@@ -251,7 +258,7 @@
 .card-media .badge {
   position: absolute;
   top: 12px;
-  left: 12px;
+  right: 12px;
   z-index: 1;
   backdrop-filter: blur(8px);
   background: rgba(8, 10, 16, 0.7);
@@ -1087,23 +1094,36 @@
 
 /* ==================== КАТАЛОГ ИГР (/games) ==================== */
 
-.games-page-head-actions {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 18px;
-  margin-bottom: 26px;
+/* Счётчик найденного стоит под описанием, а не отдельной плашкой справа */
+.games-found {
+  margin-top: 10px;
 }
 
 .games-filter-bar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16px;
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr) minmax(0, auto);
+  grid-template-areas:
+    "status platform sort"
+    "search search search";
+  gap: 18px 28px;
   margin-bottom: 32px;
   padding: 22px;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--surface);
+}
+
+.filter-status {
+  grid-area: status;
+}
+
+.filter-platform {
+  grid-area: platform;
+}
+
+.filter-sort {
+  grid-area: sort;
+  justify-content: flex-end;
 }
 
 .filter-group {
@@ -1125,11 +1145,22 @@
 }
 
 .filter-search {
-  max-width: 320px;
+  max-width: none;
+  grid-area: search;
+  flex-wrap: nowrap;
 }
 
 .filter-search .input {
-  max-width: 260px;
+  max-width: none;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* Кнопка «Найти» стоит в одну высоту с полем, а не отдельным блоком под ним */
+.filter-search button {
+  flex: 0 0 auto;
+  min-height: 46px;
+  padding: 0 22px;
 }
 
 /* ==================== СТРАНИЦА ИГРЫ (/games/:slug) ==================== */
@@ -1348,8 +1379,26 @@
   }
 }
 
+/* Планшет: статусы в свою строку, поиск во всю ширину */
+@media (max-width: 900px) {
+  .games-filter-bar {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "status status"
+      "platform sort"
+      "search search";
+    gap: 14px 20px;
+  }
+}
+
 @media (max-width: 680px) {
   .games-filter-bar {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "status"
+      "platform"
+      "search"
+      "sort";
     padding: 16px;
   }
 

@@ -239,14 +239,12 @@ export const gamesPage = {
         <div class="eyebrow">${e(s.gamesEyebrow)}</div>
         <h1 class="display-2">${e(s.gamesTitle)}</h1>
         <p class="section-text">${e(s.gamesDescription)}</p>
-      </div>
-      <div class="games-page-head-actions">
-        <span class="muted small">${e(s.gamesResults)}: <strong>${total}</strong></span>
+        <p class="muted small games-found">${e(s.gamesResults)}: <strong>${total}</strong></p>
       </div></div>`;
 
     const filterBar = `
       <form class="games-filter-bar" role="search" action="/games" method="get">
-        <div class="filter-group">
+        <div class="filter-group filter-status">
           <label class="filter-label">${e(s.gamesFilterStatus)}</label>
           <div class="chips chips-is-scroll">
             <a class="chip${!status ? " is-active" : ""}" href="/games${baseQuery ? `?${baseQuery}` : ""}">${en ? "All" : "Все"}</a>
@@ -258,7 +256,7 @@ export const gamesPage = {
             }).join("")}
           </div>
         </div>
-        <div class="filter-group">
+        <div class="filter-group filter-platform">
           <label class="filter-label">${e(s.gamesFilterPlatform)}</label>
           <div class="chips chips-is-scroll">
             <a class="chip${!platform ? " is-active" : ""}" href="/games${baseQuery ? `?${baseQuery}` : ""}">${en ? "All" : "Все"}</a>
@@ -273,9 +271,9 @@ export const gamesPage = {
           <label class="visually-hidden" for="gamesSearch">${e(s.gamesFilterSearch)}</label>
           <input class="input" id="gamesSearch" name="q" value="${e(search || "")}" maxlength="80" placeholder="${e(s.gamesFilterSearch)}" aria-label="${e(s.gamesFilterSearch)}">
           ${search ? `<a class="ghost-btn small-btn" href="${e(resetHref)}">${e(s.gamesFilterReset)}</a>` : ""}
-          <button class="ghost-btn" type="submit">${e(s.find)}</button>
+          <button class="primary-btn" type="submit">${e(s.find)}</button>
         </div>
-        <div class="filter-group">
+        <div class="filter-group filter-sort">
           <label class="filter-label">${e(s.gamesSort)}</label>
           <select class="select" name="sort" aria-label="${e(s.gamesSort)}">
             <option value="position"${sort === "position" ? " selected" : ""}>${e(s.gamesSortPosition)}</option>
@@ -289,7 +287,7 @@ export const gamesPage = {
       </form>`;
 
     const gamesGrid = games.length
-      ? `<div class="grid-games">${games.map((g) => gameCard(g, lang)).join("")}</div>`
+      ? `<div class="grid-games grid-games-catalog">${games.map((g) => gameCard(g, lang)).join("")}</div>`
       : emptyCard(e(s.gamesEmptyTitle), e(s.gamesEmptyText), `<a class="ghost-btn" href="/games">${e(s.gamesFilterReset)}</a>`);
 
     const upcomingGames = games.filter((g) => g.isUpcoming);
