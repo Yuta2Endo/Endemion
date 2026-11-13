@@ -779,6 +779,15 @@ h2,
   }
 }
 
+@media (min-width: 961px) {
+  /* Длинная форма регистрации: карточка с описанием остаётся на экране при прокрутке */
+  .id-intro {
+    position: sticky;
+    top: 24px;
+    align-self: start;
+  }
+}
+
 @media (max-width: 760px) {
   .id-shell {
     width: min(100% - 22px, 560px);
