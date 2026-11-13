@@ -20,11 +20,11 @@ jobs:
           node-version: 26
           cache: npm
       - run: npm ci
+      # typecheck проверяет и auth/, поэтому его зависимости нужны до npm run check
+      - run: npm --prefix auth ci
       - run: npm run check
       - name: Endemion ID
-        run: |
-          npm --prefix auth ci
-          npm --prefix auth test
+        run: npm --prefix auth test
         env:
           CI: true
 
