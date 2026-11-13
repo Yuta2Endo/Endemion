@@ -210,10 +210,11 @@ h2,
 
 .id-intro h1 {
   margin-top: 14px;
-  font-size: clamp(26px, 3vw, 36px);
-  line-height: 1.06;
+  font-size: clamp(26px, 2.4vw, 31px);
+  line-height: 1.08;
   letter-spacing: -0.045em;
   overflow-wrap: anywhere;
+  text-wrap: balance;
 }
 
 .id-intro h1 span {
