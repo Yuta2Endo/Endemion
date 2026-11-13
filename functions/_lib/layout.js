@@ -46,7 +46,7 @@ export function siteHeader(active, s) {
   const item = ([href, , key]) => `<a href="${href}"${key === active ? ' aria-current="page"' : ""}>${e(navLabel(s, key))}</a>`;
   return `<header class="header">
     <div class="container nav">
-      <a class="logo" href="/" aria-label="${e(s.homeAria)}"><span class="logo-mark" aria-hidden="true">E</span><span class="logo-text">ENDEMION</span></a>
+      <a class="logo" href="/" aria-label="${e(s.homeAria)}"><span class="logo-mark" aria-hidden="true"></span><span class="logo-text">ENDEMION</span></a>
       <nav class="nav-links" id="navLinks" aria-label="${e(s.sections)}">${NAV.map(item).join("")}</nav>
       <div class="nav-actions">
         <form class="nav-search" role="search" action="/search" method="get">
@@ -69,7 +69,7 @@ export function siteFooter(s) {
   return `<footer class="footer">
     <div class="container footer-grid">
       <div class="footer-about">
-        <a class="logo" href="/" aria-label="${e(s.homeAria)}"><span class="logo-mark" aria-hidden="true">E</span><span class="logo-text">ENDEMION</span></a>
+        <a class="logo" href="/" aria-label="${e(s.homeAria)}"><span class="logo-mark" aria-hidden="true"></span><span class="logo-text">ENDEMION</span></a>
         <p class="footer-tagline">Create. Play. Connect.</p>
         <p class="footer-text">${e(s.footerText)}</p>
         <ul class="footer-social" id="footerSocial" aria-label="${e(s.social)}">

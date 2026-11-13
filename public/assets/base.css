@@ -55,7 +55,7 @@
   --panel-soft: rgba(255, 255, 255, 0.04);
   --text: #f8fafc;
   --muted: #94a3b8;
-  --faint: #64748b;
+  --faint: #8695ab;
   /* Акцент: фиолетовый Primary. --cyan — прежнее имя акцента, его используют стили читалки и админки */
   --accent: var(--primary);
   --accent-strong: #7c3aed;
@@ -253,6 +253,12 @@ img {
   box-shadow: 0 0 24px rgba(139, 92, 246, 0.55), inset 0 0 0 1px rgba(255, 255, 255, 0.2);
   font-size: 16px;
   letter-spacing: 0;
+}
+
+/* Буква рисуется из CSS: у ссылки-логотипа видимый текст — только «ENDEMION»,
+   иначе читалка склеивает «E» с названием и метка перестаёт с ним совпадать. */
+.logo-mark::before {
+  content: "E";
 }
 
 .nav-links {
