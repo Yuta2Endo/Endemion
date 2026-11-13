@@ -8,7 +8,7 @@ import {
   formatAnnouncement, releaseProblems, announceRelease,
   isPublishingAllowed, channelOf
 } from "../functions/_lib/telegram-announce.js";
-import { maskToken } from "../functions/_lib/telegram.js";
+import { maskToken, sendTelegramMessage } from "../functions/_lib/telegram.js";
 
 let app;
 let admin;
@@ -397,4 +397,30 @@ test("отсутствующая публикация — 404", async () => {
   const p = await admin.call("POST", "/api/admin/studio-posts/999999/telegram-publish", {});
   assert.equal(p.status, 404);
   assert.equal(p.data.notFound, true);
+});
+
+test("режим посредника: сообщение уходит в воркер мониторинга, токен не нужен", async () => {
+  const env = { TELEGRAM_RELAY_URL: "https://monitor.example.workers.dev/", TELEGRAM_RELAY_KEY: "k-123" };
+  responseQueue.push(okResponse(77));
+  const result = await sendTelegramMessage(env, "@EndemionOfficial", "Привет из теста");
+  assert.equal(result.ok, true);
+  assert.equal(result.messageId, 77);
+  assert.equal(fetchCalls.length, 1);
+  assert.equal(fetchCalls[0].url, "https://monitor.example.workers.dev/admin?key=k-123");
+  const body = JSON.parse(fetchCalls[0].body);
+  assert.equal(body.method, "sendMessage");
+  assert.equal(body.params.chat_id, "@EndemionOfficial");
+  assert.equal(body.params.text, "Привет из теста");
+  assert.equal(body.params.link_preview_options.is_disabled, false);
+});
+
+test("ошибка Telegram через посредника берётся из тела ответа", async () => {
+  const env = { TELEGRAM_RELAY_URL: "https://monitor.example.workers.dev", TELEGRAM_RELAY_KEY: "k-123" };
+  responseQueue.push({
+    ok: true, status: 200, headers: new Headers(),
+    json: async () => ({ ok: false, error_code: 400, description: "Bad Request: chat not found" })
+  });
+  const result = await sendTelegramMessage(env, "@nowhere", "текст");
+  assert.equal(result.ok, false);
+  assert.match(String(result.error), /chat not found/);
 });

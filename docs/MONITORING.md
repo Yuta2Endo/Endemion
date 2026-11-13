@@ -116,10 +116,22 @@ npm run monitor:tail     # смотреть логи в реальном вре�
 
 ## Связь с публикацией анонсов
 
-Тот же бот используется сайтом для анонсов публикаций (`functions/_lib/telegram.js`). Публикация выключена переменной `TELEGRAM_PUBLISH=0`. Чтобы включить, нужно:
+Тот же бот используется сайтом для анонсов публикаций (`functions/_lib/telegram.js`). Публикация выключена переменной `TELEGRAM_PUBLISH=0`.
 
-1. положить токен секретом сайта: `npx wrangler secret put TELEGRAM_BOT_TOKEN`;
-2. поставить `TELEGRAM_PUBLISH=1` в `wrangler.toml`;
-3. выложить сайт (`npm run deploy`).
+Сервер сайта (VPS) до `api.telegram.org` не достаёт, поэтому анонсы идут через воркер мониторинга: он принимает метод Bot API на `/admin` и пересылает его в Telegram. На сайте для этого нужны две переменные, токен боту не нужен:
+
+```dotenv
+TELEGRAM_PUBLISH=1
+TELEGRAM_RELAY_URL=https://endemion-monitor.sasha-guseynov2005tm.workers.dev
+TELEGRAM_RELAY_KEY=<значение MONITOR_KEY>
+```
+
+Порядок включения на сервере (`/opt/endemion`):
+
+1. добавить три строки выше в `.env` (`TELEGRAM_RELAY_KEY` — тот же ключ, что у воркера в секрете `MONITOR_KEY`, копия лежит в `/root/endemion-monitor.key`);
+2. перезапустить приложение: `docker compose up -d --no-deps app`;
+3. проверить отправку в сухом режиме — в админке есть предпросмотр текста без отправки, затем отправить тестовый анонс.
+
+Если `TELEGRAM_RELAY_URL` и `TELEGRAM_RELAY_KEY` не заданы, клиент работает напрямую через `TELEGRAM_BOT_TOKEN` (так удобно в локальной разработке и на воркере сайта).
 
 Проверять публикацию лучше в сухом режиме — в админке есть предпросмотр текста без отправки.
