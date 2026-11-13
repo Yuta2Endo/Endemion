@@ -392,6 +392,55 @@
   font-size: 12px;
 }
 
+/* Пустой список: пунктирная плашка вместо одинокой строки в большой панели */
+.admin-empty {
+  padding: 14px 16px;
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+  font-size: 13px;
+  text-align: center;
+}
+
+/* Флажки в формах: своим видом, иначе нативный квадратик на тёмном фоне
+   читается как уже отмеченный */
+.admin-panel input[type="checkbox"] {
+  display: inline-grid;
+  flex: 0 0 auto;
+  place-content: center;
+  width: 18px;
+  height: 18px;
+  appearance: none;
+  border: 1px solid var(--border-strong);
+  border-radius: 5px;
+  background: var(--panel-soft);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.admin-panel input[type="checkbox"]::before {
+  width: 10px;
+  height: 10px;
+  content: "";
+  background: #0b0710;
+  clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
+  transform: scale(0);
+  transition: transform 0.12s ease-in-out;
+}
+
+.admin-panel input[type="checkbox"]:checked {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
+.admin-panel input[type="checkbox"]:checked::before {
+  transform: scale(1);
+}
+
+.admin-panel input[type="checkbox"]:focus-visible {
+  outline: 2px solid var(--accent-light);
+  outline-offset: 2px;
+}
+
 /* ==================== ФОРМЫ ==================== */
 
 .admin-title-head {
