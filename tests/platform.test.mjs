@@ -140,6 +140,16 @@ describe("сообщество", () => {
     assert.equal(r.status, 201);
     r = await reporter.call("POST", "/api/reports", { targetType: "comment", targetId: root.id, reason: "abuse" });
     assert.equal(r.data.duplicate, true);
+    // Третья жалоба от разных людей будит модераторов уведомлением
+    const second = await app.user("Второй жалобщик");
+    const third = await app.user("Третий жалобщик");
+    assert.equal((await second.call("POST", "/api/reports", { targetType: "comment", targetId: root.id, reason: "abuse" })).status, 201);
+    assert.equal((await third.call("POST", "/api/reports", { targetType: "comment", targetId: root.id, reason: "abuse" })).status, 201);
+    const inbox = await moderator.call("GET", "/api/notifications");
+    assert.ok(
+      inbox.data.notifications.some((item) => item.kind === "moderation" && item.link === "/admin"),
+      "модератор должен узнать о третьей жалобе"
+    );
     // Жалобы на контент удалённых разделов не принимаются
     assert.equal((await reporter.call("POST", "/api/reports", { targetType: "collection", targetId: 1, reason: "spam" })).status, 400);
     const queue = await moderator.call("GET", "/api/moderation/reports");

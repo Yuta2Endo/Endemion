@@ -480,6 +480,30 @@ export const threadRevisions = {
 
 // ==================== ЖАЛОБЫ ====================
 
+// Со скольких разных жалоб на один объект зовём модераторов. Само содержимое не скрываем:
+// решение принимает человек, автоматика только привлекает внимание
+const REPORT_ALERT = 3;
+
+const REPORT_LABEL = { comment: "ответ", thread: "тема", user: "профиль" };
+
+/** После третьей жалобы пишем всем модераторам и админам — дальше молчим, чтобы не спамить */
+async function alertModerators(env, targetType, targetId) {
+  const fresh = await env.DB.prepare(
+    "SELECT COUNT(DISTINCT reporter_id) AS n FROM reports WHERE target_type = ? AND target_id = ? AND status = 'open'"
+  ).bind(targetType, targetId).first();
+  if (fresh.n !== REPORT_ALERT) return;
+  const { results } = await env.DB.prepare(
+    "SELECT id FROM users WHERE role IN ('admin', 'moderator') AND blocked_at IS NULL"
+  ).all();
+  if (!results.length) return;
+  await env.DB.batch(results.map((row) => notifyStatement(env, {
+    userId: row.id,
+    kind: "moderation",
+    text: `Жалобы на ${REPORT_LABEL[targetType] || "материал"}: ${fresh.n}. Проверьте в админке.`,
+    link: "/admin"
+  })));
+}
+
 /** POST /api/reports — пожаловаться на ответ, тему форума или профиль */
 export const reports = {
   async onRequestPost({ request, env }) {
@@ -500,6 +524,7 @@ export const reports = {
     const result = await env.DB.prepare(
       "INSERT OR IGNORE INTO reports (reporter_id, target_type, target_id, reason, details) VALUES (?, ?, ?, ?, ?)"
     ).bind(user.id, body.targetType, body.targetId, body.reason, details).run();
+    if (result.meta.changes) await alertModerators(env, body.targetType, body.targetId);
     return json({ ok: true, duplicate: !result.meta.changes }, result.meta.changes ? 201 : 200);
   }
 };
