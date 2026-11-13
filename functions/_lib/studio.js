@@ -458,6 +458,18 @@ export function pluralTopics(n) {
   return "тем";
 }
 
+/** Иконки разделов форума: контуры 24×24, цвет берётся из CSS */
+const SECTION_ICON = {
+  general: '<path d="M4 5h16v11H9l-5 4z"/>',
+  games: '<rect x="3" y="7" width="18" height="10" rx="5"/><path d="M8 12h3M9.5 10.5v3"/><circle cx="16" cy="10.8" r="0.9"/><circle cx="17.8" cy="13" r="0.9"/>',
+  development: '<path d="m9 8-4 4 4 4M15 8l4 4-4 4"/>',
+  community: '<circle cx="9" cy="9" r="3"/><path d="M3.5 18a5.5 5.5 0 0 1 11 0"/><circle cx="17" cy="10" r="2.2"/><path d="M14.6 18a4 4 0 0 1 6 0"/>'
+};
+
+function sectionMark(key) {
+  return `<span class="forum-section-mark" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${SECTION_ICON[key] || SECTION_ICON.general}</svg></span>`;
+}
+
 /** Блок категорий форума по разделам: для /community */
 export function categoryIndex(categories, lang = "ru") {
   const en = lang === "en";
@@ -465,7 +477,7 @@ export function categoryIndex(categories, lang = "ru") {
     const items = categories.filter((c) => c.section === key);
     if (!items.length) return "";
     return `<section class="forum-section" aria-labelledby="forum-${key}">
-        <h2 class="forum-section-title" id="forum-${key}">${e(en ? labelEn : label)}</h2>
+        <div class="forum-section-head">${sectionMark(key)}<h2 class="forum-section-title" id="forum-${key}">${e(en ? labelEn : label)}</h2></div>
         <div class="list-panel">${items.map((c) => `<div class="list-row">
           <div>
             <h3><a href="/community/c/${e(c.slug)}">${e(c.title)}</a>${c.staffOnly ? ` <span class="badge plain">${en ? "Team" : "Команда"}</span>` : ""}</h3>

@@ -461,8 +461,32 @@
   border-top: 0;
 }
 
-.list-row:hover {
+.list-row:hover,
+.list-row:focus-within {
   background: var(--panel-soft);
+}
+
+/* Акцентная полоска слева: видно, какую строку сейчас выберет клик */
+.list-row::before {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 2px;
+  content: "";
+  background: var(--accent);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.list-row:hover::before,
+.list-row:focus-within::before {
+  opacity: 1;
+}
+
+.list-row:hover .list-count,
+.list-row:focus-within .list-count {
+  color: var(--text);
 }
 
 .list-row h3 {
@@ -689,8 +713,10 @@
 }
 
 /* Форум: разделы и категории на /community, поиск в категории */
-.forum-index{display:grid;gap:28px;margin:8px 0 40px}
-.forum-section-title{margin:0 0 12px;font-size:.85rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.forum-index{display:grid;gap:34px;margin:8px 0 40px}
+.forum-section-head{display:flex;align-items:center;gap:12px;margin:0 0 14px}
+.forum-section-mark{display:grid;place-items:center;flex:0 0 auto;width:36px;height:36px;border:1px solid var(--border);border-radius:12px;background:var(--panel-soft);color:var(--accent-light)}
+.forum-section-title{margin:0;font-size:1.08rem;font-weight:700;letter-spacing:0;text-transform:none;color:var(--text)}
 .search-page-form{display:flex;gap:10px;margin:0 0 28px}
 .search-page-form .input{flex:1;min-width:0}
 .search-group{margin:0 0 28px}
