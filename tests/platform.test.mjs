@@ -170,6 +170,52 @@ describe("сообщество", () => {
     assert.ok(log.data.entries.some((entry) => entry.action === "comment.remove"));
   });
 
+  test("пять разных жалоб прячут ответ, модератор видит текст", async () => {
+    const author = await app.user("Спорный автор");
+    const moderator = await app.user("Скрывающий модератор", "moderator");
+    const threadId = await topic(author, "Тема с жалобами");
+    const root = (await reply(author, threadId, "Спорный текст сообщения")).data.comment;
+
+    for (let index = 1; index <= 5; index += 1) {
+      const reporter = await app.user(`Жалобщик номер ${index}`);
+      const reported = await reporter.call("POST", "/api/reports", { targetType: "comment", targetId: root.id, reason: "abuse" });
+      assert.equal(reported.status, 201);
+    }
+
+    const guestView = await app.client().call("GET", `/api/comments?type=thread&id=${threadId}`);
+    const hiddenReply = guestView.data.comments.find((comment) => comment.id === root.id);
+    assert.equal(hiddenReply.hidden, true, "пятая жалоба скрывает ответ");
+    assert.equal(hiddenReply.body, "");
+
+    const moderatorView = await moderator.call("GET", `/api/comments?type=thread&id=${threadId}`);
+    const visible = moderatorView.data.comments.find((comment) => comment.id === root.id);
+    assert.equal(visible.hidden, true);
+    assert.equal(visible.body, "Спорный текст сообщения", "модератор видит текст");
+
+    const log = await moderator.call("GET", "/api/moderation/log");
+    assert.ok(log.data.entries.some((entry) => entry.action === "comment.hide" || entry.action === "hide"));
+  });
+
+  test("пять жалоб прячут тему, модератор видит её целиком", async () => {
+    const author = await app.user("Автор скрытой темы");
+    const moderator = await app.user("Читающий модератор", "moderator");
+    const threadId = await topic(author, "Тема, которую скроют");
+
+    for (let index = 1; index <= 5; index += 1) {
+      const reporter = await app.user(`Тематический жалобщик ${index}`);
+      const reported = await reporter.call("POST", "/api/reports", { targetType: "thread", targetId: threadId, reason: "abuse" });
+      assert.equal(reported.status, 201);
+    }
+
+    const guestView = await app.client().call("GET", `/api/threads/${threadId}`);
+    assert.equal(guestView.data.thread.hidden, true);
+    assert.equal(guestView.data.thread.body, "");
+    assert.equal(guestView.data.thread.subject, "Тема, которую скроют", "заголовок остаётся, чтобы было понятно, что скрыто");
+
+    const moderatorView = await moderator.call("GET", `/api/threads/${threadId}`);
+    assert.equal(moderatorView.data.thread.body, "Текст темы.");
+  });
+
   test("теория даёт достижение и попадает в ленту теорий", async () => {
     const member = await app.user("Теоретик");
     let r = await member.call("POST", "/api/threads", { kind: "theory", subject: "Шестой мир связан с первым", body: "Аргументы.", spoiler: true });

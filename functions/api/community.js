@@ -202,7 +202,7 @@ async function react(request, env, params, add) {
 // ==================== ОБСУЖДЕНИЯ И ТЕОРИИ ====================
 
 const THREAD_SELECT = `SELECT th.id, th.user_id, th.kind, th.subject, th.body, th.spoiler, th.comments_count, th.created_at,
-  th.last_activity_at, th.deleted_at, th.category_id, th.pinned_at, th.locked_at, u.name AS author_name, u.role AS author_role,
+  th.last_activity_at, th.deleted_at, th.hidden_at, th.category_id, th.pinned_at, th.locked_at, u.name AS author_name, u.role AS author_role,
   p.username AS author_username, p.avatar_version, p.avatar_color,
   fc.slug AS category_slug, fc.title AS category_title
 FROM threads th LEFT JOIN users u ON u.id = th.user_id LEFT JOIN user_profiles p ON p.user_id = th.user_id
@@ -210,12 +210,16 @@ LEFT JOIN forum_categories fc ON fc.id = th.category_id`;
 
 function toThread(row, viewer, full = false) {
   const locked = Boolean(row.locked_at);
+  // Скрытую после жалоб тему видит целиком только модератор; остальным отдаём заголовок и причину
+  const hidden = Boolean(row.hidden_at);
+  const masked = hidden && !viewer?.isModerator;
   return {
     id: row.id,
     kind: row.kind,
     subject: row.subject,
-    body: full ? row.body : row.body.slice(0, 280),
+    body: masked ? "" : full ? row.body : row.body.slice(0, 280),
     spoiler: row.spoiler === 1,
+    hidden,
     comments: row.comments_count,
     createdAt: row.created_at,
     lastActivityAt: row.last_activity_at,
@@ -227,7 +231,7 @@ function toThread(row, viewer, full = false) {
       avatar: row.avatar_version ? `/avatars/${row.user_id}?v=${row.avatar_version}` : null
     } : null,
     // Закрытую тему автор не правит: её содержимое зафиксировал модератор
-    canEdit: Boolean(viewer && viewer.id === row.user_id && (!locked || viewer.isModerator)),
+    canEdit: Boolean(viewer && !masked && viewer.id === row.user_id && (!locked || viewer.isModerator)),
     canDelete: Boolean(viewer && (viewer.id === row.user_id || viewer.isModerator)),
     canModerate: Boolean(viewer?.isModerator)
   };
@@ -486,12 +490,12 @@ const REPORT_ALERT = 3;
 
 const REPORT_LABEL = { comment: "ответ", thread: "тема", user: "профиль" };
 
-/** После третьей жалобы пишем всем модераторам и админам — дальше молчим, чтобы не спамить */
-async function alertModerators(env, targetType, targetId) {
-  const fresh = await env.DB.prepare(
-    "SELECT COUNT(DISTINCT reporter_id) AS n FROM reports WHERE target_type = ? AND target_id = ? AND status = 'open'"
-  ).bind(targetType, targetId).first();
-  if (fresh.n !== REPORT_ALERT) return;
+// С этого числа разных жалоб содержимое прячется само: модератор может вернуть,
+// поэтому автоматика не удаляет, а временно скрывает.
+const HIDE_AFTER_REPORTS = 5;
+
+/** Рассылает уведомление всем админам и модераторам */
+async function notifyModerators(env, text, link = "/admin") {
   const { results } = await env.DB.prepare(
     "SELECT id FROM users WHERE role IN ('admin', 'moderator') AND blocked_at IS NULL"
   ).all();
@@ -499,9 +503,42 @@ async function alertModerators(env, targetType, targetId) {
   await env.DB.batch(results.map((row) => notifyStatement(env, {
     userId: row.id,
     kind: "moderation",
-    text: `Жалобы на ${REPORT_LABEL[targetType] || "материал"}: ${fresh.n}. Проверьте в админке.`,
-    link: "/admin"
+    text,
+    link
   })));
+}
+
+/** После третьей жалобы пишем всем модераторам и админам — дальше молчим, чтобы не спамить */
+async function alertModerators(env, targetType, targetId) {
+  const fresh = await env.DB.prepare(
+    "SELECT COUNT(DISTINCT reporter_id) AS n FROM reports WHERE target_type = ? AND target_id = ? AND status = 'open'"
+  ).bind(targetType, targetId).first();
+  if (fresh.n !== REPORT_ALERT) return;
+  await notifyModerators(env, `Жалобы на ${REPORT_LABEL[targetType] || "материал"}: ${fresh.n}. Проверьте в админке.`);
+}
+
+/**
+ * Пятая жалоба скрывает ответ или тему до решения модератора.
+ * Скрытие обратимое: hidden_at снимается кнопкой в админке, данные остаются.
+ * @param {any} env
+ * @param {string} targetType
+ * @param {number} targetId
+ */
+async function autoHide(env, targetType, targetId) {
+  if (targetType !== "comment" && targetType !== "thread") return;
+  const fresh = await env.DB.prepare(
+    "SELECT COUNT(DISTINCT reporter_id) AS n FROM reports WHERE target_type = ? AND target_id = ? AND status = 'open'"
+  ).bind(targetType, targetId).first();
+  if (fresh.n < HIDE_AFTER_REPORTS) return;
+  const table = targetType === "comment" ? "comments" : "threads";
+  const hidden = await env.DB.prepare(
+    `UPDATE ${table} SET hidden_at = datetime('now') WHERE id = ? AND hidden_at IS NULL AND deleted_at IS NULL`
+  ).bind(targetId).run();
+  if (hidden.meta.changes !== 1) return;
+  await env.DB.prepare(
+    "INSERT INTO moderation_actions (moderator_name, action, target_type, target_id, reason) VALUES (?, ?, ?, ?, ?)"
+  ).bind("Автоматически", "hide", targetType, targetId, `Скрыто после ${fresh.n} жалоб`).run();
+  await notifyModerators(env, `${REPORT_LABEL[targetType]} скрыт после ${fresh.n} жалоб. Проверьте и верните, если жалобы не по делу.`);
 }
 
 /** POST /api/reports — пожаловаться на ответ, тему форума или профиль */
@@ -524,7 +561,10 @@ export const reports = {
     const result = await env.DB.prepare(
       "INSERT OR IGNORE INTO reports (reporter_id, target_type, target_id, reason, details) VALUES (?, ?, ?, ?, ?)"
     ).bind(user.id, body.targetType, body.targetId, body.reason, details).run();
-    if (result.meta.changes) await alertModerators(env, body.targetType, body.targetId);
+    if (result.meta.changes) {
+      await alertModerators(env, body.targetType, body.targetId);
+      await autoHide(env, body.targetType, body.targetId);
+    }
     return json({ ok: true, duplicate: !result.meta.changes }, result.meta.changes ? 201 : 200);
   }
 };

@@ -18,7 +18,7 @@ export async function loadCommentTarget(env, type, id) {
 }
 
 const COMMENT_SELECT = `SELECT c.id, c.user_id, c.target_type, c.target_id, c.parent_id, c.root_id, c.body, c.spoiler, c.created_at,
-  c.edited_at, c.deleted_at, u.name AS author_name, u.role AS author_role, p.username AS author_username,
+  c.edited_at, c.deleted_at, c.hidden_at, u.name AS author_name, u.role AS author_role, p.username AS author_username,
   p.avatar_version AS author_avatar, p.avatar_color AS author_color, pu.name AS parent_name,
   (SELECT json_group_object(kind, n) FROM (SELECT kind, COUNT(*) AS n FROM comment_reactions WHERE comment_id = c.id GROUP BY kind)) AS reactions,
   (SELECT json_group_array(kind) FROM comment_reactions WHERE comment_id = c.id AND user_id = ?) AS mine,
@@ -31,18 +31,22 @@ LEFT JOIN users pu ON pu.id = pc.user_id`;
 
 export function toComment(row, viewer) {
   const deleted = row.deleted_at !== null;
+  // Скрытый по жалобам комментарий видят только модераторы: остальным — заглушка
+  const hidden = row.hidden_at !== null;
+  const masked = deleted || (hidden && !viewer?.isModerator);
   return {
     id: row.id,
     targetType: row.target_type,
     targetId: row.target_id,
     parentId: row.parent_id,
     rootId: row.root_id,
-    body: deleted ? "" : row.body,
+    body: masked ? "" : row.body,
     spoiler: row.spoiler === 1,
     deleted,
+    hidden,
     createdAt: row.created_at,
     editedAt: row.edited_at,
-    author: deleted || !row.user_id ? null : {
+    author: masked || !row.user_id ? null : {
       id: row.user_id,
       name: row.author_name,
       username: row.author_username,
@@ -54,7 +58,7 @@ export function toComment(row, viewer) {
     reactions: JSON.parse(row.reactions || "{}"),
     myReactions: JSON.parse(row.mine || "[]"),
     replies: row.replies,
-    canEdit: Boolean(viewer && !deleted && viewer.id === row.user_id),
+    canEdit: Boolean(viewer && !masked && viewer.id === row.user_id),
     canDelete: Boolean(viewer && !deleted && (viewer.id === row.user_id || viewer.isModerator))
   };
 }

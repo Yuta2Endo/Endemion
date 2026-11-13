@@ -94,13 +94,15 @@ function commentNode(comment, ctx, isReply = false) {
   node.append(comment.author ? avatar(comment.author, isReply ? "avatar-sm" : "") : avatar(null, isReply ? "avatar-sm" : ""));
   const main = el("div");
   const head = el("div", "comment-head");
+  // Скрытый после жалоб комментарий приходит без тела и автора — показываем причину, а не «удалён»
+  const hidden = Boolean(comment.hidden) && !comment.body;
   if (comment.author) {
     head.append(comment.author.username
       ? link(`/users/${encodeURIComponent(comment.author.username)}`, null, comment.author.name)
       : el("strong", null, comment.author.name));
     if (comment.author.role !== "user") head.append(el("span", "role-badge", comment.author.role === "admin" ? "админ" : "модератор"));
   } else {
-    head.append(el("strong", "muted", comment.deleted ? "Комментарий удалён" : "Удалённый пользователь"));
+    head.append(el("strong", "muted", comment.deleted ? "Комментарий удалён" : hidden ? "Скрыто после жалоб" : "Удалённый пользователь"));
   }
   if (comment.replyTo) head.append(el("small", null, `→ ${comment.replyTo}`));
   const time = el("time", null, timeAgo(comment.createdAt));
@@ -108,10 +110,10 @@ function commentNode(comment, ctx, isReply = false) {
   head.append(time);
   if (comment.editedAt) head.append(el("small", null, "изменён"));
 
-  const text = el("p", `comment-text${comment.deleted ? " is-deleted" : ""}`, comment.deleted ? "Комментарий удалён." : comment.body);
-  main.append(head, comment.deleted ? text : spoilerText(text, comment.spoiler));
+  const text = el("p", `comment-text${comment.deleted || hidden ? " is-deleted" : ""}`, comment.deleted ? "Комментарий удалён." : hidden ? "Скрыто после жалоб — модератор проверит." : comment.body);
+  main.append(head, comment.deleted || hidden ? text : spoilerText(text, comment.spoiler));
 
-  if (!comment.deleted) {
+  if (!comment.deleted && !hidden) {
     const actions = el("div", "comment-actions");
     const { bar, toggle } = reactionBar(comment, ctx.user);
     const picker = el("span", "reaction-picker");

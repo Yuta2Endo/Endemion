@@ -47,7 +47,7 @@ export const threadPage = {
     // Данные темы нужны серверу только для метатегов и разметки для поиска: саму страницу рисует thread.js
     const row = env.DB
       ? await env.DB.prepare(
-        `SELECT t.subject, t.body, t.created_at, t.last_activity_at, t.comments_count, t.deleted_at,
+        `SELECT t.subject, t.body, t.created_at, t.last_activity_at, t.comments_count, t.deleted_at, t.hidden_at,
                 p.username, u.name AS author_name
          FROM threads t
          LEFT JOIN users u ON u.id = t.user_id
@@ -56,9 +56,11 @@ export const threadPage = {
       ).bind(Number(params.id)).first()
       : null;
     const thread = row && !row.deleted_at ? row : null;
+    // Скрытую после жалоб тему не размечаем для поиска: тело может быть спорным
+    const hidden = Boolean(thread && thread.hidden_at);
     const excerpt = thread ? thread.body.replace(/\s+/g, " ").trim().slice(0, 200) : "";
     const pageUrl = `${origin}/community/thread/${encodeURIComponent(params.id)}`;
-    const head = thread
+    const head = thread && !hidden
       ? `<meta property="og:type" content="article">
   <meta property="og:title" content="${e(thread.subject)}">
   <meta property="og:description" content="${e(excerpt)}">
@@ -84,6 +86,7 @@ export const threadPage = {
     const body = `
     <div class="container page">
       <nav class="breadcrumbs" aria-label="${en ? "Breadcrumb" : "Навигация"}"><a href="/community">${en ? "Community" : "Сообщество"}</a> <span aria-hidden="true">/</span> <span id="crumb">${en ? "Discussion" : "Обсуждение"}</span></nav>
+      ${hidden ? `<p class="notice">${en ? "This thread was hidden after several reports. A moderator will review it." : "Тема скрыта после жалоб — её проверит модератор."}</p>` : ""}
       <div class="split section">
         <div class="stack">
           <article class="post" id="post" aria-busy="true"><div class="skeleton skeleton-row"></div></article>

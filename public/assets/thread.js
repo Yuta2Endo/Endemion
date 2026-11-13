@@ -54,7 +54,9 @@ function render(thread) {
   if (thread.spoiler) badges.append(el("span", "tag", "Спойлеры: нажмите на текст, чтобы открыть"));
   const author = el("div", "thread-meta");
   author.append(userLink(thread.author), el("span", null, timeAgo(thread.createdAt)));
-  const text = el("p", "post-body", thread.body);
+  // Скрытую после жалоб тему модератор видит целиком, остальным показываем только причину
+  const masked = Boolean(thread.hidden) && !thread.body;
+  const text = el("p", "post-body", masked ? "Тема скрыта после жалоб — её проверит модератор." : thread.body);
   const actions = el("div", "section-actions section");
   if (user) {
     actions.append(button(thread.subscribed ? "Отписаться" : "Подписаться", "ghost-btn small-btn", async () => {
