@@ -46,6 +46,23 @@ test("удалённые разделы отвечают 410, их API боль�
   assert.doesNotMatch(sitemap, /\/(anime|manga|title|reading|catalog)\b/);
 });
 
+test("тема форума: заголовок, описание и разметка DiscussionForumPosting", async () => {
+  const author = await app.user("Автор темы для поиска");
+  const created = await author.call("POST", "/api/threads", { kind: "discussion", subject: "Тема для поиска", body: "Текст темы для поиска.", category: "general" });
+  assert.equal(created.status, 201, created.text);
+  const id = created.data.thread.id;
+
+  const page = await app.client().call("GET", `/community/thread/${id}`);
+  assert.equal(page.status, 200);
+  assert.match(page.text, /<title>Тема для поиска \| ENDEMION<\/title>/);
+  assert.match(page.text, /<meta name="description" content="Текст темы для поиска\."/);
+  assert.match(page.text, /"@type":"DiscussionForumPosting"/);
+  assert.match(page.text, /"commentCount":0/);
+
+  const sitemap = (await app.client().call("GET", "/sitemap.xml")).text;
+  assert.match(sitemap, new RegExp(`/community/thread/${id}<`));
+});
+
 test("главная: приветствие, игры из каталога, ссылка на Endemion Life, без ссылок на магазины", async () => {
   const home = await app.client().call("GET", "/");
   assert.match(home.text, /Создаём миры. Соединяем игроков./);

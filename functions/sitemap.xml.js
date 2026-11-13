@@ -16,12 +16,16 @@ export async function onRequestGet({ request, env }) {
     ).all()).results
     : [];
 
+  const threads = env.DB
+    ? (await env.DB.prepare("SELECT id, last_activity_at AS updated_at FROM threads WHERE deleted_at IS NULL ORDER BY last_activity_at DESC LIMIT 5000").all()).results
+    : [];
   const urls = [
     { loc: `${origin}/` },
     ...["games", "studio", "about", "community", "terms", "privacy", "offer", "copyright"].map((path) => ({ loc: `${origin}/${path}` })),
     ...games.map((g) => ({ loc: `${origin}/games/${g.slug}`, lastmod: g.updated_at })),
     ...posts.map((p) => ({ loc: `${origin}/studio/${p.slug}`, lastmod: p.updated_at })),
     ...categories.map((c) => ({ loc: `${origin}/community/c/${c.slug}` })),
+    ...threads.map((t) => ({ loc: `${origin}/community/thread/${t.id}`, lastmod: t.updated_at })),
     ...legalPaths().map((path) => ({ loc: `${origin}${path}` }))
   ];
 

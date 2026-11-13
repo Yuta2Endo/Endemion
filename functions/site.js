@@ -41,8 +41,46 @@ export const community = {
 
 /** GET /community/thread/:id — обсуждение или теория с комментариями */
 export const threadPage = {
-  async onRequestGet({ request, params }) {
+  async onRequestGet({ request, env, params }) {
     const en = langOf(request) === "en";
+    const origin = new URL(request.url).origin;
+    // Данные темы нужны серверу только для метатегов и разметки для поиска: саму страницу рисует thread.js
+    const row = env.DB
+      ? await env.DB.prepare(
+        `SELECT t.subject, t.body, t.created_at, t.last_activity_at, t.comments_count, t.deleted_at,
+                p.username, u.name AS author_name
+         FROM threads t
+         LEFT JOIN users u ON u.id = t.user_id
+         LEFT JOIN user_profiles p ON p.user_id = t.user_id
+         WHERE t.id = ?`
+      ).bind(Number(params.id)).first()
+      : null;
+    const thread = row && !row.deleted_at ? row : null;
+    const excerpt = thread ? thread.body.replace(/\s+/g, " ").trim().slice(0, 200) : "";
+    const pageUrl = `${origin}/community/thread/${encodeURIComponent(params.id)}`;
+    const head = thread
+      ? `<meta property="og:type" content="article">
+  <meta property="og:title" content="${e(thread.subject)}">
+  <meta property="og:description" content="${e(excerpt)}">
+  <meta property="og:url" content="${e(pageUrl)}">
+  <meta property="og:image" content="${e(origin)}/assets/og-image.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <script type="application/ld+json">${JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "DiscussionForumPosting",
+    headline: thread.subject,
+    text: thread.body,
+    url: pageUrl,
+    datePublished: thread.created_at,
+    dateModified: thread.last_activity_at,
+    commentCount: thread.comments_count,
+    inLanguage: en ? "en" : "ru",
+    author: thread.username
+      ? { "@type": "Person", name: thread.author_name || thread.username, alternateName: `@${thread.username}`, url: `${origin}/users/${encodeURIComponent(thread.username)}` }
+      : undefined,
+    publisher: { "@type": "Organization", name: "Endemion", url: `${origin}/` }
+  }).replaceAll("<", "\\u003c")}</script>`
+      : "";
     const body = `
     <div class="container page">
       <nav class="breadcrumbs" aria-label="${en ? "Breadcrumb" : "Навигация"}"><a href="/community">${en ? "Community" : "Сообщество"}</a> <span aria-hidden="true">/</span> <span id="crumb">${en ? "Discussion" : "Обсуждение"}</span></nav>
@@ -55,7 +93,10 @@ export const threadPage = {
       </div>
     </div>`;
     return renderPage(request, {
-      title: en ? "Discussion" : "Обсуждение", active: "community", body, scripts: ["thread.js"], path: `/community/thread/${encodeURIComponent(params.id)}`,
+      title: thread ? thread.subject : (en ? "Discussion" : "Обсуждение"),
+      description: excerpt || undefined,
+      head: head || undefined,
+      active: "community", body, scripts: ["thread.js"], path: `/community/thread/${encodeURIComponent(params.id)}`,
       mainAttrs: `data-thread-id="${e(params.id)}"`
     });
   }
