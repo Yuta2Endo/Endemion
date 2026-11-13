@@ -107,6 +107,14 @@ npm run check                    # все три подряд
 
 Код сервера — в `server/`: SQLite вместо D1, диск или S3 вместо R2, раздача `public/` с заголовками из `_headers`. При запуске сервер сам делает резервную копию базы и применяет новые миграции. Пошаговая инструкция — [DEPLOY.md](DEPLOY.md).
 
+Выкладка одной командой (переключение на `origin/site-improve`, пересборка `app`, ожидание здоровья и смоук):
+
+```
+npm run deploy:prod
+```
+
+Нужны ключ `~/.ssh/endemion_vps` и запушенная ветка. Адрес, каталог и ветка меняются через `DEPLOY_HOST`, `DEPLOY_DIR`, `DEPLOY_BRANCH`.
+
 ## Cloudflare Workers
 
 Тот же код работает как Worker с базой D1 `endemion` (id в `wrangler.toml`):

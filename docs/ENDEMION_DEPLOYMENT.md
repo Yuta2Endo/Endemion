@@ -118,13 +118,26 @@ docker compose -f infrastructure/docker-compose.prod.yml -f infrastructure/docke
 
 ## 8. Обновление кода
 
+С сайта разработчика, одной командой (нужна запушенная ветка и ключ `~/.ssh/endemion_vps`):
+
+```bash
+npm run deploy:prod
+```
+
+Скрипт `scripts/deploy-prod.mjs` сам переключает сервер на `origin/site-improve` (detached HEAD), пересобирает `app`, ждёт `/healthz` и прогоняет `npm run smoke`. Воркер Cloudflare прод не обслуживает: `npm run deploy` — только предпросмотр на `*.workers.dev`.
+
+Вручную то же самое:
+
 ```bash
 cd /opt/endemion
 docker compose exec -T app node server/backup.mjs
-git pull --ff-only
+git fetch origin
+git checkout --detach origin/site-improve
 docker compose build auth app
 docker compose up -d --no-deps auth
 docker compose up -d --no-deps app
 ```
+
+`git pull --ff-only` не подходит: сервер стоит на detached HEAD, а production-only правок в рабочем дереве быть не должно — всё, что нужно на проде, живёт в ветке.
 
 Если изменился Caddyfile, перезагрузка только через `docker cp` (раздел 3). Life обновляется по `docs/DEPLOYMENT.md` Life: образы собираются локально, код приходит через `git bundle`.
