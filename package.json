@@ -19,6 +19,7 @@
     "seed": "node server/seed.mjs",
     "backup": "node server/backup.mjs",
     "smoke": "node scripts/smoke.mjs",
+    "predeploy:prod": "npm run check",
     "deploy:prod": "node scripts/deploy-prod.mjs",
     "grant-admin": "node server/grant-admin.mjs",
     "lint": "eslint .",
