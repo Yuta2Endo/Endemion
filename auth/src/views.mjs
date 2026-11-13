@@ -24,8 +24,7 @@ function layout({ title, content, wide = false, scripts = [], home = "/account" 
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#07061a" media="(prefers-color-scheme: dark)">
-  <meta name="theme-color" content="#f4f1ff" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#080a10">
   <meta name="robots" content="noindex">
   <title>${escapeHtml(title)} — Endemion ID</title>
   <link rel="icon" href="/favicon.ico?v=2" sizes="32x32">
@@ -41,7 +40,7 @@ ${scripts.map((src) => `  <script type="module" src="${escapeHtml(src)}"></scrip
       <a class="logo" href="${escapeHtml(home)}"><span class="logo-mark" aria-hidden="true">E</span>ENDEMION <span class="logo-id">ID</span></a>
     </nav>
     ${content}
-    <footer class="id-footer">Один аккаунт для Endemion и Endemion Life${legalLinks ? ` · <a href="${escapeHtml(legalLinks.privacy)}">Политика</a> · <a href="${escapeHtml(legalLinks.terms)}">Условия</a>` : ""}</footer>
+    <footer class="id-footer">Один аккаунт для сайта, форума и Endemion Life${legalLinks ? ` · <a href="${escapeHtml(legalLinks.privacy)}">Политика</a> · <a href="${escapeHtml(legalLinks.terms)}">Условия</a>` : ""}</footer>
   </main>
 </body>
 </html>`;
@@ -77,9 +76,17 @@ function authLayout({ title, clientPlatform, heading, description, content, scri
     home: "/login",
     content: `<section class="id-layout">
       <div class="id-intro">
-        <div class="eyebrow">Endemion ID</div>
-        <h1>Один вход.<br><span>Все миры Endemion.</span></h1>
-        <p>${target ? `Вы входите в <strong>${escapeHtml(target)}</strong>. ` : ""}Один аккаунт для читалки Endemion и игры Endemion Life: имя, аватар и прогресс общие, пароль вводится один раз.</p>
+        <div class="id-intro-copy">
+          <div class="eyebrow">Endemion ID</div>
+          <h1>Один аккаунт.<br><span>Вся экосистема.</span></h1>
+          <p>${target ? `Вы входите в <strong>${escapeHtml(target)}</strong>. ` : ""}Игры, форум и сохранения Endemion Life связаны одним профилем: имя, аватар и прогресс общие, пароль вводится один раз.</p>
+          <ul class="id-benefits">
+            <li><span class="id-benefit-mark" aria-hidden="true">✓</span>Единый пароль для сайта и Endemion Life</li>
+            <li><span class="id-benefit-mark" aria-hidden="true">✓</span>Темы, ответы и уведомления в одном месте</li>
+            <li><span class="id-benefit-mark" aria-hidden="true">✓</span>Вход по ключу устройства или коду из приложения</li>
+          </ul>
+        </div>
+        <p class="id-trust">Пароль хранится только в виде необратимого хеша. Соединение защищено HTTPS.</p>
       </div>
       <div class="id-panel">
         <h2 class="form-title">${escapeHtml(heading)}</h2>
