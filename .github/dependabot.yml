@@ -1,0 +1,35 @@
+# Зависимости обновляем сами, но не чаще раза в неделю и одним PR на экосистему.
+# Проверки прогоняет .github/workflows/ci.yml: npm run check, тесты auth и e2e в chromium.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: deps
+    groups:
+      # Мелкие патчи и минорные версии — одним PR, чтобы не тонуть в обновлениях
+      minor-and-patch:
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: npm
+    directory: "/auth"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 2
+    commit-message:
+      prefix: deps(auth)
+    groups:
+      minor-and-patch:
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: ci

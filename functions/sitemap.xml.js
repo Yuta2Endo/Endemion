@@ -19,9 +19,15 @@ export async function onRequestGet({ request, env }) {
   const threads = env.DB
     ? (await env.DB.prepare("SELECT id, last_activity_at AS updated_at FROM threads WHERE deleted_at IS NULL ORDER BY last_activity_at DESC LIMIT 5000").all()).results
     : [];
+
+  // Дата последнего обновления списков: поисковикам полезно знать, что раздел менялся
+  const latest = (rows) => rows.reduce((max, row) => (row.updated_at && row.updated_at > max ? row.updated_at : max), "");
+
   const urls = [
     { loc: `${origin}/` },
-    ...["games", "studio", "about", "community", "terms", "privacy", "offer", "copyright"].map((path) => ({ loc: `${origin}/${path}` })),
+    ...["studio", "about", "terms", "privacy", "offer", "copyright"].map((path) => ({ loc: `${origin}/${path}` })),
+    { loc: `${origin}/games`, lastmod: latest(games) },
+    { loc: `${origin}/community`, lastmod: latest(threads) },
     ...games.map((g) => ({ loc: `${origin}/games/${g.slug}`, lastmod: g.updated_at })),
     ...posts.map((p) => ({ loc: `${origin}/studio/${p.slug}`, lastmod: p.updated_at })),
     ...categories.map((c) => ({ loc: `${origin}/community/c/${c.slug}` })),
