@@ -50,12 +50,13 @@ export const home = {
   async onRequestGet({ request, env }) {
     const origin = new URL(request.url).origin;
     const lang = langOf(request);
-    const [settings, games, upcoming, threads, devlog] = await Promise.all([
+    const [settings, games, upcoming, threads, devlog, threadTotal] = await Promise.all([
       getSettings(env),
       listGames(env, { upcoming: false }),
       listGames(env, { upcoming: true }),
       recentThreads(env, { limit: 6 }),
-      listPosts(env, { kinds: ["devlog"], limit: 1 })
+      listPosts(env, { kinds: ["devlog"], limit: 1 }),
+      env.DB ? env.DB.prepare("SELECT COUNT(*) AS n FROM threads WHERE deleted_at IS NULL").first() : null
     ]);
     const en = lang === "en";
     const s = t(lang);
@@ -63,6 +64,10 @@ export const home = {
     const discussion = featured ? await gameCategory(env, featured.id) : null;
 
     // ==================== HERO ====================
+    const stats = [
+      { value: games.length, label: s.homeStatProjects },
+      { value: threadTotal?.n || 0, label: s.homeStatThreads }
+    ].filter((stat) => stat.value > 0);
     const hero = `
     <section class="home-hero" aria-labelledby="heroTitle">
       <div class="home-hero-bg" aria-hidden="true">${featured?.coverUrl ? `<img src="${e(featured.coverUrl)}" alt="" fetchpriority="high" decoding="async">` : ""}</div>
@@ -74,6 +79,17 @@ export const home = {
           <div class="btn-row">
             <a class="primary-btn btn-lg" href="/games">${e(s.homeExploreGames)}</a>
             <a class="ghost-btn btn-lg" href="/community">${e(s.homeJoinCommunity)}</a>
+          </div>
+          ${stats.length ? `<ul class="hero-stats">${stats.map((stat) => `<li><strong>${stat.value}</strong><span>${e(stat.label)}</span></li>`).join("")}</ul>` : ""}
+        </div>
+        <div class="home-hero-visual rise rise-2" aria-hidden="true">
+          <div class="orbit">
+            <span class="orbit-ring orbit-ring-1"></span>
+            <span class="orbit-ring orbit-ring-2"></span>
+            <span class="orbit-ring orbit-ring-3"></span>
+            <span class="orbit-dot orbit-dot-1"></span>
+            <span class="orbit-dot orbit-dot-2"></span>
+            <span class="orbit-core">E</span>
           </div>
         </div>
       </div>

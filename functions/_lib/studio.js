@@ -288,6 +288,25 @@ export function statusBadge(status, lang = "ru") {
   return `<span class="badge status-${key}">${e(labels[status] || (lang === "en" ? "Status not set" : "Статус не указан"))}</span>`;
 }
 
+/** Сколько вариантов градиента у заглушек: класс art-N выбирается по slug, чтобы карточки не сливались */
+const ART_VARIANTS = 6;
+
+/** Устойчивый номер варианта: один и тот же slug всегда даёт один и тот же градиент */
+function artVariant(slug) {
+  let hash = 0;
+  for (const char of slug || "") hash = (hash * 31 + char.codePointAt(0)) % 9973;
+  return (hash % ART_VARIANTS) + 1;
+}
+
+/** Первые буквы названия: короткий монограмм вместо повторения заголовка */
+function initials(title) {
+  const words = (title || "").split(/\s+/).filter(Boolean);
+  const letters = words.length > 1
+    ? words.slice(0, 2).map((word) => [...word][0] || "")
+    : [...(words[0] || "")].slice(0, 2);
+  return letters.join("").toUpperCase() || "?";
+}
+
 /** Обложка игры или заглушка с явной подписью: временная картинка не выдаётся за игровой ассет */
 export function gameArt(game, { eager = false, lang = "ru" } = {}) {
   const cover = lang === "en" ? "Cover" : "Обложка";
@@ -295,7 +314,11 @@ export function gameArt(game, { eager = false, lang = "ru" } = {}) {
     return `<img src="${e(game.coverUrl)}" alt="${cover} ${e(game.title)}" ${eager ? 'fetchpriority="high"' : 'loading="lazy"'} decoding="async" width="1280" height="720">`;
   }
   const soon = lang === "en" ? "Cover coming soon" : "Обложка скоро появится";
-  return `<div class="placeholder-art" role="img" aria-label="${cover} ${e(game.title)}"><strong>${e(game.title)}</strong><small>${soon}</small></div>`;
+  return `<div class="placeholder-art art-${artVariant(game.slug)}" role="img" aria-label="${cover} ${e(game.title)}">
+      <span class="placeholder-rings" aria-hidden="true"></span>
+      <span class="placeholder-monogram" aria-hidden="true">${e(initials(game.title))}</span>
+      <small>${soon}</small>
+    </div>`;
 }
 
 export function gameCard(game, lang = "ru") {
