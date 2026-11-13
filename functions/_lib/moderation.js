@@ -24,8 +24,8 @@ export function moderationStatement(env, moderator, { action, targetType, target
 /** Что пожаловались и кто автор: для очереди жалоб и для решения */
 export async function loadTarget(env, type, id) {
   const queries = {
-    comment: `SELECT c.id, c.user_id AS owner_id, c.body AS text, c.deleted_at AS removed_at, c.target_type, c.target_id FROM comments c WHERE c.id = ?`,
-    thread: `SELECT t.id, t.user_id AS owner_id, t.subject || ' — ' || t.body AS text, t.deleted_at AS removed_at, 'thread' AS target_type, t.id AS target_id FROM threads t WHERE t.id = ?`,
+    comment: `SELECT c.id, c.user_id AS owner_id, c.body AS text, COALESCE(c.deleted_at, c.hidden_at) AS removed_at, c.target_type, c.target_id FROM comments c WHERE c.id = ?`,
+    thread: `SELECT t.id, t.user_id AS owner_id, t.subject || ' — ' || t.body AS text, COALESCE(t.deleted_at, t.hidden_at) AS removed_at, 'thread' AS target_type, t.id AS target_id FROM threads t WHERE t.id = ?`,
     user: `SELECT u.id, u.id AS owner_id, u.name || ' (@' || COALESCE(p.username, '') || ') — ' || COALESCE(p.bio, '') AS text, u.blocked_at AS removed_at, 'user' AS target_type, u.id AS target_id FROM users u LEFT JOIN user_profiles p ON p.user_id = u.id WHERE u.id = ?`
   };
   if (!queries[type]) return null;
@@ -62,14 +62,14 @@ export function contentStatements(env, moderator, type, id, action) {
   const remove = action === "remove";
   switch (type) {
     case "comment":
-      // Восстановить удалённый комментарий нельзя: текст стирается
+      // Удаление стирает текст безвозвратно; скрытый после жалоб ответ модератор возвращает целиком
       return remove
-        ? [env.DB.prepare("UPDATE comments SET body = '', deleted_at = datetime('now'), deleted_by = ? WHERE id = ? AND deleted_at IS NULL").bind(moderator.id, id)]
-        : null;
+        ? [env.DB.prepare("UPDATE comments SET body = '', deleted_at = datetime('now'), deleted_by = ?, hidden_at = NULL, hidden_by = NULL WHERE id = ? AND deleted_at IS NULL").bind(moderator.id, id)]
+        : [env.DB.prepare("UPDATE comments SET hidden_at = NULL, hidden_by = NULL WHERE id = ? AND hidden_at IS NOT NULL AND deleted_at IS NULL").bind(id)];
     case "thread":
       return [remove
-        ? env.DB.prepare("UPDATE threads SET deleted_at = datetime('now'), deleted_by = ? WHERE id = ?").bind(moderator.id, id)
-        : env.DB.prepare("UPDATE threads SET deleted_at = NULL, deleted_by = NULL WHERE id = ? AND body <> ''").bind(id)];
+        ? env.DB.prepare("UPDATE threads SET deleted_at = datetime('now'), deleted_by = ?, hidden_at = NULL, hidden_by = NULL WHERE id = ?").bind(moderator.id, id)
+        : env.DB.prepare("UPDATE threads SET deleted_at = NULL, deleted_by = NULL, hidden_at = NULL, hidden_by = NULL WHERE id = ? AND body <> ''").bind(id)];
     default:
       return null;
   }

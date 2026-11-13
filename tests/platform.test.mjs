@@ -216,6 +216,34 @@ describe("сообщество", () => {
     assert.equal(moderatorView.data.thread.body, "Текст темы.");
   });
 
+  test("скрытый после жалоб ответ модератор возвращает", async () => {
+    const author = await app.user("Автор возвращённого ответа");
+    const moderator = await app.user("Возвращающий модератор", "moderator");
+    const threadId = await topic(author, "Тема с возвратом ответа");
+    const commentId = (await reply(author, threadId, "Спорный, но допустимый текст.")).data.comment.id;
+
+    for (let index = 1; index <= 5; index += 1) {
+      const reporter = await app.user(`Возвратный жалобщик ${index}`);
+      const reported = await reporter.call("POST", "/api/reports", { targetType: "comment", targetId: commentId, reason: "abuse" });
+      assert.equal(reported.status, 201);
+    }
+
+    let list = await app.client().call("GET", `/api/comments?type=thread&id=${threadId}`);
+    let comment = list.data.comments.find((row) => row.id === commentId);
+    assert.equal(comment.hidden, true);
+    assert.equal(comment.body, "");
+
+    const restored = await moderator.call("POST", "/api/moderation/actions", {
+      targetType: "comment", targetId: commentId, action: "restore", reason: "Жалобы не по делу"
+    });
+    assert.equal(restored.status, 200);
+
+    list = await app.client().call("GET", `/api/comments?type=thread&id=${threadId}`);
+    comment = list.data.comments.find((row) => row.id === commentId);
+    assert.equal(comment.hidden, false);
+    assert.equal(comment.body, "Спорный, но допустимый текст.");
+  });
+
   test("теория даёт достижение и попадает в ленту теорий", async () => {
     const member = await app.user("Теоретик");
     let r = await member.call("POST", "/api/threads", { kind: "theory", subject: "Шестой мир связан с первым", body: "Аргументы.", spoiler: true });
