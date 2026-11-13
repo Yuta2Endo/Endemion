@@ -85,6 +85,98 @@ async function report(env, results) {
   return { alerted: false, reason: "всё в порядке" };
 }
 
+/** Что разрешено вызывать через /admin: только оформление канала, ничего больше */
+const ADMIN_READ = new Set(["getChat", "getChatMemberCount", "getChatAdministrators", "getChatMember", "getChatMenuButton"]);
+const ADMIN_WRITE = new Set([
+  "setChatDescription", "setChatTitle", "setChatPhoto", "deleteMessage",
+  "pinChatMessage", "unpinChatMessage", "sendMessage", "editMessageText",
+  "exportChatInviteLink", "createChatInviteLink", "revokeChatInviteLink"
+]);
+
+/**
+ * Ручное управление каналом из терминала: с этой машины api.telegram.org недоступен,
+ * а у Cloudflare доступ есть. Ключ обязателен и сравнивается как секрет.
+ */
+async function admin(request, env, url) {
+  if (!env.MONITOR_KEY || url.searchParams.get("key") !== env.MONITOR_KEY) {
+    return Response.json({ ok: false, error: "нужен ключ" }, { status: 401 });
+  }
+  const token = String(env.TELEGRAM_BOT_TOKEN || "").trim();
+  if (!token) return Response.json({ ok: false, error: "нет TELEGRAM_BOT_TOKEN" }, { status: 503 });
+
+  let method = url.searchParams.get("method");
+  let params = {};
+  if (request.method === "POST") {
+    const body = await request.json().catch(() => null);
+    if (!body || typeof body !== "object") return Response.json({ ok: false, error: "нужно JSON-тело" }, { status: 400 });
+    method = body.method || method;
+    params = { ...(body.params || body) };
+    delete params.method;
+  }
+  if (!ADMIN_READ.has(method) && !ADMIN_WRITE.has(method) && method !== "downloadPhoto" && method !== "preview") {
+    return Response.json({ ok: false, error: `метод не разрешён: ${method}` }, { status: 400 });
+  }
+  if (params.chat_id === undefined) params.chat_id = String(env.TELEGRAM_CHAT_ID || "@EndemionOfficial").trim();
+
+  const endpoint = `https://api.telegram.org/bot${token}/${method}`;
+  try {
+    // Публичная лента канала: только чтение, чтобы видеть, что уже опубликовано
+    if (method === "preview") {
+      const html = await (await fetch("https://t.me/s/EndemionOfficial", { signal: AbortSignal.timeout(TIMEOUT_MS) })).text();
+      if (params.raw) return new Response(html, { headers: { "Content-Type": "text/html; charset=utf-8" } });
+      const posts = [...html.matchAll(/data-post="EndemionOfficial\/(\d+)"[\s\S]*?<div class="tgme_widget_message_text[^"]*"[^>]*>([\s\S]*?)<\/div>/g)]
+        .map((match) => ({
+          id: Number(match[1]),
+          text: match[2]
+            .replace(/<br\s*\/?>/g, "\n")
+            .replace(/<[^>]+>/g, "")
+            .replace(/&amp;/g, "&")
+            .replace(/&lt;/g, "<")
+            .replace(/&gt;/g, ">")
+            .replace(/&quot;/g, "\"")
+            .trim()
+        }));
+      return Response.json({ ok: true, posts });
+    }
+    // Скачать текущее фото канала: нужно, чтобы посмотреть, как он выглядит
+    if (method === "downloadPhoto") {
+      let fileId = params.file_id;
+      if (!fileId) {
+        const chat = await (await fetch(`https://api.telegram.org/bot${token}/getChat`, {
+          method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ chat_id: params.chat_id })
+        })).json();
+        fileId = chat?.result?.photo?.big_file_id;
+        if (!fileId) return Response.json({ ok: false, error: "у канала нет фото" }, { status: 404 });
+      }
+      const file = await (await fetch(`https://api.telegram.org/bot${token}/getFile`, {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ file_id: fileId })
+      })).json();
+      if (!file.ok) return Response.json(file, { status: 400 });
+      const image = await fetch(`https://api.telegram.org/file/bot${token}/${file.result.file_path}`);
+      return new Response(image.body, { headers: { "Content-Type": image.headers.get("content-type") || "image/jpeg" } });
+    }
+    if (method === "setChatPhoto") {
+      const photoUrl = params.photo_url;
+      delete params.photo_url;
+      const image = await fetch(photoUrl);
+      if (!image.ok) return Response.json({ ok: false, error: `фото не скачалось: ${image.status}` }, { status: 400 });
+      const form = new FormData();
+      form.append("chat_id", params.chat_id);
+      form.append("photo", new Blob([await image.arrayBuffer()], { type: image.headers.get("content-type") || "image/png" }), "photo.png");
+      const response = await fetch(endpoint, { method: "POST", body: form });
+      return Response.json(await response.json());
+    }
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(params)
+    });
+    return Response.json(await response.json());
+  } catch (error) {
+    return Response.json({ ok: false, error: String(error?.message || error) }, { status: 502 });
+  }
+}
+
 export default {
   async scheduled(_event, env, ctx) {
     ctx.waitUntil((async () => {
@@ -95,6 +187,7 @@ export default {
 
   async fetch(request, env) {
     const url = new URL(request.url);
+    if (url.pathname === "/admin") return admin(request, env, url);
     if (url.searchParams.get("me") === "1") {
       if (env.MONITOR_KEY && url.searchParams.get("key") !== env.MONITOR_KEY) {
         return Response.json({ ok: false, error: "нужен ключ" }, { status: 401 });

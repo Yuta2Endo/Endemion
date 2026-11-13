@@ -48,7 +48,7 @@
 | Секрет | Зачем |
 | --- | --- |
 | `TELEGRAM_BOT_TOKEN` | токен бота `@EndemionUpdateBot` из @BotFather |
-| `MONITOR_KEY` | ключ для ручных проверок `?test=1` и `?me=1` |
+| `MONITOR_KEY` | ключ для ручных проверок `?test=1`, `?me=1` и админ-запросов `/admin` |
 
 Ставятся один раз:
 
@@ -71,6 +71,39 @@ curl "https://endemion-monitor.<account>.workers.dev/?test=1&key=<MONITOR_KEY>"
 # кто такой бот (имя, id, права)
 curl "https://endemion-monitor.<account>.workers.dev/?me=1&key=<MONITOR_KEY>"
 ```
+
+## Управление каналом
+
+С машины и с сервера Telegram недоступен, поэтому канал можно править через воркер: `POST /admin?key=<MONITOR_KEY>` с телом `{"method": "...", "params": {...}}`. Метод можно передать и в query (`?key=...&method=getChat`).
+
+| Метод | Что делает |
+| --- | --- |
+| `getChat`, `getChatMemberCount`, `getChatAdministrators`, `getChatMember`, `getChatMenuButton` | чтение состояния канала и прав |
+| `sendMessage`, `editMessageText`, `deleteMessage`, `pinChatMessage`, `unpinChatMessage` | посты |
+| `setChatTitle`, `setChatDescription`, `setChatPhoto` | оформление канала |
+| `exportChatInviteLink`, `createChatInviteLink`, `revokeChatInviteLink` | ссылки-приглашения |
+| `preview` | посты публичной ленты (`{id, text}`); `{"method":"preview","params":{"raw":true}}` — исходный HTML `t.me/s` |
+| `downloadPhoto` | байты текущего фото канала (`getFile` + проксирование) |
+
+Список разрешённых методов задан в `monitor/src/index.js` (`ADMIN_READ` и `ADMIN_WRITE`) — всё остальное отклоняется, чтобы ключ не превратился в универсальный доступ к боту.
+
+```bash
+# описание канала
+curl -X POST "https://endemion-monitor.<account>.workers.dev/admin?key=<MONITOR_KEY>" \
+  -H "content-type: application/json" \
+  -d '{"method":"setChatDescription","params":{"description":"Официальный канал Endemion — цифровая экосистема: игры, сообщество и единый вход Endemion ID.\n🌐 endemion.online"}}'
+
+# пост в канал (HTML, без превью ссылок)
+curl -X POST "https://endemion-monitor.<account>.workers.dev/admin?key=<MONITOR_KEY>" \
+  -H "content-type: application/json" \
+  -d '{"method":"sendMessage","params":{"text":"<b>Привет</b>","parse_mode":"HTML","link_preview_options":{"is_disabled":true}}}'
+
+# что сейчас в публичной ленте
+curl -X POST "https://endemion-monitor.<account>.workers.dev/admin?key=<MONITOR_KEY>" \
+  -H "content-type: application/json" -d '{"method":"preview"}'
+```
+
+Права бота ограничены тем, что владелец выдал в настройках канала: например, без права «Изменение информации канала» `setChatDescription` вернёт `not enough rights to set chat description`.
 
 ## Выкладка и логи
 
