@@ -52,14 +52,72 @@ export function updateReportsBadge(count) {
 
 const ACTION_VERBS = { remove: "скрыто", restore: "восстановлено", reject: "жалобы отклонены" };
 
+// Готовые формулировки: модератор одобряет причину одним нажатием, а не пишет её каждый раз
+const REASON_TITLES = {
+  remove: "Почему скрываем?",
+  restore: "Почему возвращаем?",
+  reject: "Почему отклоняем жалобы?"
+};
+
+const REASON_TEMPLATES = {
+  remove: [
+    "Спам или реклама — удалено по правилам сообщества.",
+    "Оскорбления и грубость — удалено по правилам сообщества.",
+    "Спойлеры без предупреждения — удалено по правилам сообщества.",
+    "Не по теме — удалено по правилам сообщества."
+  ],
+  restore: ["Жалобы не подтвердились — контент возвращён."],
+  reject: ["Жалобы необоснованны — нарушений не найдено."]
+};
+
+/** Причина решения: готовые шаблоны плюс своё поле. null — модератор передумал */
+function askReason(action, what) {
+  return new Promise((resolve) => {
+    const dialog = el("dialog", "admin-dialog");
+    const field = el("textarea", "textarea");
+    field.rows = 3;
+    field.maxLength = 500;
+    field.placeholder = "Выберите шаблон или напишите свой текст";
+
+    const templates = el("div", "admin-template-list");
+    for (const text of REASON_TEMPLATES[action] || []) {
+      templates.append(button(text, "ghost-btn admin-template-chip", () => {
+        field.value = text;
+        field.focus();
+      }));
+    }
+
+    let answer = null;
+    const actions = el("div", "admin-chapter-actions");
+    actions.append(
+      button("Отмена", "secondary-button", () => dialog.close()),
+      button("Применить", "primary-btn", () => {
+        answer = field.value.trim();
+        dialog.close();
+      })
+    );
+
+    dialog.append(
+      el("h2", null, REASON_TITLES[action] || "Причина"),
+      el("p", null, `Решение по объекту «${what}» попадёт в журнал модерации.`),
+      templates,
+      field,
+      actions
+    );
+    // Escape и «Отмена» закрывают диалог без решения
+    dialog.addEventListener("close", () => {
+      dialog.remove();
+      resolve(answer);
+    });
+    document.body.append(dialog);
+    dialog.showModal();
+    field.focus();
+  });
+}
+
 async function moderate(group, action, { mute = false } = {}) {
   const what = group.label.toLowerCase();
-  const prompts = {
-    remove: `Скрыть ${what}? Автор получит уведомление. Причина (необязательно):`,
-    restore: `Вернуть ${what}? Причина (необязательно):`,
-    reject: "Отклонить жалобы как необоснованные? Комментарий (необязательно):"
-  };
-  const reason = prompt(prompts[action], "");
+  const reason = await askReason(action, what);
   if (reason === null) return;
   const body = { targetType: group.targetType, targetId: group.targetId, action, reason };
   if (mute) {
@@ -129,7 +187,7 @@ reportStatus.addEventListener("change", loadReports);
 
 // Свежие комментарии: модератор может скрыть комментарий без жалобы
 async function removeComment(comment) {
-  const reason = prompt("Скрыть комментарий? Текст будет стёрт, автор получит уведомление. Причина (необязательно):", "");
+  const reason = await askReason("remove", "ответ в комментариях");
   if (reason === null) return;
   const result = await api("/api/moderation/actions", {
     method: "POST", body: { targetType: "comment", targetId: comment.id, action: "remove", reason }
