@@ -66,3 +66,20 @@ test("старая успешная выгрузка тоже поднимает
     assert.match(status.problems.join(" "), /выгрузка в хранилище 72 ч назад/);
   });
 });
+
+test("ручной архив в каталоге не считается свежей копией", () => {
+  withDir((dir) => {
+    // Имя ручного архива сортируется после автоматических, но он старый
+    const manual = path.join(dir, "endemion-pre-cleanup-robokassa4-2026-11-12T00-25-23Z.sqlite");
+    writeFileSync(manual, "sqlite");
+    const old = (Date.now() - 42 * 3_600_000) / 1000;
+    utimesSync(manual, old, old);
+
+    const fresh = path.join(dir, "endemion-2026-11-14T03-00-00.sqlite");
+    writeFileSync(fresh, "sqlite");
+
+    const status = backupStatus(dir, { maxAgeHours: 30 });
+    assert.equal(status.ok, true, status.problems.join("; "));
+    assert.ok(Date.parse(status.latest) > Date.now() - 60_000, `свежий файл не выбран: ${status.latest}`);
+  });
+});

@@ -8,10 +8,9 @@ import path from "node:path";
 import { backup, DatabaseSync } from "node:sqlite";
 import { pathToFileURL } from "node:url";
 import { BACKUP_DIR, DB_FILE } from "./config.mjs";
-import { REMOTE_REPORT } from "./backupStatus.mjs";
+import { NAME, REMOTE_REPORT } from "./backupStatus.mjs";
 import { createS3Client } from "./storage.mjs";
 
-const NAME = /^endemion-.+\.sqlite$/;
 // Папка копий внутри бакета
 const S3_PREFIX = "backups/";
 
@@ -47,9 +46,13 @@ export async function backupDatabase(db, keep = 14, env = process.env) {
   const file = path.join(BACKUP_DIR, `endemion-${stamp}.sqlite`);
   await backup(db, file);
 
-  // Старые копии удаляются: остаются последние keep штук. Имена содержат дату, поэтому сортировка по имени — по времени
-  const old = readdirSync(BACKUP_DIR).filter((name) => NAME.test(name)).sort().reverse().slice(keep);
-  for (const name of old) rmSync(path.join(BACKUP_DIR, name), { force: true });
+  // Старые копии удаляются: остаются последние keep штук. Сортируем по времени файла, ручные архивы не трогаем
+  const old = readdirSync(BACKUP_DIR)
+    .filter((name) => NAME.test(name))
+    .map((name) => ({ name, time: statSync(path.join(BACKUP_DIR, name)).mtimeMs }))
+    .sort((a, b) => b.time - a.time)
+    .slice(keep);
+  for (const entry of old) rmSync(path.join(BACKUP_DIR, entry.name), { force: true });
 
   try {
     const remote = await uploadBackup(file, env);

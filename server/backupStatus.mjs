@@ -4,15 +4,21 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 
-const NAME = /^endemion-.+\.sqlite$/;
+// Только автоматические бэкапы вида endemion-2026-11-13T19-19-27.sqlite: в каталоге могут лежать
+// ручные архивы (endemion-pre-cleanup-...), которые не должны считаться свежей копией.
+export const NAME = /^endemion-\d{4}-\d{2}-\d{2}T[\d-]+\.sqlite$/;
 // Отчёт о последней попытке выгрузки в S3. Пишется при каждом бэкапе, перезаписывается.
 export const REMOTE_REPORT = "last-remote.json";
 
 /** Время самого свежего бэкапа в каталоге (мс) или 0, если файлов нет */
 export function latestBackupTime(dir) {
   try {
-    const names = readdirSync(dir).filter((name) => NAME.test(name)).sort();
-    return names.length ? statSync(path.join(dir, names.at(-1))).mtimeMs : 0;
+    // Сортируем по времени изменения, а не по имени: имя ручного архива может оказаться «больше» автоматического
+    let newest = 0;
+    for (const name of readdirSync(dir).filter((name) => NAME.test(name))) {
+      newest = Math.max(newest, statSync(path.join(dir, name)).mtimeMs);
+    }
+    return newest;
   } catch {
     return 0;
   }
