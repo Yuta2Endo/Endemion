@@ -212,9 +212,11 @@ if ("serviceWorker" in navigator) {
 
 let mePromise = null;
 
-/** Текущий пользователь или null. Запрос делается один раз на страницу */
+/** Текущий пользователь или null. Запрос делается один раз на страницу. status помогает отличить отказ сервера от сетевого сбоя */
 export function getMe() {
-  if (!mePromise) mePromise = api("/api/me").then((r) => (r.ok && r.data ? r.data : { user: null }));
+  if (!mePromise) {
+    mePromise = api("/api/me").then((r) => (r.ok && r.data ? { ...r.data, status: r.status } : { user: null, status: r.status }));
+  }
   return mePromise;
 }
 

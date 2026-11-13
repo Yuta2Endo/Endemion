@@ -102,6 +102,8 @@ test("все шесть вкладки отображаются и перекл�
 
 test("клавиатурная навигация между вкладками (стрелки)", async ({ page }) => {
   await page.goto("/account");
+  // Панель показывает себя только после загрузки данных: до этого openTab("overview") может сбросить выбор
+  await expect(page.locator("#account")).toBeVisible();
 
   const firstTab = page.locator('[role=tab][data-tab="overview"]');
   await firstTab.focus();
@@ -254,7 +256,6 @@ test("интерфейс на русском языке", async ({ page }) => {
 
 test("интерфейс на английском языке", async ({ page, context }) => {
   await context.addCookies([{ name: "lang", value: "en", url: BASE }]);
-  await page.goto("/account");
   await page.goto("/account");
 
   await expect(page.locator(".account-eyebrow")).toContainText("Endemion Account");

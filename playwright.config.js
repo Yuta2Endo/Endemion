@@ -19,6 +19,9 @@ export default defineConfig({
   fullyParallel: true,
   // Локальный wrangler dev медленнее сайта: много параллельных браузеров дают ложные тайм-ауты
   workers: 4,
+  // Один повтор на флейки: Firefox-драйвер иногда падает на закрытии контекста
+  // (Browser.removeBrowserContext: _maybeDontRestoreTabs), сам тест при этом проходит.
+  retries: 1,
   reporter: [["list"]],
   use: {
     baseURL: BASE,

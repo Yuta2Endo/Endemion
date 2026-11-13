@@ -312,14 +312,17 @@ tabs.forEach((tab, i) => {
 // ==================== ИНИЦИАЛИЗАЦИЯ ====================
 
 async function init() {
-  const user = await initHeader();
-  if (!user) {
-    location.replace(loginUrl());
-    return;
-  }
+  await initHeader();
 
   const meResult = await getMe();
   if (!meResult.user) {
+    // Гость (сервер ответил 200 без пользователя) уходит на вход. Сетевой сбой или ошибка сервера
+    // не должны выкидывать со страницы: переход на /auth ломал бы и саму навигацию
+    const status = meResult.status || 0;
+    if (status === 0 || status >= 500) {
+      document.getElementById("account").after(errorBox("Не удалось загрузить панель. Обновите страницу."));
+      return;
+    }
     location.replace(loginUrl());
     return;
   }
