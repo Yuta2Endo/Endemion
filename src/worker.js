@@ -162,7 +162,12 @@ const RETIRED = new Set([
 
 function retired(pathname) {
   if (!RETIRED.has(pathname.split("/")[1])) return null;
-  return new Response(null, { status: 301, headers: { Location: "/", "Cache-Control": "public, max-age=86400" } });
+  // 410, а не 301: раздел закрыт насовсем, замены у этих адресов нет.
+  // Редирект на главную поисковики считают «мягкой 404» и держат адрес в индексе.
+  return new Response("Этот раздел закрыт и больше не открывается.", {
+    status: 410,
+    headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "public, max-age=86400" }
+  });
 }
 
 const ROUTES = ROUTE_LIST.map(([pattern, module]) => ({ parts: pattern.split("/").filter(Boolean), module }));

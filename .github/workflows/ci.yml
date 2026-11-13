@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  push:
+    branches: [main, site-improve]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Проверки (lint, типы, тесты)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 26
+          cache: npm
+      - run: npm ci
+      - run: npm run check
+      - name: Endemion ID
+        run: |
+          npm --prefix auth ci
+          npm --prefix auth test
+        env:
+          CI: true
+
+  e2e:
+    name: Браузерные тесты (chromium)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 26
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Локальная база D1
+        run: npm run db:migrate:local
+      # wrangler dev читает .dev.vars; в CI писем не отправляем
+      - name: Настройки локального сервера
+        run: printf 'MAIL_DEV_MODE=1\n' > .dev.vars
+      - run: npx playwright test --project=chromium
+        env:
+          CI: true
+      - name: Следы упавших тестов
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-traces
+          path: test-results/
+          retention-days: 7

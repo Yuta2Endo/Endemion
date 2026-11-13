@@ -18,6 +18,7 @@
     "db:migrate": "node server/migrate-cli.mjs",
     "seed": "node server/seed.mjs",
     "backup": "node server/backup.mjs",
+    "smoke": "node scripts/smoke.mjs",
     "grant-admin": "node server/grant-admin.mjs",
     "lint": "eslint .",
     "typecheck": "tsc -p tsconfig.json",

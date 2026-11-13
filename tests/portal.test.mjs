@@ -26,7 +26,7 @@ test("страницы портала отвечают 200, неизвестны
   assert.match(missing.text, /<meta name="robots" content="noindex/);
 });
 
-test("удалённые разделы ведут на главную (301), их API больше нет", async () => {
+test("удалённые разделы отвечают 410, их API больше нет", async () => {
   const guest = app.client();
   const home = await guest.call("GET", "/");
   for (const href of ["/games", "/community", "/studio", "/about"]) assert.match(home.text, new RegExp(`href="${href}"`), href);
@@ -34,8 +34,7 @@ test("удалённые разделы ведут на главную (301), и
   for (const path of ["/encyclopedia", "/anime", "/anime/5-name", "/manga", "/characters/1", "/mylist",
     "/reading", "/catalog", "/title/1", "/read/1/1", "/nexus", "/oracle", "/pulse", "/arena", "/collection/1"]) {
     const r = await guest.call("GET", path);
-    assert.equal(r.status, 301, path);
-    assert.equal(r.headers.get("location"), "/", path);
+    assert.equal(r.status, 410, path);
   }
   for (const path of ["/api/titles", "/api/catalog/anime", "/api/library", "/api/polls", "/api/collections", "/api/universe/anime/1"]) {
     assert.equal((await guest.call("GET", path)).status, 404, path);

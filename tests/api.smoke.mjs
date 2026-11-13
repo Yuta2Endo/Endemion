@@ -88,7 +88,7 @@ r = await call("POST", "/api/comments", { targetType: "title", targetId: 1, body
 check("комментарии к тайтлам больше не принимаются", r.status === 400);
 
 const retired = await fetch(`${BASE}/encyclopedia`, { redirect: "manual" });
-check("энциклопедия ведёт на главную", retired.status === 301 && retired.headers.get("location") === "/");
+check("энциклопедия закрыта (410)", retired.status === 410);
 
 r = await call("PATCH", "/api/me", { name: "  Новое   имя  " });
 check("смена имени", r.status === 200 && r.data.user.name === "Новое имя");
