@@ -1,0 +1,19 @@
+# Монитор сайта: cron-воркер, который раз в 5 минут проверяет endemion.online
+# и пишет в Telegram, только когда сайт упал или поднялся. Выкладка:
+#   npm run monitor:deploy
+name = "endemion-monitor"
+main = "src/index.js"
+compatibility_date = "2026-10-01"
+
+[triggers]
+crons = ["*/5 * * * *"]
+
+# Состояние «сайт лежит» / «сайт поднялся», чтобы не спамить одним и тем же сообщением
+[[kv_namespaces]]
+binding = "STATE"
+id = "4021c0f402bc47e680ee526c6d1f1ee8"
+
+[vars]
+SITE_URL = "https://endemion.online"
+AUTH_URL = "https://auth.endemion.online"
+TELEGRAM_CHAT_ID = "@EndemionOfficial"

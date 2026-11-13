@@ -14,6 +14,6 @@
     "skipLibCheck": true,
     "resolveJsonModule": true
   },
-  "include": ["functions/**/*.js", "src/**/*.js", "server/**/*.mjs", "tests/**/*.mjs"],
+  "include": ["functions/**/*.js", "src/**/*.js", "monitor/**/*.js", "server/**/*.mjs", "tests/**/*.mjs"],
   "exclude": ["node_modules", "tests/e2e"]
 }

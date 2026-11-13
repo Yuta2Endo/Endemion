@@ -52,6 +52,7 @@ tests/                  юнит- и интеграционные тесты (no
 | [docs/ENDEMION_SECURITY.md](docs/ENDEMION_SECURITY.md) | Меры защиты, тесты, известные ограничения |
 | [docs/SITE_IMPROVEMENT_PLAN.md](docs/SITE_IMPROVEMENT_PLAN.md) | План развития сайта и статус пунктов |
 | [docs/CONTENT_PLAN.md](docs/CONTENT_PLAN.md) | Что и как публиковать: ритм, темы, шаблоны |
+| [docs/MONITORING.md](docs/MONITORING.md) | Монитор доступности, алерты в Telegram, секреты |
 
 ## Роли
 
