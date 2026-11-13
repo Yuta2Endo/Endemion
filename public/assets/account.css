@@ -162,6 +162,30 @@
   min-height: 420px;
 }
 
+/* Страницы 404 и «нет сети»: карточка по центру экрана, а не под пустой половиной страницы */
+.account-shell.is-centered {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 100vh;
+  min-height: 100dvh;
+  /* Короткий текст в широкой карточке выглядит потерянным: страница ошибки уже обычного */
+  max-width: 780px;
+  width: 100%;
+  margin-inline: auto;
+}
+
+.account-shell.is-centered .account-nav {
+  margin-bottom: 24px;
+}
+
+.not-found-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 28px;
+}
+
 .not-found-button {
   margin-top: 28px;
 }

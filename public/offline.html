@@ -15,7 +15,7 @@
 </head>
 <body>
   <!-- Эту страницу показывает service worker (/sw.js), когда нет интернета -->
-  <main class="account-shell">
+  <main class="account-shell is-centered">
     <nav class="account-nav">
       <a class="logo" href="/"><span class="logo-mark" aria-hidden="true"></span>ENDEMION</a>
     </nav>
@@ -24,8 +24,13 @@
       <div class="eyebrow">Нет подключения</div>
       <h1>Связь<br><span>потерялась.</span></h1>
       <p>Endemion не может загрузить страницу: нет подключения к интернету. Проверьте сеть и обновите страницу.</p>
-      <a class="primary-btn not-found-button" href="/">На главную</a>
+      <div class="not-found-actions">
+        <button class="primary-btn" id="retryButton" type="button">Попробовать снова</button>
+        <a class="ghost-btn" href="/">На главную</a>
+      </div>
     </section>
   </main>
+
+  <script type="module" src="/assets/retry.js"></script>
 </body>
 </html>
