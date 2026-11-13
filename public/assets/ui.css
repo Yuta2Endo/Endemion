@@ -24,11 +24,6 @@
 .page-head .section-text {
   max-width: 620px;
 }
-
-.page-head-tool {
-  width: min(100%, 380px);
-}
-
 .section {
   margin-top: 54px;
 }
@@ -106,7 +101,7 @@
   gap: 14px;
 }
 
-/* ==================== КАРТОЧКИ ТАЙТЛОВ ==================== */
+/* ==================== СЕТКА КАРТОЧЕК ==================== */
 
 .cards {
   display: grid;
@@ -114,188 +109,6 @@
   gap: 20px 18px;
 }
 
-.t-card {
-  position: relative;
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-  overflow: hidden;
-  border: 1px solid var(--border);
-  border-radius: 18px;
-  background: var(--panel);
-  transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
-}
-
-.t-card:hover,
-.t-card:focus-within {
-  border-color: var(--border-strong);
-  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(var(--accent-rgb), 0.18);
-  transform: translateY(-4px);
-}
-
-.t-cover {
-  position: relative;
-  aspect-ratio: 3 / 4;
-  overflow: hidden;
-  /* --poster задаётся скриптом через style.setProperty: так не нужен встроенный style и CSP остаётся строгим */
-  background: var(--poster, var(--panel-solid));
-}
-
-.t-cover::before {
-  position: absolute;
-  inset: 0;
-  content: "";
-  background:
-    radial-gradient(circle at 78% 16%, rgba(255, 255, 255, 0.45) 0 1px, transparent 2px),
-    radial-gradient(circle at 18% 28%, rgba(255, 255, 255, 0.35) 0 1px, transparent 2px),
-    radial-gradient(circle at 62% 46%, rgba(255, 255, 255, 0.25) 0 1px, transparent 2px);
-}
-
-.t-cover::after {
-  position: absolute;
-  inset: 0;
-  content: "";
-  background: linear-gradient(to top, rgba(5, 7, 12, 0.92), transparent 55%);
-}
-
-.t-cover.has-image .t-symbol {
-  display: none;
-}
-
-.t-symbol {
-  position: absolute;
-  inset: 0 0 18%;
-  display: grid;
-  place-items: center;
-  color: rgba(255, 255, 255, 0.86);
-  font-size: clamp(44px, 5vw, 64px);
-  filter: drop-shadow(0 0 22px rgba(255, 255, 255, 0.3));
-  transition: transform 0.4s ease;
-}
-
-.t-card:hover .t-symbol {
-  transform: scale(1.08) rotate(-5deg);
-}
-
-.t-badges {
-  position: absolute;
-  top: 10px;
-  left: 10px;
-  z-index: 1;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
-  max-width: calc(100% - 56px);
-}
-
-.t-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 3px 8px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 999px;
-  background: rgba(8, 10, 16, 0.62);
-  backdrop-filter: blur(6px);
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.03em;
-}
-
-.t-badge::before {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  content: "";
-  background: currentColor;
-}
-
-.t-badge.type-manga { color: #f4f2ff; }
-.t-badge.type-manhwa { color: var(--accent-light); }
-.t-badge.type-manhua { color: var(--yellow); }
-.t-badge.status-ongoing { color: var(--green); }
-.t-badge.status-completed { color: var(--muted); }
-
-.t-fav {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  z-index: 2;
-  display: grid;
-  width: 34px;
-  height: 34px;
-  place-items: center;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  border-radius: 50%;
-  color: #fff;
-  background: rgba(8, 10, 16, 0.5);
-  backdrop-filter: blur(6px);
-  font-size: 15px;
-  transition: color 0.2s ease, background 0.2s ease, transform 0.2s ease;
-}
-
-.t-fav:hover {
-  transform: scale(1.08);
-}
-
-.t-fav[aria-pressed="true"] {
-  color: var(--pink);
-  background: rgba(255, 111, 181, 0.2);
-}
-
-.t-score {
-  position: absolute;
-  right: 10px;
-  bottom: 10px;
-  left: 10px;
-  z-index: 1;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 6px;
-  font-size: 12px;
-  font-weight: 800;
-}
-
-.t-rating {
-  color: var(--yellow);
-}
-
-.t-readers {
-  color: var(--muted);
-  font-weight: 700;
-}
-
-.t-body {
-  display: grid;
-  gap: 5px;
-  padding: 11px 13px 14px;
-}
-
-.t-title {
-  display: -webkit-box;
-  overflow: hidden;
-  font-size: 14px;
-  font-weight: 800;
-  line-height: 1.3;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-}
-
-/* Вся карточка кликабельна: ссылка растягивается на карточку, кнопка избранного лежит поверх */
-.t-title a::after {
-  position: absolute;
-  inset: 0;
-  content: "";
-}
-
-.t-meta {
-  overflow: hidden;
-  color: var(--muted);
-  font-size: 12px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
 
 .t-desc {
   display: -webkit-box;
@@ -305,85 +118,6 @@
   line-height: 1.5;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 3;
-}
-
-.t-progress {
-  height: 4px;
-  margin-top: 4px;
-  overflow: hidden;
-  border-radius: 99px;
-  background: var(--panel-light);
-}
-
-.t-progress span {
-  display: block;
-  height: 100%;
-  border-radius: inherit;
-  background: linear-gradient(90deg, var(--primary), var(--secondary));
-}
-
-/* Широкая карточка: обложка слева, текст справа (Oracle, Nexus, «Продолжить чтение») */
-.t-card.is-wide {
-  display: grid;
-  grid-template-columns: 112px minmax(0, 1fr);
-}
-
-.t-card.is-wide .t-cover {
-  aspect-ratio: auto;
-  min-height: 150px;
-}
-
-/* Кнопка внутри карточки поверх ссылки, растянутой на всю карточку */
-.t-raised {
-  position: relative;
-  z-index: 2;
-}
-
-/* Узкая обложка: значки уходят под кнопку избранного, чтобы она их не закрывала */
-.t-card.is-wide .t-badges {
-  top: 50px;
-  max-width: calc(100% - 20px);
-}
-
-.t-card.is-wide .t-symbol {
-  inset: 0;
-  font-size: 40px;
-}
-
-.t-card.is-wide .t-body {
-  align-content: start;
-  padding: 14px 16px;
-}
-
-.t-card.is-wide .t-title {
-  font-size: 15.5px;
-}
-
-.t-card.is-wide .t-actions {
-  position: relative;
-  z-index: 2;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 6px;
-}
-
-/* Скелет карточки, пока идёт загрузка */
-.t-skeleton {
-  display: grid;
-  gap: 10px;
-}
-
-.t-skeleton .skeleton:first-child {
-  aspect-ratio: 3 / 4;
-}
-
-.t-skeleton .skeleton-line {
-  width: 80%;
-}
-
-.t-skeleton .skeleton-line + .skeleton-line {
-  width: 55%;
 }
 
 /* ==================== ЧИПЫ И ВКЛАДКИ ==================== */
@@ -499,14 +233,6 @@ a.tag:hover {
   color: #fff;
   background: linear-gradient(135deg, rgba(var(--accent-rgb), 0.5), rgba(79, 124, 255, 0.35));
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
-}
-
-.count-pill {
-  margin-left: 6px;
-  padding: 1px 7px;
-  border-radius: 999px;
-  background: var(--panel-light);
-  font-size: 11px;
 }
 
 /* ==================== АВАТАРЫ ==================== */
@@ -644,71 +370,6 @@ a.tag:hover {
   color: var(--green);
 }
 
-/* Подбор тайтла по названию (Nexus, Oracle, обсуждения, турниры) */
-.picker {
-  position: relative;
-}
-
-.picker-list {
-  position: absolute;
-  top: calc(100% + 6px);
-  right: 0;
-  left: 0;
-  z-index: 20;
-  max-height: 300px;
-  overflow-y: auto;
-  border: 1px solid var(--border-strong);
-  border-radius: 14px;
-  background: var(--panel-solid);
-  box-shadow: var(--shadow);
-}
-
-.picker-list button {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  padding: 9px 12px;
-  border: 0;
-  background: none;
-  text-align: left;
-}
-
-.picker-list button:hover,
-.picker-list button.is-active {
-  background: rgba(var(--accent-rgb), 0.16);
-}
-
-.picker-thumb {
-  display: grid;
-  flex: none;
-  width: 32px;
-  height: 42px;
-  place-items: center;
-  border-radius: 7px;
-  background: var(--poster, var(--panel-light));
-  font-size: 15px;
-}
-
-.picker-list small {
-  display: block;
-  color: var(--muted);
-  font-size: 12px;
-}
-
-.picked {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.picked .tag button {
-  padding: 0 2px;
-  border: 0;
-  color: var(--muted);
-  background: none;
-}
-
 /* ==================== ОБЪЯСНЕНИЯ СВЯЗЕЙ ==================== */
 
 .reasons {
@@ -780,10 +441,6 @@ a.tag:hover {
     margin-top: 40px;
   }
 
-  .discover {
-    grid-template-columns: 1fr;
-    padding: 24px;
-  }
 
   .cards {
     grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
