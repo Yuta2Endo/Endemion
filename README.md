@@ -50,6 +50,8 @@ tests/                  юнит- и интеграционные тесты (no
 | [docs/ENDEMION_ACCOUNT_MIGRATION.md](docs/ENDEMION_ACCOUNT_MIGRATION.md) | Перенос пользователей, конфликты, откат |
 | [docs/ENDEMION_DEPLOYMENT.md](docs/ENDEMION_DEPLOYMENT.md) | DNS, секреты, выкладка, Caddy, мониторинг |
 | [docs/ENDEMION_SECURITY.md](docs/ENDEMION_SECURITY.md) | Меры защиты, тесты, известные ограничения |
+| [docs/SITE_IMPROVEMENT_PLAN.md](docs/SITE_IMPROVEMENT_PLAN.md) | План развития сайта и статус пунктов |
+| [docs/CONTENT_PLAN.md](docs/CONTENT_PLAN.md) | Что и как публиковать: ритм, темы, шаблоны |
 
 ## Роли
 
