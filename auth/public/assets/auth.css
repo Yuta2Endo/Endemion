@@ -809,6 +809,21 @@ h2,
     backdrop-filter: none;
   }
 
+  /* На телефоне важнее сама форма: от рассказа оставляем заголовок и одну фразу */
+  .id-intro {
+    gap: 0;
+  }
+
+  .id-intro .id-benefits,
+  .id-trust,
+  .id-intro::after {
+    display: none;
+  }
+
+  .id-intro h1 {
+    font-size: clamp(24px, 7vw, 30px);
+  }
+
   .session-row,
   .method-row {
     flex-direction: column;
