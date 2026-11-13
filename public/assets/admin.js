@@ -463,9 +463,14 @@ function renderAccounts() {
 async function loadAccounts() {
   const id = ++accountsRequest;
   setMessage(accountsMessage, "");
+  accountsMessage.classList.remove("is-muted");
   const result = await api(accountsUrl(0));
   if (id !== accountsRequest) return;
-  if (!result.ok) return setMessage(accountsMessage, result.data?.error || "Не удалось загрузить аккаунты.");
+  if (!result.ok) {
+    // 503 — не сбой, а незаданные ключи Endemion ID: спокойная подсказка вместо красной ошибки
+    accountsMessage.classList.toggle("is-muted", result.status === 503);
+    return setMessage(accountsMessage, result.data?.error || "Не удалось загрузить аккаунты.");
+  }
   accountItems = result.data.accounts;
   accountsTotal = result.data.total;
   renderAccounts();

@@ -473,10 +473,10 @@ export async function loadSiteSettings(note = null) {
   const published = catalog.filter((game) => game.published);
   form.append(
     field("Главная игра на главной странице", select("featuredGame", [["", "Не показывать"], ...published.map((game) => [game.slug, game.title])], settings.featuredGame), { wide: true }),
-    field("Текст о студии", textarea("aboutText", settings.aboutText, 5000, 5), { wide: true, hint: "Пусто — блок не показывается." })
+    field("Текст о студии", textarea("aboutText", settings.aboutText, 5000, 4), { wide: true, hint: "Пусто — блок не показывается." })
   );
 
-  const links = el("fieldset", "admin-fieldset admin-wide");
+  const links = el("fieldset", "admin-fieldset admin-fieldset-flat admin-wide");
   const rows = el("div", "admin-social-rows");
   const addRow = (item = { label: "", url: "" }) => {
     const row = el("div", "admin-social-row");

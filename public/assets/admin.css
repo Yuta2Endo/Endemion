@@ -66,6 +66,9 @@
   padding: 10px 12px;
   border-radius: 12px;
   color: var(--muted);
+  /* Пункты меню должны оставаться в одну строку: колонка узкая, а шрифт широкий */
+  font-size: 13.5px;
+  white-space: nowrap;
 }
 
 .admin-menu a:hover {
@@ -738,10 +741,28 @@ a.secondary-button[hidden] {
   font-weight: 800;
 }
 
+/* Блок внутри уже готовой панели: своя рамка давала «панель в панели» */
+.admin-fieldset-flat {
+  padding: 14px 0 0;
+  border: 0;
+  border-top: 1px solid var(--border);
+  border-radius: 0;
+}
+
+.admin-fieldset-flat legend {
+  padding-right: 0;
+  padding-left: 0;
+}
+
 .admin-hint {
   color: var(--muted);
   font-size: 12px;
   line-height: 1.5;
+}
+
+/* Сообщение о ненастроенной интеграции — это не ошибка ввода, поэтому без красного */
+.admin-panel .form-message.is-muted {
+  color: var(--muted);
 }
 
 .admin-tag-picker {
