@@ -27,7 +27,8 @@
 /* Меню разделов слева, раздел справа */
 .admin-layout {
   display: grid;
-  grid-template-columns: 200px minmax(0, 1fr);
+  /* 240px: в узкой колонке заголовок «Админка» рвался посередине слова */
+  grid-template-columns: 240px minmax(0, 1fr);
   gap: 22px;
   align-items: start;
 }
@@ -52,7 +53,9 @@
 
 .admin-menu h1 {
   margin: 0 0 10px 10px;
-  font-size: 20px;
+  font-size: 18px;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
 }
 
 .admin-menu a {
@@ -95,7 +98,8 @@
 
 .admin-stats {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  /* Ровно четыре колонки: иначе шесть карточек сводки делятся как 4 + 2 и ряд выглядит обрезанным */
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
   margin-bottom: 24px;
 }
@@ -172,11 +176,19 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 8px 14px;
-  align-items: center;
+  align-items: start;
   padding: 12px 14px;
   border: 1px solid var(--border);
   border-radius: 14px;
   background: var(--panel-soft);
+}
+
+/* Действия не должны растягивать строку: длинный ряд кнопок переносится по 2–3 в строку */
+.admin-user .admin-chapter-actions {
+  max-width: 400px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
 }
 
 .admin-user.is-blocked {
@@ -861,6 +873,10 @@ a.secondary-button[hidden] {
   .admin-title-list {
     max-height: 240px;
   }
+
+  .admin-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 /* Меню разделов — строка кнопок над разделом */
@@ -882,6 +898,10 @@ a.secondary-button[hidden] {
 }
 
 @media (max-width: 600px) {
+  .admin-stats {
+    grid-template-columns: 1fr;
+  }
+
   .admin-panel {
     padding: 18px;
   }
