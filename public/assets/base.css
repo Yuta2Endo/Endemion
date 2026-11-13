@@ -876,25 +876,35 @@ img {
     bottom: 16px;
     left: auto;
     display: grid;
-    width: min(560px, calc(100% - 32px));
+    width: min(520px, calc(100% - 32px));
     max-height: none;
     align-items: center;
-    gap: 6px 20px;
-    padding: 14px 18px;
+    gap: 2px 16px;
+    padding: 13px 16px;
     border-radius: 14px;
     grid-template-columns: minmax(0, 1fr) auto;
     grid-template-areas:
       "title actions"
-      "text actions";
+      "text actions"
+      "more actions";
   }
 
   .consent-banner > strong {
     grid-area: title;
   }
 
+  /* На десктопе одна строка текста: плашка не должна накрывать кнопки на первом экране */
   .consent-banner > .consent-text {
+    display: -webkit-box;
+    overflow: hidden;
     grid-area: text;
     margin-bottom: 0;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 1;
+  }
+
+  .consent-banner > .consent-more {
+    display: none;
   }
 
   .consent-banner .consent-actions {
@@ -904,7 +914,9 @@ img {
 
   .consent-banner .consent-actions button {
     flex: 0 0 auto;
-    min-width: 120px;
+    min-width: 104px;
+    padding: 8px 12px;
+    font-size: 13px;
   }
 }
 
