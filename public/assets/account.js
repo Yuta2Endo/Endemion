@@ -20,6 +20,65 @@ function T(key) {
 
 // ==================== РЕНДЕР: ОБЗОР ====================
 
+/**
+ * Чек-лист первого входа: показываем, пока не сделаны все шаги и пользователь не скрыл его.
+ * Шаги считает сервер по фактическим данным, поэтому подсказка не врёт и не копится в базе.
+ */
+async function renderOnboarding() {
+  const card = $("#accountOnboarding");
+  if (!card) return;
+
+  const result = await api("/api/me/onboarding");
+  if (!result.ok || !result.data) return;
+  if (result.data.hidden || result.data.done >= result.data.total) {
+    card.hidden = true;
+    return;
+  }
+
+  const links = {
+    avatar: { text: T("accountOnboardingStepAvatar"), onClick: () => openTab("settings") },
+    bio: { text: T("accountOnboardingStepBio"), onClick: () => openTab("settings") },
+    game: { text: T("accountOnboardingStepGame"), href: "/games" },
+    topic: { text: T("accountOnboardingStepTopic"), href: "/community" }
+  };
+
+  $("#onboardingProgress").textContent = T("accountOnboardingProgress")
+    .replace("{done}", String(result.data.done))
+    .replace("{total}", String(result.data.total));
+
+  const list = $("#onboardingSteps");
+  list.replaceChildren(
+    ...result.data.steps.map((step) => {
+      const item = el("li", step.done ? "onboarding-step is-done" : "onboarding-step");
+      item.append(el("span", "onboarding-check", step.done ? "✓" : ""));
+      const label = el("span", "onboarding-label", links[step.key]?.text || step.key);
+      item.append(label);
+      if (!step.done && links[step.key]) {
+        const action = links[step.key].href ? el("a", "onboarding-link", T("accountOnboardingGo")) : el("button", "onboarding-link", T("accountOnboardingGo"));
+        if (links[step.key].href) action.href = links[step.key].href;
+        else {
+          action.type = "button";
+          action.addEventListener("click", links[step.key].onClick);
+        }
+        item.append(action);
+      }
+      return item;
+    })
+  );
+
+  const hide = $("#onboardingHide");
+  hide.replaceWith(hide.cloneNode(true));
+  $("#onboardingHide").addEventListener("click", async () => {
+    const saved = await api("/api/me/onboarding", { method: "PATCH", body: { hidden: true } });
+    if (saved.ok) {
+      card.hidden = true;
+      toast(T("accountOnboardingHidden"));
+    }
+  });
+
+  card.hidden = false;
+}
+
 function renderOverview() {
   if (!me || !profile) return;
 
@@ -339,6 +398,7 @@ async function init() {
 
   renderOverview();
   await renderSettings();
+  await renderOnboarding();
 
   // Переключатель языка: перезагружает страницу, сервер отдаст нужный язык
   const langToggle = document.querySelector("[data-lang-toggle]");

@@ -737,3 +737,108 @@
     font-size: 24px;
   }
 }
+
+/* Чек-лист первого входа: виден, пока шаги не сделаны или пользователь его не скрыл */
+.onboarding-card {
+  margin-bottom: 24px;
+  gap: 16px;
+  background:
+    linear-gradient(135deg, rgba(139, 92, 246, 0.14), rgba(99, 102, 241, 0.05)),
+    var(--panel);
+}
+
+.onboarding-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.onboarding-head h2 {
+  margin-bottom: 4px;
+}
+
+.onboarding-lead {
+  margin: 0;
+  font-size: 14px;
+}
+
+.onboarding-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.onboarding-progress {
+  font-size: 13px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.onboarding-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.onboarding-step {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  font-size: 14px;
+}
+
+.onboarding-check {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1px solid var(--border-strong);
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  flex: none;
+}
+
+.onboarding-step.is-done .onboarding-check {
+  background: var(--primary);
+  border-color: transparent;
+  color: #fff;
+}
+
+.onboarding-step.is-done .onboarding-label {
+  color: var(--muted);
+  text-decoration: line-through;
+  text-decoration-color: rgba(148, 163, 184, 0.5);
+}
+
+.onboarding-label {
+  flex: 1;
+}
+
+.onboarding-link {
+  background: none;
+  border: none;
+  color: var(--accent-light);
+  font: inherit;
+  cursor: pointer;
+  padding: 4px 6px;
+  text-decoration: underline;
+}
+
+.onboarding-link:hover,
+.onboarding-link:focus-visible {
+  color: var(--text);
+}
+
+@media (max-width: 640px) {
+  .onboarding-head {
+    flex-direction: column;
+  }
+}

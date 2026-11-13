@@ -266,6 +266,20 @@ export const account = {
       </nav>
 
       <section data-panel="overview">
+        <section class="account-card onboarding-card" id="accountOnboarding" aria-labelledby="onboardingTitle" hidden>
+          <div class="onboarding-head">
+            <div>
+              <h2 id="onboardingTitle">${s.accountOnboardingTitle}</h2>
+              <p class="onboarding-lead muted">${s.accountOnboardingLead}</p>
+            </div>
+            <div class="onboarding-actions">
+              <span class="onboarding-progress" id="onboardingProgress"></span>
+              <button class="ghost-btn small-btn" id="onboardingHide" type="button">${s.accountOnboardingHide}</button>
+            </div>
+          </div>
+          <ul class="onboarding-list" id="onboardingSteps"></ul>
+        </section>
+
         <div class="account-grid">
           <div class="account-col account-col-wide">
             <section class="account-card" aria-labelledby="overviewPlayerTitle">

@@ -412,3 +412,30 @@ test("выход из системы работает", async ({ page, context }
   await page.waitForURL(/\/$/);
   expect(new URL(page.url()).pathname).toBe("/");
 });
+
+test("новичок видит чек-лист первого входа и может его скрыть", async ({ page, context }, testInfo) => {
+  // Свежий аккаунт: у общего админа подсказки уже пройдены и карточка не показывается
+  const client = apiClient("", clientIpFor(testInfo.project.name));
+  await client.call("POST", "/api/auth/register", {
+    name: "Новичок",
+    email: `e2e-onboarding-${uniqueSuffix()}@example.com`,
+    password: "correct-horse-1",
+    consent: true
+  });
+  const [name, value] = client.cookie.split("=");
+  await context.addCookies([{ name, value, url: BASE }]);
+
+  await page.goto("/account");
+  const card = page.locator("#accountOnboarding");
+  await expect(card).toBeVisible();
+  await expect(page.locator(".onboarding-step")).toHaveCount(4);
+  await expect(page.locator("#onboardingProgress")).toContainText("из 4");
+
+  await page.locator("#onboardingHide").click();
+  await expect(card).toBeHidden();
+
+  // Скрытие сохраняется: после перезагрузки подсказок нет
+  await page.reload();
+  await expect(page.locator("#account")).toBeVisible();
+  await expect(page.locator("#accountOnboarding")).toBeHidden();
+});

@@ -11,6 +11,7 @@ import * as endemionId from "../functions/api/auth/oidc.js";
 import * as me from "../functions/api/me/index.js";
 import * as mePassword from "../functions/api/me/password.js";
 import * as meSessions from "../functions/api/me/sessions.js";
+import * as meOnboarding from "../functions/api/me/onboarding.js";
 import * as config from "../functions/api/config.js";
 import * as adminComplaints from "../functions/api/admin/complaints/index.js";
 import * as adminComplaint from "../functions/api/admin/complaints/[id].js";
@@ -57,6 +58,7 @@ const ROUTE_LIST = [
   ["/api/me", me],
   ["/api/me/password", mePassword],
   ["/api/me/sessions", meSessions],
+  ["/api/me/onboarding", meOnboarding],
   ["/api/config", config],
   ["/api/robokassa/result", robokassaResult],
   ["/api/robokassa/create", robokassaCreate],

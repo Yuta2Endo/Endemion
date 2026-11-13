@@ -638,3 +638,32 @@ test("отзывы: функционал избранного остаётся �
   assert.equal(rList.data.games.length, 1);
   assert.equal(rList.data.games[0].id, game.id);
 });
+
+test("онбординг: шаги считаются по данным, подсказки скрываются", async () => {
+  assert.equal((await app.client().call("GET", "/api/me/onboarding")).status, 401);
+
+  const owner = await app.user("Новичок без подсказок");
+  const first = await owner.call("GET", "/api/me/onboarding");
+  assert.equal(first.status, 200);
+  assert.equal(first.data.total, 4);
+  assert.equal(first.data.hidden, false);
+  assert.deepEqual(Object.fromEntries(first.data.steps.map((step) => [step.key, step.done])), {
+    avatar: false, bio: false, game: false, topic: false
+  });
+
+  // Описание профиля закрывает шаг «о себе», избранная игра — шаг «игра»
+  assert.equal((await owner.call("PATCH", "/api/me/profile", { bio: "Пишу небольшие игры." })).status, 200);
+  const game = await app.db.prepare("SELECT id FROM games WHERE published = 1 ORDER BY id LIMIT 1").first();
+  const username = (await app.db.prepare("SELECT username FROM user_profiles WHERE user_id = ?").bind(owner.id).first()).username;
+  assert.equal((await owner.call("POST", `/api/users/${username}/library/add`, { game_id: game.id })).status, 200);
+
+  const after = await owner.call("GET", "/api/me/onboarding");
+  const done = Object.fromEntries(after.data.steps.map((step) => [step.key, step.done]));
+  assert.equal(done.bio, true);
+  assert.equal(done.game, true);
+  assert.equal(after.data.done, 2);
+
+  // Скрытие запоминается в профиле и переживает следующий запрос
+  assert.equal((await owner.call("PATCH", "/api/me/onboarding", { hidden: true })).status, 200);
+  assert.equal((await owner.call("GET", "/api/me/onboarding")).data.hidden, true);
+});
