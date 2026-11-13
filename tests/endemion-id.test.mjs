@@ -7,11 +7,21 @@ import { createHash, randomBytes } from "node:crypto";
 import worker from "../src/worker.js";
 import { BASE, createApp } from "./helpers/app.mjs";
 import { startAuth, browser, interactionUid } from "../auth/tests/helpers.mjs";
+import { issueAssertionForRequest } from "../functions/_lib/lifeAssertion.js";
 
 const CLIENT = { id: "endemion-web", secret: "site-test-secret-0123456789-0123456789" };
 
 let auth;
 let site;
+
+/**
+ * Код ошибки из assert.rejects: аргумент приходит как unknown.
+ * @param {unknown} error
+ * @returns {string | undefined}
+ */
+function errorCode(error) {
+  return /** @type {{ code?: string }} */ (error).code;
+}
 
 before(async () => {
   auth = await startAuth({
@@ -203,6 +213,38 @@ test("выход на сайте ведёт на выход в Endemion ID", asy
   assert.equal(redirect.searchParams.get("post_logout_redirect_uri"), `${BASE}/`);
   assert.ok(!cookies.has("endemion_session"));
   assert.equal((await siteRequest(cookies, "/api/me")).data.user, null);
+});
+
+test("отзыв сессии в Endemion ID не даёт выпустить новое утверждение для Life", async () => {
+  const pair = await crypto.subtle.generateKey({ name: "ECDSA", namedCurve: "P-256" }, true, ["sign", "verify"]);
+  const privateKey = Buffer.from(await crypto.subtle.exportKey("pkcs8", pair.privateKey)).toString("base64");
+  const env = {
+    ...site.env,
+    ENDEMION_LIFE_ASSERTION: "1",
+    ENDEMION_LIFE_JWT_KID: "portal-test-1",
+    ENDEMION_LIFE_JWT_PRIVATE_KEY: privateKey,
+    ENDEMION_LIFE_JWT_PREVIOUS_PUBLIC_JWKS: "[]"
+  };
+
+  const user = browser(auth.issuer);
+  const cookies = new Map();
+  await signIn(user, cookies, { login: "renamed_reader", password: "correct-horse-1" });
+  const request = () => new Request(new URL("/account", BASE), {
+    headers: { Cookie: `endemion_session=${cookies.get("endemion_session")}` }
+  });
+
+  const before = await issueAssertionForRequest(env, request());
+  assert.equal(typeof before.token, "string");
+
+  // Отзыв на стороне Endemion ID обнаруживается при следующей сверке сессии
+  auth.revokeAll(auth.accounts.findByEmail("new@example.com").sub);
+  await forceRefresh();
+  await assert.rejects(() => issueAssertionForRequest(env, request()), (error) => errorCode(error) === "UNAUTHENTICATED");
+
+  const left = await site.db.prepare("SELECT COUNT(*) AS n FROM sessions WHERE token_hash = ?")
+    .bind(createHash("sha256").update(cookies.get("endemion_session")).digest("hex"))
+    .first();
+  assert.equal(left.n, 0, "сессия портала удалена после отзыва");
 });
 
 test("опасные действия требуют свежего входа в Endemion ID", async () => {

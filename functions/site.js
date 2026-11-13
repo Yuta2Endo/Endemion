@@ -5,7 +5,7 @@
 import { escapeHtml as e } from "./_lib/html.js";
 import { renderPage } from "./_lib/layout.js";
 import { categoryIndex, listCategories } from "./_lib/studio.js";
-import { langOf } from "./_lib/i18n.js";
+import { langOf, t } from "./_lib/i18n.js";
 
 /** GET /community — категории форума, лента обсуждений и теорий, поиск участников */
 export const community = {
@@ -191,6 +191,235 @@ export const profile = {
     </div>
     <div class="container page" id="profileLoading"><div class="state"><span class="spinner"></span>Загружаем профиль…</div></div>`;
     return renderPage(request, { title: "Мой профиль", body, scripts: ["profile.js"], noindex: true });
+  }
+};
+
+/** GET /account — панель аккаунта: обзор, статистика, достижения, настройки, безопасность */
+export const account = {
+  async onRequestGet({ request }) {
+    const lang = langOf(request);
+    const s = t(lang);
+    const body = `
+    <div class="container page" id="account" hidden>
+      <div class="account-head">
+        <div class="account-brand">
+          <span class="account-mark">E</span>
+          <div>
+            <div class="account-eyebrow">${s.accountEyebrow}</div>
+            <h1 id="accountTitle"></h1>
+          </div>
+        </div>
+        <div class="account-actions">
+          <a class="ghost-btn" id="accountLifeLink" href="https://life.endemion.online" target="_blank" rel="noopener">${s.accountPlayLife}</a>
+          <button class="ghost-btn" id="accountLogout" type="button">${s.accountLogout}</button>
+        </div>
+      </div>
+
+      <nav class="account-nav" aria-label="${s.accountSecuritySessions}">
+        <button type="button" role="tab" data-tab="overview" aria-selected="true">${s.accountNavOverview}</button>
+        <button type="button" role="tab" data-tab="characters" aria-selected="false">${s.accountNavCharacters}</button>
+        <button type="button" role="tab" data-tab="achievements" aria-selected="false">${s.accountNavAchievements}</button>
+        <button type="button" role="tab" data-tab="family" aria-selected="false">${s.accountNavFamily}</button>
+        <button type="button" role="tab" data-tab="settings" aria-selected="false">${s.accountNavSettings}</button>
+        <button type="button" role="tab" data-tab="security" aria-selected="false">${s.accountNavSecurity}</button>
+      </nav>
+
+      <section data-panel="overview">
+        <div class="account-grid">
+          <div class="account-col account-col-wide">
+            <section class="account-card" aria-labelledby="overviewPlayerTitle">
+              <h2 id="overviewPlayerTitle">${s.accountPlayer}</h2>
+              <div class="player-overview">
+                <div id="playerAvatar"></div>
+                <div class="player-info">
+                  <h3 id="playerName"></h3>
+                  <p class="player-id" id="playerId"></p>
+                  <p class="player-meta" id="playerSince"></p>
+                  <p class="player-meta" id="playerStatus"></p>
+                  <p class="player-meta muted" id="playerProvider"></p>
+                </div>
+                <div class="player-actions">
+                  <button class="ghost-btn" id="playerEdit" type="button">${s.accountEditProfile}</button>
+                </div>
+              </div>
+            </section>
+
+            <section class="account-card" aria-labelledby="overviewStatsTitle">
+              <h2 id="overviewStatsTitle">${s.accountStats}</h2>
+              <div class="stat-grid" id="accountStats"></div>
+              <div class="account-empty" id="accountStatsEmpty" hidden>
+                <span class="empty-icon">✦</span>
+                <strong>${s.accountStatsEmptyTitle}</strong>
+                <p>${s.accountStatsEmptyText}</p>
+              </div>
+            </section>
+          </div>
+
+          <div class="account-col account-col-narrow">
+            <section class="account-card" aria-labelledby="overviewSavesTitle">
+              <h2 id="overviewSavesTitle">${s.accountSaves}</h2>
+              <div class="saves-status" id="accountSaves">
+                <div class="save-item">
+                  <span class="save-dot"></span>
+                  <span class="save-text">${s.accountSaveSync}</span>
+                </div>
+                <p class="save-hint" id="saveHint">${s.accountSaveSyncPending}</p>
+              </div>
+              <a class="ghost-btn save-link" id="saveOpenLife" href="https://life.endemion.online" target="_blank" rel="noopener">${s.accountSaveOpenLife}</a>
+            </section>
+          </div>
+        </div>
+      </section>
+
+      <section data-panel="characters" hidden>
+        <div class="account-section">
+          <div class="section-head">
+            <h2>${s.accountCharacters}</h2>
+            <p class="section-text">${s.accountCharactersDesc}</p>
+          </div>
+          <div class="account-empty">
+            <span class="empty-icon">🎭</span>
+            <strong>${s.accountCharactersEmptyTitle}</strong>
+            <p>${s.accountCharactersEmptyText}</p>
+            <a class="ghost-btn" href="https://life.endemion.online" target="_blank" rel="noopener">${s.accountPlayLife}</a>
+          </div>
+        </div>
+      </section>
+
+      <section data-panel="achievements" hidden>
+        <div class="account-section">
+          <div class="section-head">
+            <h2>${s.accountAchievements}</h2>
+            <p class="section-text">${s.accountAchievementsDesc}</p>
+          </div>
+          <div class="achievements-grid" id="accountAchievements"></div>
+        </div>
+      </section>
+
+      <section data-panel="family" hidden>
+        <div class="account-section">
+          <div class="section-head">
+            <h2>${s.accountFamily}</h2>
+            <p class="section-text">${s.accountFamilyDesc}</p>
+          </div>
+          <div class="account-empty">
+            <span class="empty-icon">🌳</span>
+            <strong>${s.accountFamilyEmptyTitle}</strong>
+            <p>${s.accountFamilyEmptyText}</p>
+          </div>
+        </div>
+      </section>
+
+      <section data-panel="settings" hidden>
+        <div class="account-section">
+          <div class="section-head">
+            <h2>${s.accountSettings}</h2>
+            <p class="section-text">${s.accountSettingsDesc}</p>
+          </div>
+          <div class="settings-grid">
+            <div class="settings-col">
+              <form class="account-card settings-form" id="accountProfileForm" novalidate>
+                <h3>${s.accountSettingsProfile}</h3>
+                <div class="form-row">
+                  <label for="accountName">${s.accountSettingsName}</label>
+                  <input class="input" id="accountName" type="text" autocomplete="name" minlength="2" maxlength="40" required>
+                  <span id="accountNameHint" class="form-hint"></span>
+                </div>
+                <div class="form-row">
+                  <label for="accountBio">${s.accountSettingsBio}</label>
+                  <textarea class="textarea" id="accountBio" maxlength="500" rows="4"></textarea>
+                </div>
+                <div class="form-row">
+                  <span class="form-label">${s.accountSettingsAvatarColor}</span>
+                  <div class="color-options" id="accountColorOptions"></div>
+                </div>
+                <div class="form-row">
+                  <span class="form-label">${s.accountSettingsAvatar}</span>
+                  <div class="avatar-upload">
+                    <label class="ghost-btn">${s.accountSettingsAvatarUpload}<input class="visually-hidden" id="accountAvatarInput" type="file" accept="image/jpeg,image/png,image/webp,image/avif"></label>
+                    <button class="ghost-btn" id="accountAvatarRemove" type="button" hidden>${s.accountSettingsAvatarRemove}</button>
+                  </div>
+                  <small class="form-hint">${s.accountSettingsAvatarHint}</small>
+                </div>
+                <button class="primary-btn" type="submit">${s.accountSettingsSaveProfile}</button>
+                <p class="form-message" id="accountProfileMessage" role="status"></p>
+              </form>
+            </div>
+
+            <div class="settings-col">
+              <form class="account-card settings-form" id="accountPrivacyForm" novalidate>
+                <h3>${s.accountSettingsPrivacy}</h3>
+                <label class="check"><input type="checkbox" name="isPublic"> ${s.accountSettingsPrivacyPublic}</label>
+                <label class="check"><input type="checkbox" name="showActivity"> ${s.accountSettingsPrivacyActivity}</label>
+                <button class="ghost-btn" type="submit">${s.accountSettingsSavePrivacy}</button>
+                <p class="form-message" id="accountPrivacyMessage" role="status"></p>
+              </form>
+
+              <form class="account-card settings-form" id="accountNotifyForm" novalidate>
+                <h3>${s.accountSettingsNotifications}</h3>
+                <label class="check"><input type="checkbox" name="replies"> ${s.accountSettingsNotifyReplies}</label>
+                <label class="check"><input type="checkbox" name="follows"> ${s.accountSettingsNotifyFollows}</label>
+                <label class="check"><input type="checkbox" name="achievements"> ${s.accountSettingsNotifyAchievements}</label>
+                <button class="ghost-btn" type="submit">${s.accountSettingsSaveNotifications}</button>
+                <p class="form-message" id="accountNotifyMessage" role="status"></p>
+              </form>
+
+              <section id="accountEndemionIdSettings" class="account-card settings-form" hidden>
+                <h3>${s.accountSettingsEndemionId}</h3>
+                <p class="muted small">${s.accountSettingsEndemionIdText}</p>
+                <div class="section-actions">
+                  <a class="primary-btn" id="accountEndemionIdLink" href="#">${s.accountSettingsOpenEndemionId}</a>
+                </div>
+              </section>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section data-panel="security" hidden>
+        <div class="account-section">
+          <div class="section-head">
+            <h2>${s.accountSecurity}</h2>
+            <p class="section-text">${s.accountSecurityDesc}</p>
+          </div>
+          <div class="security-grid">
+            <div class="security-col">
+              <section class="account-card" aria-labelledby="securityProviderTitle">
+                <h3 id="securityProviderTitle">${s.accountSecurityProvider}</h3>
+                <div class="security-item">
+                  <span class="security-label">${s.accountSecurityAccountType}</span>
+                  <span id="securityAuthType"></span>
+                </div>
+                <div class="security-item">
+                  <span class="security-label">${s.accountSecurityEmail}</span>
+                  <span id="securityEmail"></span>
+                </div>
+                <div class="security-item">
+                  <span class="security-label">${s.accountSecurityRegistered}</span>
+                  <span id="securityCreated"></span>
+                </div>
+                <div class="security-item">
+                  <span class="security-label">${s.accountSecurityLastAuth}</span>
+                  <span id="securityLastAuth"></span>
+                </div>
+              </section>
+            </div>
+
+            <div class="security-col">
+              <section class="account-card" aria-labelledby="securitySessionsTitle">
+                <h3 id="securitySessionsTitle">${s.accountSecuritySessions}</h3>
+                <div class="sessions-list" id="securitySessions">
+                  <div class="skeleton skeleton-row" style="height:70px"></div>
+                </div>
+                <p class="muted small" id="securitySessionsHint"></p>
+              </section>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+    `;
+    return renderPage(request, { title: s.accountTitle, body, scripts: ["account.js"], noindex: true });
   }
 };
 
