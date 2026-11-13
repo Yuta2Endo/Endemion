@@ -715,6 +715,53 @@ img {
   pointer-events: none;
 }
 
+/* ==================== ТЕКСТОВЫЕ ДОКУМЕНТЫ ==================== */
+
+/* Оглавление собирает скрипт doc.js из заголовков статьи */
+.doc-toc {
+  max-width: 900px;
+  margin: 0 auto 18px;
+  padding: 18px 22px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--panel-soft);
+}
+
+.doc-toc-title {
+  margin: 0 0 10px;
+  color: var(--faint);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.doc-toc ol {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding-left: 18px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.doc-toc a {
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.doc-toc a:hover,
+.doc-toc a:focus-visible {
+  color: var(--text);
+  text-decoration: underline;
+}
+
+.doc-updated {
+  margin-bottom: 20px;
+  color: var(--faint);
+  font-size: 13px;
+}
+
 /* Подвал: о студии и три колонки ссылок. На планшете — две колонки, на телефоне — одна */
 .footer-grid {
   display: grid;

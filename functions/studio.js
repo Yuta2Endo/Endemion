@@ -12,6 +12,12 @@ import {
 } from "./_lib/studio.js";
 import { cleanLine } from "./_lib/validate.js";
 import { langOf, t } from "./_lib/i18n.js";
+import { LEGAL_UPDATED } from "./_lib/legal/index.js";
+
+/** Дата документа в человеческом виде: 2026-11-06 → «6 ноября 2026 года» */
+function formatLegalDate(iso) {
+  return new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "long", year: "numeric" }).format(new Date(`${iso}T00:00:00Z`));
+}
 import { hasRole } from "./_lib/roles.js";
 import { currentUser } from "./_lib/session.js";
 
@@ -818,7 +824,9 @@ export const termsPage = {
   async onRequestGet({ request }) {
     const body = `
     <article class="container page post-page">
+      <nav class="breadcrumbs" aria-label="Хлебные крошки"><a href="/">Главная</a><span aria-hidden="true">/</span><span>Условия использования</span></nav>
       <h1 class="display-2">Условия использования</h1>
+      <p class="doc-updated">Последнее обновление: <time datetime="${LEGAL_UPDATED}">${formatLegalDate(LEGAL_UPDATED)}</time></p>
       <div class="rich-text">
         <p>Эти условия действуют для сайта endemion.online, форума Endemion Community и аккаунта Endemion ID. Пользуясь сайтом, вы соглашаетесь с ними.</p>
         <h3>Аккаунт</h3>
@@ -836,7 +844,7 @@ export const termsPage = {
         <p>Как сайт обрабатывает данные, описано в <a href="/privacy">политике конфиденциальности</a>.</p>
       </div>
     </article>`;
-    return renderPage(request, { title: "Условия использования", path: "/terms", active: null, body, styles: STYLES, scripts: SCRIPTS,
+    return renderPage(request, { title: "Условия использования", path: "/terms", active: null, body, styles: STYLES, scripts: [...SCRIPTS, "doc.js"],
       description: "Условия использования сайта Endemion и форума Endemion Community." });
   }
 };

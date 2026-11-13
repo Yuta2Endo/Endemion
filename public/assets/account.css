@@ -585,8 +585,17 @@
 /* ==================== ДОКУМЕНТЫ ==================== */
 
 .doc {
+  max-width: 900px;
+  margin-inline: auto;
   padding: 40px;
   line-height: 1.75;
+}
+
+/* Якоря не должны прятаться под липкой шапкой */
+.doc h2,
+.doc h3,
+.rich-text h3 {
+  scroll-margin-top: calc(var(--header-height) + 20px);
 }
 
 .doc h1 {
