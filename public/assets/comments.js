@@ -2,7 +2,7 @@
 // Используется в темах форума: mountComments(контейнер, { targetType: "thread", targetId })
 
 import {
-  announceAchievements, api, askLogin, avatar, button, el, errorBox, getMe, lineSkeletons, link, reportContent,
+  announceAchievements, api, askLogin, avatar, button, el, errorBox, getMe, goal, lineSkeletons, link, reportContent,
   spoilerText, stateBox, timeAgo, toast, userLink
 } from "./app.js";
 
@@ -53,6 +53,7 @@ function commentForm({ targetType, targetId, parentId = null, placeholder, onSen
     area.value = "";
     spoilerBox.checked = false;
     message.textContent = "";
+    goal("comment");
     announceAchievements(result.data.achievements);
     onSent(result.data.comment);
   });

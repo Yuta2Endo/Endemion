@@ -2,7 +2,7 @@
 // Вкладка выбирается адресом: /community#theories, /community#readers
 
 import {
-  announceAchievements, api, avatar, button, checkbox, el, errorBox, field, formValue, initHeader, input, lineSkeletons,
+  announceAchievements, api, avatar, button, checkbox, el, errorBox, field, formValue, goal, initHeader, input, lineSkeletons,
   link, loginUrl, openDialog, stateBox, textarea, timeAgo, userLink
 } from "./app.js";
 
@@ -115,6 +115,7 @@ async function newThread(kind = "discussion") {
         }
       });
       if (!result.ok) return result.data?.error || "Не удалось опубликовать.";
+      goal("thread_create");
       announceAchievements(result.data.achievements);
       location.href = `/community/thread/${result.data.thread.id}`;
       return null;

@@ -53,6 +53,7 @@ tests/                  юнит- и интеграционные тесты (no
 | [docs/SITE_IMPROVEMENT_PLAN.md](docs/SITE_IMPROVEMENT_PLAN.md) | План развития сайта и статус пунктов |
 | [docs/CONTENT_PLAN.md](docs/CONTENT_PLAN.md) | Что и как публиковать: ритм, темы, шаблоны |
 | [docs/MONITORING.md](docs/MONITORING.md) | Монитор доступности, алерты в Telegram, секреты |
+| [docs/ANALYTICS.md](docs/ANALYTICS.md) | Цели Метрики: имена событий и как их включить |
 
 ## Роли
 

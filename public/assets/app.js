@@ -70,11 +70,27 @@ function loadMetrika(id) {
     (window.ym.a = window.ym.a || []).push(arguments);
   };
   window.ym.l = Date.now();
+  window.__ymId = Number(id);
   const script = document.createElement("script");
   script.async = true;
   script.src = "https://mc.yandex.ru/metrika/tag.js";
   document.head.append(script);
-  window.ym(Number(id), "init", { clickmap: true, trackLinks: true, accurateTrackBounce: true, webvisor: false });
+  window.ym(window.__ymId, "init", { clickmap: true, trackLinks: true, accurateTrackBounce: true, webvisor: false });
+}
+
+/**
+ * Цель Метрики. Счётчик загружается только после согласия на cookie, поэтому без него вызов ничего не делает.
+ * Имена целей и что они значат — в docs/ANALYTICS.md
+ * @param {string} name
+ * @param {Record<string, unknown>} [params]
+ */
+export function goal(name, params = {}) {
+  if (typeof window.ym !== "function" || !window.__ymId) return;
+  try {
+    window.ym(window.__ymId, "reachGoal", name, params);
+  } catch {
+    // Метрика не должна ломать действие пользователя
+  }
 }
 
 /** Cookie Яндекса (Метрика и реклама): _ym* и yandex*. Удаляются, если посетитель передумал */

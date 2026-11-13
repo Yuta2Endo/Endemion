@@ -1,7 +1,7 @@
 // Категория форума /community/c/:slug: кнопка «Новая тема» и форма. Список тем, поиск и страницы рисует сервер.
 // В категорию «только для команды» пишут модераторы и админы — это проверяет и сервер
 
-import { announceAchievements, api, button, checkbox, field, formValue, initHeader, input, loginUrl, openDialog, textarea } from "./app.js";
+import { announceAchievements, api, button, checkbox, field, formValue, goal, initHeader, input, loginUrl, openDialog, textarea } from "./app.js";
 
 const main = document.querySelector("main");
 const slug = main.dataset.category;
@@ -25,6 +25,7 @@ function newTopic() {
         body: { kind: "discussion", category: slug, subject: formValue(form, "subject"), body: formValue(form, "body"), spoiler: formValue(form, "spoiler") }
       });
       if (!result.ok) return result.data?.error || "Не удалось опубликовать.";
+      goal("thread_create");
       announceAchievements(result.data.achievements);
       location.href = `/community/thread/${result.data.thread.id}`;
       return null;

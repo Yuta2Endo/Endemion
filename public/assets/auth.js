@@ -1,6 +1,6 @@
 // Вход и регистрация через /api/auth/*. Пароль проверяет сервер, в браузере ничего не хранится
 
-import { api, getConfig, getMe, safeNext } from "./app.js";
+import { api, getConfig, getMe, goal, safeNext } from "./app.js";
 
 const form = document.querySelector("#authForm");
 const loginMode = document.querySelector("#loginMode");
@@ -129,6 +129,7 @@ form.addEventListener("submit", async (event) => {
   submitButton.disabled = false;
 
   if (result.ok) {
+    goal(mode === "register" ? "register" : "login");
     location.href = next;
     return;
   }

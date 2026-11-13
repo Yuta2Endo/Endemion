@@ -1,7 +1,7 @@
 // Страница игры: шапка сайта, просмотр скриншотов (lightbox), подсветка раздела в навигации по странице
 // и мягкое появление секций. Вся разметка собрана на сервере (functions/studio.js), без скрипта страница работает целиком
 
-import { api, getMe, initHeader } from "./app.js";
+import { api, getMe, goal, initHeader } from "./app.js";
 
 initHeader();
 
@@ -27,6 +27,7 @@ async function toggleFavorite(button) {
         body: { game_id: Number(gameId) }
       });
       if (result.ok) {
+        goal("library_add");
         button.dataset.favorited = "1";
         button.textContent = button.dataset.favoritedShortAdded || "В избранное";
         button.setAttribute("aria-label", button.dataset.favoritedLabelAdded || "Убрать из избранного");
