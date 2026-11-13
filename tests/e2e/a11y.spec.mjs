@@ -4,7 +4,7 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 
-const PAGES = ["/", "/games", "/community", "/studio", "/about", "/terms", "/privacy", "/copyright"];
+const PAGES = ["/", "/games", "/community", "/studio", "/about", "/terms", "/privacy", "/copyright", "/auth"];
 
 test.describe("доступность страниц", () => {
   for (const path of PAGES) {

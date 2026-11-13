@@ -892,7 +892,7 @@ img {
     grid-area: title;
   }
 
-  .consent-banner > p {
+  .consent-banner > .consent-text {
     grid-area: text;
     margin-bottom: 0;
   }
@@ -920,6 +920,11 @@ img {
 .consent-banner a {
   color: var(--accent-light);
   text-decoration: underline;
+}
+
+/* Ссылка на политику нужна только там, где описание сжато (телефоны) */
+.consent-more {
+  display: none;
 }
 
 .consent-actions {
@@ -1002,13 +1007,38 @@ img {
     bottom: 8px;
     left: 8px;
     width: auto;
-    padding: 14px;
+    gap: 4px;
+    padding: 12px 14px;
     border-radius: 14px;
-    font-size: 13px;
+    font-size: 12.5px;
+  }
+
+  .consent-banner > strong {
+    font-size: 14px;
+  }
+
+  /* Длинное описание сжимаем до двух строк, ссылка на политику остаётся отдельной строкой */
+  .consent-banner .consent-text {
+    display: -webkit-box;
+    margin-bottom: 2px;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  .consent-banner .consent-more {
+    display: block;
+    margin-bottom: 6px;
+  }
+
+  .consent-banner .consent-actions {
+    gap: 8px;
   }
 
   .consent-banner .consent-actions button {
-    padding: 10px 14px;
+    min-height: 42px;
+    padding: 8px 12px;
+    font-size: 13px;
   }
 
   .container {

@@ -19,18 +19,26 @@
 <body>
   <main class="account-shell">
     <nav class="account-nav">
-      <a class="logo" href="/"><span class="logo-mark" aria-hidden="true">E</span>ENDEMION</a>
+      <a class="logo" href="/"><span class="logo-mark" aria-hidden="true"></span>ENDEMION</a>
       <a class="back-link" href="/">← Вернуться на главную</a>
     </nav>
 
     <section class="account-layout">
       <div class="account-intro">
-        <div class="eyebrow">Личная книжная полка</div>
-        <h1>Твои<br>истории.<br><span>Твоё место.</span></h1>
-        <p>
-          Создай профиль Endemion, чтобы писать на форуме,
-          подписываться на участников и получать уведомления об ответах.
-        </p>
+        <div class="account-intro-copy">
+          <div class="eyebrow">Endemion ID</div>
+          <h1>Один аккаунт.<br><span>Вся экосистема.</span></h1>
+          <p>
+            Войдите, чтобы писать на форуме, собирать избранные игры
+            и переносить сохранения в Endemion Life.
+          </p>
+          <ul class="auth-benefits">
+            <li><span class="auth-benefit-mark" aria-hidden="true">✓</span>Один пароль для сайта и Endemion Life</li>
+            <li><span class="auth-benefit-mark" aria-hidden="true">✓</span>Темы, ответы и уведомления в одном месте</li>
+            <li><span class="auth-benefit-mark" aria-hidden="true">✓</span>Вход по ключу устройства или коду из приложения</li>
+          </ul>
+        </div>
+        <p class="auth-trust">Пароль хранится только в виде необратимого хеша. Соединение защищено HTTPS.</p>
       </div>
 
       <div class="account-panel">
@@ -74,6 +82,8 @@
           <div class="turnstile" id="turnstile"></div>
 
           <button class="main-button" id="submitButton" type="submit">Войти в профиль</button>
+
+          <p class="auth-legal">Продолжая, вы соглашаетесь с <a href="/terms">условиями использования</a> и <a href="/privacy">политикой конфиденциальности</a>.</p>
 
           <div class="form-message" id="formMessage" role="alert" aria-live="assertive"></div>
         </form>

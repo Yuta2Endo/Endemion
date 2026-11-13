@@ -43,21 +43,44 @@
 }
 
 .account-intro {
+  position: relative;
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  min-height: 540px;
-  padding: 42px;
+  justify-content: space-between;
+  gap: 32px;
+  overflow: hidden;
+  padding: clamp(30px, 3.6vw, 42px);
   background:
-    radial-gradient(circle at 90% 10%, rgba(139, 92, 255, 0.17), transparent 15rem),
-    radial-gradient(circle at 0% 100%, rgba(255, 121, 173, 0.12), transparent 16rem),
+    radial-gradient(circle at 88% 6%, rgba(139, 92, 255, 0.2), transparent 18rem),
+    radial-gradient(circle at 0% 100%, rgba(34, 211, 238, 0.12), transparent 18rem),
     var(--panel);
 }
 
+/* Световая дуга в углу: карточка не выглядит плоским прямоугольником */
+.account-intro::after {
+  position: absolute;
+  top: -38%;
+  right: -22%;
+  width: 320px;
+  height: 320px;
+  border: 1px solid rgba(167, 139, 250, 0.28);
+  border-radius: 50%;
+  content: "";
+  box-shadow: 0 0 0 44px rgba(139, 92, 246, 0.05), 0 0 0 92px rgba(34, 211, 238, 0.03);
+  pointer-events: none;
+}
+
+.account-intro-copy {
+  position: relative;
+  z-index: 1;
+}
+
 .account-intro h1 {
-  font-size: clamp(42px, 6vw, 74px);
-  line-height: 0.95;
-  letter-spacing: -0.07em;
+  margin-top: 14px;
+  font-size: clamp(26px, 2.7vw, 34px);
+  line-height: 1.05;
+  letter-spacing: -0.04em;
+  overflow-wrap: anywhere;
 }
 
 .account-intro h1 span {
@@ -66,9 +89,72 @@
 
 .account-intro p {
   max-width: 390px;
-  margin-top: 25px;
+  margin-top: 20px;
   color: var(--muted);
   line-height: 1.7;
+}
+
+.auth-benefits {
+  display: grid;
+  gap: 12px;
+  padding: 0;
+  margin: 26px 0 0;
+  list-style: none;
+}
+
+.auth-benefits li {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.auth-benefit-mark {
+  display: grid;
+  flex: 0 0 24px;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  margin-top: 1px;
+  border: 1px solid rgba(167, 139, 250, 0.4);
+  border-radius: 50%;
+  color: var(--cyan);
+  background: rgba(139, 92, 246, 0.12);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.account-intro .auth-trust {
+  position: relative;
+  z-index: 1;
+  margin: 0;
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+  color: var(--faint);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+/* Страницы 404 и «нет сети» используют ту же карточку: текст держим по центру */
+.account-intro.not-found {
+  justify-content: center;
+  gap: 0;
+}
+
+.auth-legal {
+  margin: 14px 0;
+  color: var(--faint);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.auth-legal a {
+  color: var(--accent-light);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  white-space: nowrap;
 }
 
 .not-found {
@@ -563,7 +649,7 @@
   }
 
   .account-intro h1 {
-    font-size: 55px;
+    font-size: clamp(22px, 6.2vw, 30px);
   }
 
   .favorite-list {

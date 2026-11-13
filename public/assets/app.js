@@ -127,15 +127,15 @@ function showConsent(metrikaId, adsPageId) {
   title.id = "consentTitle";
   title.textContent = adsPageId ? "Cookie, статистика и реклама" : "Cookie и статистика";
   const text = document.createElement("p");
+  text.className = "consent-text";
+  text.textContent = consentText(metrikaId, adsPageId);
+  // Ссылка отдельной строкой: на телефоне описание сжимается, а путь к политике остаётся виден
+  const more = document.createElement("p");
+  more.className = "consent-more";
   const link = document.createElement("a");
   link.href = "/privacy#cookie";
   link.textContent = "политике конфиденциальности";
-  text.append(
-    consentText(metrikaId, adsPageId),
-    "Подробнее — в ",
-    link,
-    "."
-  );
+  more.append("Подробнее — в ", link, ".");
 
   const actions = document.createElement("div");
   actions.className = "consent-actions";
@@ -164,7 +164,7 @@ function showConsent(metrikaId, adsPageId) {
     if (wasLoaded) location.reload();
   });
 
-  banner.append(title, text, actions);
+  banner.append(title, text, more, actions);
   document.body.append(banner);
 }
 
