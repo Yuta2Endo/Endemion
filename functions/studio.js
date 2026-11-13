@@ -738,7 +738,22 @@ export const studioPage = {
       </div></div>
       <nav class="studio-tabs" aria-label="${en ? "Post types" : "Виды публикаций"}">${STUDIO_TABS.map(tabLink).join("")}</nav>
       ${list.posts.length ? `<div class="grid-posts">${list.posts.map((p) => postCard(p, lang)).join("")}</div>`
-    : emptyCard(en ? "No posts yet" : "Публикаций пока нет", tab[0] === "history" ? (en ? "Posts moved to the archive will appear here." : "Здесь появятся публикации, перенесённые в архив.") : (en ? "The studio has not published anything in this section yet." : "Студия ещё ничего не опубликовала в этом разделе."))}
+    : tab[0]
+      ? emptyCard(en ? "No posts yet" : "Публикаций пока нет", en ? "Posts moved to the archive will appear here." : "Здесь появятся публикации, перенесённые в архив.")
+      : `<section class="studio-empty" aria-labelledby="studioEmptyTitle">
+        <div class="studio-empty-art" aria-hidden="true">
+          <div class="orbit"><span class="orbit-ring orbit-ring-1"></span><span class="orbit-ring orbit-ring-2"></span><span class="orbit-core">E</span></div>
+        </div>
+        <div class="studio-empty-copy">
+          <h2 id="studioEmptyTitle">${en ? "The devlog is on its way" : "Дневники ещё в пути"}</h2>
+          <p>${en ? "The studio is preparing its first devlog. Meanwhile, look at the games, talk about them on the forum or follow the news in Telegram." : "Студия готовит первый devlog. Пока можно посмотреть игры, обсудить их на форуме или следить за новостями в Telegram."}</p>
+          <div class="btn-row">
+            <a class="primary-btn" href="/games">${en ? "Our games" : "Наши игры"}</a>
+            <a class="ghost-btn" href="/community/c/devlog">${en ? "Devlog on the forum" : "Devlog на форуме"}</a>
+            <a class="ghost-btn" href="https://t.me/EndemionOfficial" rel="noopener">Telegram</a>
+          </div>
+        </div>
+      </section>`}
       ${pages > 1 ? `<nav class="btn-row pager" aria-label="${en ? "Pages" : "Страницы"}">${page > 1 ? pageLink(page - 1, en ? "← Back" : "← Назад") : ""}<span class="muted">${en ? `Page ${page} of ${pages}` : `Страница ${page} из ${pages}`}</span>${page < pages ? pageLink(page + 1, en ? "Next →" : "Дальше →") : ""}</nav>` : ""}
       ${upcoming.length ? `<section class="studio-section" aria-labelledby="futureTitle"><div class="section-head"><div><h2 id="futureTitle">${en ? "Upcoming projects" : "Будущие проекты"}</h2></div></div>
         <div class="grid-games">${upcoming.map((g) => gameCard(g, lang)).join("")}</div></section>` : ""}
