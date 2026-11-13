@@ -2,10 +2,11 @@
 // Всё идёт с сервера в первую очередь: кеш нужен только на случай, когда сети нет. Так после обновления сайта
 // новая страница никогда не получит старый скрипт. Личные данные (API, профиль, админка) не кешируются вовсе
 
-const VERSION = "v7";
+// Версию подставляет обработчик /sw.js из ASSET_VERSION (functions/sw.js) при выкладке.
+const VERSION = "dev";
 const CACHE = `endemion-${VERSION}`;
 const OFFLINE_URL = "/offline";
-const PRECACHE = [OFFLINE_URL, "/assets/base.css", "/assets/account.css", "/assets/ui.css", "/favicon.ico?v=2", "/icons/icon-192.png?v=2"];
+const PRECACHE = [OFFLINE_URL, "/assets/base.css", "/assets/account.css", "/assets/studio.css", "/assets/account-dashboard.css", "/assets/ui.css", "/favicon.ico?v=2", "/icons/icon-192.png?v=2"];
 
 // Только локальные тесты: браузерные тесты Playwright в Firefox не могут отключить сеть для service worker
 // через context.setOffline(). Страница на localhost может попросить service worker сымитировать обрыв сети,

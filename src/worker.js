@@ -24,6 +24,7 @@ import * as robokassaResult from "../functions/api/robokassa/result.js";
 import * as robokassaCreate from "../functions/api/robokassa/create.js";
 import * as robots from "../functions/robots.txt.js";
 import * as sitemap from "../functions/sitemap.xml.js";
+import * as sw from "../functions/sw.js";
 import * as profile from "../functions/api/profile.js";
 import * as library from "../functions/api/users/library.js";
 import * as gameReviews from "../functions/api/games/reviews.js";
@@ -149,6 +150,8 @@ const ROUTE_LIST = [
   ["/u/:username", site.userRedirect],
   ["/robots.txt", robots],
   ["/sitemap.xml", sitemap],
+  // Версия кеша service worker подставляется при отдаче из ASSET_VERSION
+  ["/sw.js", sw],
   // Stage 11.2: публичные ключи портала для проверки утверждений Endemion Life
   ["/.well-known/jwks.json", jwks]
 ];
