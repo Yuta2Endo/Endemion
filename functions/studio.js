@@ -82,11 +82,12 @@ export const home = {
           <div class="eyebrow">${e(s.homeEyebrow)}</div>
           <h1 class="display-1" id="heroTitle"><span class="gradient-text">${e(s.homeTitle)}</span></h1>
           <p class="lead">${e(s.homeLead)}</p>
-          <div class="btn-row">
+          <div class="hero-actions">
             <a class="primary-btn btn-lg" href="/games">${e(s.homeExploreGames)}</a>
-            <a class="ghost-btn btn-lg" href="/community">${e(s.homeJoinCommunity)}</a>
+            <a class="hero-alt-link" href="/community">${e(s.homeJoinCommunity)} <span aria-hidden="true">→</span></a>
           </div>
           ${stats.length ? `<ul class="hero-stats">${stats.map((stat) => `<li><strong>${stat.value}</strong><span>${e(stat.label)}</span></li>`).join("")}</ul>` : ""}
+          <p class="hero-trust">${e(s.homeTrust)}</p>
         </div>
         <div class="home-hero-visual rise rise-2" aria-hidden="true">
           <div class="orbit">

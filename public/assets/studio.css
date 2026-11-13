@@ -814,8 +814,20 @@
 
 /* Декоративная «орбита» вместо пустой правой половины: только визуал, для чтения скрыта */
 .home-hero-visual {
+  position: relative;
   display: grid;
   place-items: center;
+}
+
+/* Свечение под орбитой: без него кольца теряются на тёмном фоне */
+.home-hero-visual::before {
+  position: absolute;
+  width: 74%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(var(--accent-rgb), 0.24), transparent 68%);
+  content: "";
+  filter: blur(12px);
 }
 
 .orbit {
@@ -834,7 +846,8 @@
 
 .orbit-ring-1 {
   inset: 0;
-  border-color: rgba(var(--accent-rgb), 0.28);
+  border-color: rgba(var(--accent-rgb), 0.5);
+  box-shadow: 0 0 70px rgba(var(--accent-rgb), 0.16);
   animation: orbit-spin 38s linear infinite;
 }
 
@@ -853,13 +866,13 @@
 .orbit-ring-2 {
   inset: 15%;
   border-style: dashed;
-  border-color: rgba(var(--highlight-rgb), 0.22);
+  border-color: rgba(var(--highlight-rgb), 0.38);
   animation: orbit-spin 26s linear infinite reverse;
 }
 
 .orbit-ring-3 {
   inset: 31%;
-  border-color: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.18);
 }
 
 .orbit-core {
@@ -871,7 +884,7 @@
   border-radius: 38% 38% 38% 12%;
   background: linear-gradient(140deg, #6366f1, #8b5cf6 55%, #a855f7);
   box-shadow:
-    0 0 60px rgba(var(--accent-rgb), 0.45),
+    0 0 90px rgba(var(--accent-rgb), 0.6),
     inset 0 1px 0 rgba(255, 255, 255, 0.28);
   color: #fff;
   font-family: var(--font-display);
@@ -906,11 +919,40 @@
   }
 }
 
+/* Первый экран: одна заметная кнопка и тихая ссылка рядом, чтобы выбор был очевиден */
+.hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px 26px;
+}
+
+.hero-alt-link {
+  color: var(--muted);
+  font-size: 15px;
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: color .15s, border-color .15s;
+}
+
+.hero-alt-link:hover,
+.hero-alt-link:focus-visible {
+  color: var(--text);
+  border-bottom-color: rgba(var(--accent-rgb), .6);
+}
+
+.hero-trust {
+  max-width: 52ch;
+  margin-top: 14px;
+  color: var(--faint);
+  font-size: 13px;
+}
+
 .hero-stats {
   display: flex;
   flex-wrap: wrap;
   gap: 14px 34px;
-  margin-top: 38px;
+  margin-top: 30px;
   padding: 0;
   list-style: none;
 }
@@ -948,6 +990,8 @@
 
 .home-hero .display-1 {
   margin-bottom: 20px;
+  font-size: clamp(38px, 4.6vw, 62px);
+  text-wrap: balance;
 }
 
 .home-hero .lead {

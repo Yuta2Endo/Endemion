@@ -65,7 +65,9 @@ test("тема форума: заголовок, описание и разме�
 
 test("главная: приветствие, игры из каталога, ссылка на Endemion Life, без ссылок на магазины", async () => {
   const home = await app.client().call("GET", "/");
-  assert.match(home.text, /Создаём миры. Соединяем игроков./);
+  assert.match(home.text, /Свои миры. Один аккаунт./);
+  assert.match(home.text, /hero-alt-link/);
+  assert.match(home.text, /Вход через Endemion ID/);
   for (const title of SEED_GAMES) assert.ok(home.text.includes(title), title);
   assert.match(home.text, /href="https:\/\/life\.endemion\.online"/);
   // Обложек у игр из миграции нет: показывается подписанная заглушка, а не выдуманная картинка
