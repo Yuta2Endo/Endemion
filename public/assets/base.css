@@ -98,10 +98,12 @@
 html {
   scroll-behavior: smooth;
   scroll-padding-top: calc(var(--header-height) + 16px);
+  -webkit-tap-highlight-color: transparent;
 }
 
 body {
   min-height: 100vh;
+  min-height: 100dvh;
   overflow-x: hidden;
   color: var(--text);
   background:
@@ -1056,6 +1058,16 @@ img {
     --header-height: 64px;
   }
 
+  /* iOS увеличивает страницу, если поле мельче 16px — важнее компонентных размеров */
+  .input,
+  .select,
+  .textarea,
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+
   body {
     font-size: 14px;
   }
@@ -1179,4 +1191,19 @@ img {
 
 .home-telegram .primary-btn {
   margin-top: 14px;
+}
+
+/* На тач-экранах :hover залипает после тапа: подъём кнопок только с курсором */
+@media (hover: none) {
+  .primary-btn:hover,
+  .ghost-btn:hover,
+  .secondary-button:hover,
+  .danger-button:hover {
+    transform: none;
+  }
+}
+
+a,
+button {
+  touch-action: manipulation;
 }

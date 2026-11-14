@@ -1778,3 +1778,14 @@
   }
 }
 
+/* Тач-экран не должен оставлять карточку «поднятой» после тапа */
+@media (hover: none) {
+  .card:hover {
+    transform: none;
+  }
+
+  .list-row:hover {
+    background: transparent;
+  }
+}
+
