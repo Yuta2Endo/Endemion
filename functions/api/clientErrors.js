@@ -36,14 +36,27 @@ export async function onRequestPost({ request, env }) {
   return json({ ok: true });
 }
 
-/** GET /api/client-errors — список последних ошибок для админа */
+/** GET /api/client-errors — сводка по ошибкам: одна строка на сообщение */
 export async function onRequestGet({ request, env }) {
   const { response } = await requireAdmin(env, request);
   if (response) return response;
+  // Группируем по тексту: список нужен, чтобы увидеть проблему, а не каждое падение
   const { results } = await env.DB.prepare(
-    `SELECT id, message, source, line, url, user_agent, created_at
-     FROM client_errors ORDER BY created_at DESC, id DESC LIMIT ${LIST_LIMIT}`
+    `SELECT message, MAX(source) AS source, MAX(url) AS url, MAX(line) AS line,
+            COUNT(*) AS count, MAX(created_at) AS last_at
+     FROM client_errors
+     GROUP BY message
+     ORDER BY last_at DESC
+     LIMIT ${LIST_LIMIT}`
   ).all();
   const total = await env.DB.prepare("SELECT COUNT(*) AS n FROM client_errors").first();
   return json({ errors: results, total: total?.n ?? 0 });
+}
+
+/** DELETE /api/client-errors — очистить журнал */
+export async function onRequestDelete({ request, env }) {
+  const { response } = await requireAdmin(env, request);
+  if (response) return response;
+  const result = await env.DB.prepare("DELETE FROM client_errors").run();
+  return json({ ok: true, deleted: result.meta.changes ?? 0 });
 }

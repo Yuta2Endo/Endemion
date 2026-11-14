@@ -597,11 +597,19 @@ async function loadClientErrors() {
     info.append(element("strong", null, item.message));
     const place = `${item.url || "адрес неизвестен"}${item.line ? `:${item.line}` : ""}`;
     info.append(element("small", null, [place, item.source].filter(Boolean).join(" · ")));
-    info.append(element("small", null, formatDateTime(item.created_at)));
+    info.append(element("small", null, `Повторов: ${item.count} · последний раз ${formatDateTime(item.last_at)}`));
     row.append(info);
     clientErrorsBox.append(row);
   }
 }
+
+$("#clientErrorsClear").addEventListener("click", async () => {
+  if (!confirm("Очистить журнал ошибок? Записи удалятся безвозвратно.")) return;
+  const result = await api("/api/client-errors", { method: "DELETE" });
+  if (!result.ok) return setMessage(clientErrorsMessage, result.data?.error || "Не удалось очистить журнал.");
+  await loadClientErrors();
+  setMessage(clientErrorsMessage, "Журнал очищен.", true);
+});
 
 auditMore.addEventListener("click", async () => {
   const id = auditRequest;
