@@ -2,6 +2,37 @@
 
 import { adsStarted, loadAds } from "./ads.js";
 
+// Ошибки клиента уходят в админку: без этого падение скрипта видно только в консоли
+const reportedErrors = new Set();
+
+function reportClientError(message, source = "", line = null) {
+  const text = String(message || "").slice(0, 500);
+  if (!text || reportedErrors.has(text) || reportedErrors.size > 20) return;
+  reportedErrors.add(text);
+  try {
+    fetch("/api/client-errors", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        message: text,
+        source: String(source || "").slice(0, 300),
+        line: Number.isInteger(line) ? line : null,
+        url: location.pathname.slice(0, 300)
+      }),
+      keepalive: true
+    }).catch(() => {});
+  } catch {}
+}
+
+window.addEventListener("error", (event) => {
+  reportClientError(event.message, event.filename, event.lineno);
+});
+
+window.addEventListener("unhandledrejection", (event) => {
+  const reason = event.reason;
+  reportClientError(reason?.message || String(reason));
+});
+
 /** Запрос к API. Возвращает { ok, status, data } и не бросает исключение при ошибке сети */
 export async function api(path, { method = "GET", body } = {}) {
   const options = { method, credentials: "same-origin", headers: {} };

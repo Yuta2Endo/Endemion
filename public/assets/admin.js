@@ -54,7 +54,7 @@ function formatBytes(bytes) {
 
 // ==================== РАЗДЕЛЫ ====================
 
-const SECTIONS = ["dashboard", "games", "studio", "forum-categories", "site-settings", "moderation", "complaints", "users", "accounts", "audit"];
+const SECTIONS = ["dashboard", "games", "studio", "forum-categories", "site-settings", "moderation", "complaints", "users", "accounts", "client-errors", "audit"];
 const MODERATOR_SECTIONS = ["moderation"];
 
 /** Разделы, доступные вошедшему: модератору — только модерация */
@@ -84,6 +84,7 @@ async function route() {
   if (section === "complaints") loadComplaints();
   if (section === "users") loadUsers();
   if (section === "accounts") loadAccounts();
+  if (section === "client-errors") loadClientErrors();
   if (section === "audit") loadAudit();
 }
 
@@ -572,6 +573,34 @@ async function loadAudit() {
   auditTotal = result.data.total;
   renderAudit(auditList, auditEntries);
   auditMore.hidden = auditEntries.length >= auditTotal;
+}
+
+// ==================== ОШИБКИ БРАУЗЕРА ====================
+
+const clientErrorsBox = $("#clientErrors");
+const clientErrorsCount = $("#clientErrorsCount");
+const clientErrorsMessage = $("#clientErrorsMessage");
+
+async function loadClientErrors() {
+  const result = await api("/api/client-errors");
+  if (!result.ok) return setMessage(clientErrorsMessage, result.data?.error || "Не удалось загрузить ошибки.");
+  setMessage(clientErrorsMessage, "");
+  clientErrorsCount.textContent = result.data.total ? `Записей: ${result.data.total}` : "";
+  clientErrorsBox.replaceChildren();
+  if (!result.data.errors.length) {
+    clientErrorsBox.append(element("li", "admin-empty", "Ошибок пока нет."));
+    return;
+  }
+  for (const item of result.data.errors) {
+    const row = element("li", "admin-user");
+    const info = element("div", "admin-user-info");
+    info.append(element("strong", null, item.message));
+    const place = `${item.url || "адрес неизвестен"}${item.line ? `:${item.line}` : ""}`;
+    info.append(element("small", null, [place, item.source].filter(Boolean).join(" · ")));
+    info.append(element("small", null, formatDateTime(item.created_at)));
+    row.append(info);
+    clientErrorsBox.append(row);
+  }
 }
 
 auditMore.addEventListener("click", async () => {

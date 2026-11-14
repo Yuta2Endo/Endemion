@@ -32,6 +32,7 @@ import * as gameReviews from "../functions/api/games/reviews.js";
 import * as pulse from "../functions/api/pulse.js";
 import * as community from "../functions/api/community.js";
 import * as searchApi from "../functions/api/search.js";
+import * as clientErrors from "../functions/api/clientErrors.js";
 import * as moderation from "../functions/api/moderation.js";
 import * as adminPlatform from "../functions/api/adminPlatform.js";
 import * as site from "../functions/site.js";
@@ -106,6 +107,7 @@ const ROUTE_LIST = [
   ["/api/moderation/actions", moderation.moderationActions],
   ["/api/moderation/users/:id/unmute", moderation.moderationUnmute],
   ["/api/moderation/log", moderation.moderationLog],
+  ["/api/client-errors", clientErrors],
   ["/api/moderation/comments", moderation.moderationComments],
   // Админка платформы
   ["/api/admin/games", adminStudio.adminGames],

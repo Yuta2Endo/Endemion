@@ -40,6 +40,7 @@
         <a href="#complaints" data-section="complaints" data-admin-only>Жалобы <span class="admin-badge" id="complaintsBadge" hidden></span></a>
         <a href="#users" data-section="users" data-admin-only>Пользователи</a>
         <a href="#accounts" data-section="accounts" data-admin-only>Endemion ID</a>
+        <a href="#client-errors" data-section="client-errors" data-admin-only>Ошибки браузера</a>
         <a href="#audit" data-section="audit" data-admin-only>Журнал</a>
       </nav>
 
@@ -156,6 +157,15 @@
           <p class="form-message" id="accountsMessage" role="status" aria-live="polite"></p>
           <ul class="admin-user-list" id="accountList"></ul>
           <button class="secondary-button admin-more" id="accountsMore" type="button" hidden>Показать ещё</button>
+        </section>
+
+        <!-- ==================== ОШИБКИ БРАУЗЕРА ==================== -->
+        <section class="admin-panel" data-panel="client-errors" aria-labelledby="clientErrorsHeading" hidden>
+          <h2 id="clientErrorsHeading">Ошибки браузера</h2>
+          <p class="panel-description">Сбои скриптов на страницах сайта: сообщение, файл и адрес. Личные данные сюда не попадают.</p>
+          <p class="muted small" id="clientErrorsCount"></p>
+          <p class="form-message" id="clientErrorsMessage" role="status" aria-live="polite"></p>
+          <ol class="admin-user-list" id="clientErrors"></ol>
         </section>
 
         <!-- ==================== ЖУРНАЛ ==================== -->
