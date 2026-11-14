@@ -100,6 +100,7 @@ const ROUTE_LIST = [
   ["/api/threads/:id", community.thread],
   ["/api/threads/:id/moderation", community.threadModeration],
   ["/api/threads/:id/subscription", community.threadSubscription],
+  ["/api/categories/:slug/subscription", community.categorySubscription],
   ["/api/threads/:id/revisions", community.threadRevisions],
   ["/api/reports", community.reports],
   // Модерация (модератор и администратор)

@@ -240,16 +240,16 @@ function toThread(row, viewer, full = false) {
 /** Категория форума для новой темы: существующая, а в категорию «только для команды» пишут модераторы и админы */
 async function threadCategory(env, user, value) {
   if (value === undefined || value === null || value === "") {
-    const general = await env.DB.prepare("SELECT id FROM forum_categories WHERE slug = 'general'").first();
-    return { id: general?.id ?? null };
+    const general = await env.DB.prepare("SELECT id, title FROM forum_categories WHERE slug = 'general'").first();
+    return { id: general?.id ?? null, title: general?.title ?? "" };
   }
   const id = typeof value === "string" && !/^\d+$/.test(value)
     ? (await env.DB.prepare("SELECT id FROM forum_categories WHERE slug = ?").bind(value).first())?.id
     : parseId(value);
-  const row = id ? await env.DB.prepare("SELECT id, staff_only FROM forum_categories WHERE id = ?").bind(id).first() : null;
+  const row = id ? await env.DB.prepare("SELECT id, title, staff_only FROM forum_categories WHERE id = ?").bind(id).first() : null;
   if (!row) return { problem: error("Категория не найдена.", 404) };
   if (row.staff_only === 1 && !user.isModerator) return { problem: error("В этой категории публикует только команда Endemion.", 403) };
-  return { id: row.id };
+  return { id: row.id, title: row.title };
 }
 
 /** /api/threads — лента обсуждений (GET ?kind=&category=&q=&offset=) и новое обсуждение или теория (POST) */
@@ -309,8 +309,26 @@ export const threads = {
     const row = await env.DB.prepare(
       "INSERT INTO threads (user_id, kind, subject, body, spoiler, category_id) VALUES (?, ?, ?, ?, ?, ?) RETURNING id"
     ).bind(user.id, body.kind, subject, parsed.text, body.spoiler === true ? 1 : 0, category.id).first();
+    const link = `/community/thread/${row.id}`;
     // Автор темы подписан на ответы в ней
-    await env.DB.prepare("INSERT OR IGNORE INTO thread_subscriptions (user_id, thread_id) VALUES (?, ?)").bind(user.id, row.id).run();
+    const statements = [
+      env.DB.prepare("INSERT OR IGNORE INTO thread_subscriptions (user_id, thread_id) VALUES (?, ?)").bind(user.id, row.id)
+    ];
+    const told = new Set([user.id]);
+    // Подписчики категории узнают о новой теме; автор и уже уведомлённые пропускаются
+    const subscribers = category.id
+      ? (await env.DB.prepare("SELECT user_id FROM category_subscriptions WHERE category_id = ?").bind(category.id).all()).results
+      : [];
+    for (const subscriber of subscribers) {
+      if (told.has(subscriber.user_id)) continue;
+      told.add(subscriber.user_id);
+      statements.push(notifyStatement(env, {
+        userId: subscriber.user_id, kind: "follow", actorId: user.id, link,
+        text: `${user.name}: новая тема в разделе «${category.title}»`
+      }));
+    }
+    statements.push(...await mentionStatements(env, { text: `${subject}\n${parsed.text}`, actor: user, link, told }));
+    await env.DB.batch(statements);
     const achievements = await checkAchievements(env, user.id, "thread");
     const saved = await env.DB.prepare(`${THREAD_SELECT} WHERE th.id = ?`).bind(row.id).first();
     return json({ thread: toThread(saved, user, true), achievements }, 201);
@@ -458,6 +476,48 @@ async function setSubscription(request, env, params, on) {
     await env.DB.prepare("INSERT OR IGNORE INTO thread_subscriptions (user_id, thread_id) VALUES (?, ?)").bind(user.id, id).run();
   } else {
     await env.DB.prepare("DELETE FROM thread_subscriptions WHERE user_id = ? AND thread_id = ?").bind(user.id, id).run();
+  }
+  return json({ subscribed: on });
+}
+
+/** GET/PUT/DELETE /api/categories/:slug/subscription — подписка на новые темы раздела */
+export const categorySubscription = {
+  async onRequestGet({ request, env, params }) {
+    const user = await currentUser(env, request);
+    const category = await categoryBySlug(env, params.slug);
+    if (!category) return error("Категория не найдена.", 404);
+    const subscribed = user
+      ? Boolean(await env.DB.prepare(
+        "SELECT 1 AS n FROM category_subscriptions WHERE user_id = ? AND category_id = ?"
+      ).bind(user.id, category.id).first())
+      : false;
+    return json({ subscribed, signedIn: Boolean(user) });
+  },
+  async onRequestPut({ request, env, params }) {
+    return setCategorySubscription(request, env, params, true);
+  },
+  async onRequestDelete({ request, env, params }) {
+    return setCategorySubscription(request, env, params, false);
+  }
+};
+
+async function categoryBySlug(env, slug) {
+  if (!slug) return null;
+  return env.DB.prepare("SELECT id, slug, title, staff_only FROM forum_categories WHERE slug = ?")
+    .bind(String(slug).slice(0, 60)).first();
+}
+
+async function setCategorySubscription(request, env, params, on) {
+  const { user, response } = await requireUser(env, request);
+  if (response) return response;
+  const category = await categoryBySlug(env, params.slug);
+  if (!category) return error("Категория не найдена.", 404);
+  if (on) {
+    await env.DB.prepare("INSERT OR IGNORE INTO category_subscriptions (user_id, category_id) VALUES (?, ?)")
+      .bind(user.id, category.id).run();
+  } else {
+    await env.DB.prepare("DELETE FROM category_subscriptions WHERE user_id = ? AND category_id = ?")
+      .bind(user.id, category.id).run();
   }
   return json({ subscribed: on });
 }

@@ -420,6 +420,27 @@ export function link(href, className, text) {
   return node;
 }
 
+const MENTION_LINK = /(^|[^A-Za-z0-9_])@([A-Za-z0-9_]{3,24})(?![A-Za-z0-9_])/g;
+
+/** Текст с @упоминаниями: имя профиля становится ссылкой на его страницу */
+export function linkMentions(node) {
+  const text = node.textContent;
+  if (!text.includes("@")) return node;
+  const fragment = document.createDocumentFragment();
+  let last = 0;
+  for (const match of text.matchAll(MENTION_LINK)) {
+    const start = match.index + match[1].length;
+    const name = match[2];
+    fragment.append(text.slice(last, start));
+    fragment.append(link(`/users/${encodeURIComponent(name)}`, "mention", `@${name}`));
+    last = start + name.length + 1;
+  }
+  if (!last) return node;
+  fragment.append(text.slice(last));
+  node.replaceChildren(fragment);
+  return node;
+}
+
 export function button(text, className, onClick, { label = null, pressed = null } = {}) {
   const node = el("button", className, text);
   node.type = "button";

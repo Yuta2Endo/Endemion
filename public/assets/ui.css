@@ -687,6 +687,19 @@ a.tag:hover {
   white-space: pre-wrap;
 }
 
+/* Упоминание участника: @username ведёт на его профиль */
+.mention {
+  color: var(--accent-light);
+  text-decoration: none;
+  border-radius: 4px;
+}
+
+.mention:hover,
+.mention:focus-visible {
+  color: var(--text);
+  text-decoration: underline;
+}
+
 .post + .panel {
   margin-top: 22px;
 }

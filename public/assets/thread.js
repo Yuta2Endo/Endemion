@@ -2,7 +2,7 @@
 // Права проверяет сервер; кнопки здесь только отражают то, что он разрешит
 
 import {
-  api, button, checkbox, el, errorBox, field, formValue, initHeader, input, link, openDialog, reportContent,
+  api, button, checkbox, el, errorBox, field, formValue, initHeader, input, link, linkMentions, openDialog, reportContent,
   spoilerText, stateBox, textarea, timeAgo, toast, userLink
 } from "./app.js";
 import { mountComments } from "./comments.js";
@@ -57,6 +57,7 @@ function render(thread) {
   // Скрытую после жалоб тему модератор видит целиком, остальным показываем только причину
   const masked = Boolean(thread.hidden) && !thread.body;
   const text = el("p", "post-body", masked ? "Тема скрыта после жалоб — её проверит модератор." : thread.body);
+  if (!masked) linkMentions(text);
   const actions = el("div", "section-actions section");
   if (user) {
     actions.append(button(thread.subscribed ? "Отписаться" : "Подписаться", "ghost-btn small-btn", async () => {

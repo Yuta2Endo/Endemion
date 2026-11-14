@@ -359,4 +359,40 @@ describe("роли и админка", () => {
     assert.match(page.text, /Похожие темы/);
     assert.match(page.text, /Орбитальная станция: первый взгляд/);
   });
+
+  test("упоминание в новой теме приходит упомянутому", async () => {
+    const author = await app.user("Автор упоминания");
+    const mentioned = await app.user("Упомянутый участник");
+    const username = (await mentioned.call("GET", "/api/me")).data.user.username;
+    const r = await author.call("POST", "/api/threads", {
+      kind: "discussion", category: "general", subject: "Вопрос к участнику",
+      body: `Привет @${username}, посмотри эту тему.`
+    });
+    assert.equal(r.status, 201);
+    const inbox = await mentioned.call("GET", "/api/notifications");
+    assert.ok(inbox.data.notifications.some((item) => item.kind === "mention" && item.link === `/community/thread/${r.data.thread.id}`));
+  });
+
+  test("подписка на раздел приносит новые темы и снимается", async () => {
+    const subscriber = await app.user("Следящий за разделом");
+    let r = await subscriber.call("GET", "/api/categories/general/subscription");
+    assert.equal(r.status, 200);
+    assert.equal(r.data.subscribed, false);
+    r = await subscriber.call("PUT", "/api/categories/general/subscription");
+    assert.equal(r.status, 200);
+    assert.equal(r.data.subscribed, true);
+
+    const author = await app.user("Автор темы раздела");
+    const threadId = await topic(author, "Новость для подписчиков раздела");
+    let inbox = await subscriber.call("GET", "/api/notifications");
+    assert.ok(inbox.data.notifications.some((item) => item.kind === "follow" && item.link === `/community/thread/${threadId}`));
+    const before = inbox.data.notifications.filter((item) => item.kind === "follow").length;
+
+    r = await subscriber.call("DELETE", "/api/categories/general/subscription");
+    assert.equal(r.status, 200);
+    assert.equal(r.data.subscribed, false);
+    await topic(author, "Вторая новость для подписчиков");
+    inbox = await subscriber.call("GET", "/api/notifications");
+    assert.equal(inbox.data.notifications.filter((item) => item.kind === "follow").length, before);
+  });
 });

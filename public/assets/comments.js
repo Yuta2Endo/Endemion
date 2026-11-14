@@ -2,7 +2,7 @@
 // Используется в темах форума: mountComments(контейнер, { targetType: "thread", targetId })
 
 import {
-  announceAchievements, api, askLogin, avatar, button, el, errorBox, getMe, goal, lineSkeletons, link, reportContent,
+  announceAchievements, api, askLogin, avatar, button, el, errorBox, getMe, goal, lineSkeletons, link, linkMentions, reportContent,
   spoilerText, stateBox, timeAgo, toast, userLink
 } from "./app.js";
 
@@ -111,6 +111,7 @@ function commentNode(comment, ctx, isReply = false) {
   if (comment.editedAt) head.append(el("small", null, "изменён"));
 
   const text = el("p", `comment-text${comment.deleted || hidden ? " is-deleted" : ""}`, comment.deleted ? "Комментарий удалён." : hidden ? "Скрыто после жалоб — модератор проверит." : comment.body);
+  if (!comment.deleted && !hidden) linkMentions(text);
   main.append(head, comment.deleted || hidden ? text : spoilerText(text, comment.spoiler));
 
   if (!comment.deleted && !hidden) {
@@ -232,7 +233,9 @@ export async function mountComments(container, { targetType, targetId, placehold
       const area = container.querySelector(".comments > .comment-form textarea");
       if (!area) return;
       const quoted = comment.body.split("\n").map((line) => `> ${line}`).join("\n");
-      const head = comment.author ? `> ${comment.author.name}:\n` : "";
+      // Автор цитаты — @username: он станет ссылкой на профиль и упоминанием при отправке
+      const who = comment.author ? (comment.author.username ? `@${comment.author.username}` : comment.author.name) : "";
+      const head = who ? `> ${who}:\n` : "";
       area.value = `${area.value ? `${area.value.trimEnd()}\n\n` : ""}${head}${quoted}\n\n`.slice(0, MAX);
       area.focus();
       area.setSelectionRange(area.value.length, area.value.length);
