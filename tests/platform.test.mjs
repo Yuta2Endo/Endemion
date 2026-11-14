@@ -349,4 +349,14 @@ describe("роли и админка", () => {
     assert.equal(r.status, 200);
     assert.equal((await guest.call("GET", "/api/admin/users")).status, 200);
   });
+
+  test("тема предлагает похожие обсуждения", async () => {
+    const author = await app.user("Автор связанных тем");
+    await topic(author, "Орбитальная станция: первый взгляд");
+    const second = await topic(author, "Орбитальная станция: второй взгляд");
+    const page = await app.client().call("GET", `/community/thread/${second}`);
+    assert.equal(page.status, 200);
+    assert.match(page.text, /Похожие темы/);
+    assert.match(page.text, /Орбитальная станция: первый взгляд/);
+  });
 });

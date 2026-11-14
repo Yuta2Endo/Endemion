@@ -691,6 +691,31 @@ a.tag:hover {
   margin-top: 22px;
 }
 
+/* Похожие темы: продолжение чтения без возврата в каталог */
+.related-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.related-list a {
+  display: block;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  color: var(--text);
+  text-decoration: none;
+  transition: border-color .15s, background .15s;
+}
+
+.related-list a:hover,
+.related-list a:focus-visible {
+  border-color: rgba(var(--accent-rgb), .45);
+  background: var(--panel-soft);
+}
+
 /* Правая колонка не растягивается на всю высоту темы */
 .split > aside {
   align-self: start;

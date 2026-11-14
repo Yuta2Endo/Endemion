@@ -40,6 +40,24 @@ export const community = {
 };
 
 /** GET /community/thread/:id — обсуждение или теория с комментариями */
+/** Похожие темы: общие слова в названии и тексте, при равенстве — свежесть */
+async function relatedThreads(env, id, subject, text) {
+  const { results } = await env.DB.prepare(
+    `SELECT id, subject FROM threads
+     WHERE deleted_at IS NULL AND hidden_at IS NULL AND id <> ?
+     ORDER BY last_activity_at DESC LIMIT 30`
+  ).bind(id).all();
+  const words = new Set(`${subject} ${text}`.toLowerCase().match(/[\p{L}\p{N}]{4,}/gu) || []);
+  return results
+    .map((row) => {
+      const own = row.subject.toLowerCase().match(/[\p{L}\p{N}]{4,}/gu) || [];
+      return { ...row, score: own.filter((word) => words.has(word)).length };
+    })
+    .filter((row) => row.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 4);
+}
+
 export const threadPage = {
   async onRequestGet({ request, env, params }) {
     const en = langOf(request) === "en";
@@ -59,6 +77,7 @@ export const threadPage = {
     // Скрытую после жалоб тему не размечаем для поиска: тело может быть спорным
     const hidden = Boolean(thread && thread.hidden_at);
     const excerpt = thread ? thread.body.replace(/\s+/g, " ").trim().slice(0, 200) : "";
+    const related = thread && !hidden ? await relatedThreads(env, Number(params.id), thread.subject, thread.body) : [];
     const pageUrl = `${origin}/community/thread/${encodeURIComponent(params.id)}`;
     const head = thread && !hidden
       ? `<meta property="og:type" content="article">
@@ -91,6 +110,10 @@ export const threadPage = {
         <div class="stack">
           <article class="post" id="post" aria-busy="true"><div class="skeleton skeleton-row"></div></article>
           <section class="panel" aria-labelledby="commentsTitle"><h2 id="commentsTitle">${en ? "Comments" : "Комментарии"}</h2><div id="comments"></div></section>
+          ${related.length ? `<section class="panel related" aria-labelledby="relatedTitle">
+            <h2 id="relatedTitle">${en ? "Related threads" : "Похожие темы"}</h2>
+            <ul class="related-list">${related.map((item) => `<li><a href="/community/thread/${item.id}">${e(item.subject)}</a></li>`).join("")}</ul>
+          </section>` : ""}
         </div>
         <aside class="stack" id="threadAside"></aside>
       </div>
