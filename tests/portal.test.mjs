@@ -63,29 +63,30 @@ test("тема форума: заголовок, описание и разме�
   assert.match(sitemap, new RegExp(`/community/thread/${id}<`));
 });
 
-test("главная: приветствие, игры из каталога, ссылка на Endemion Life, без ссылок на магазины", async () => {
+test("главная: фокус на Endemion Life, другие игры из каталога и ссылка на игру", async () => {
   const home = await app.client().call("GET", "/");
-  assert.match(home.text, /Свои миры. Один аккаунт./);
+  assert.match(home.text, /Одна жизнь\. Тысяча решений\./);
+  assert.match(home.text, /ENDEMION LIFE/);
   assert.match(home.text, /hero-alt-link/);
+  assert.match(home.text, /data-play="hero"/);
   assert.match(home.text, /Вход через Endemion ID/);
   for (const title of SEED_GAMES) assert.ok(home.text.includes(title), title);
-  assert.match(home.text, /href="https:\/\/life\.endemion\.online"/);
+  assert.match(home.text, /href="https:\/\/life\.endemion\.online/);
   // Обложек у игр из миграции нет: показывается подписанная заглушка, а не выдуманная картинка
   assert.match(home.text, /Обложка скоро появится/);
   assert.doesNotMatch(home.text, /play\.google\.com|apps\.apple\.com|store\.steampowered\.com/);
 });
 
-test("рекламный блок Яндекс.РСЯ стоит между «Избранным проектом» и «Нашими играми»", async () => {
+test("реклама Яндекс.РСЯ остаётся в сообществе, но не на главной", async () => {
   const ads = await createApp({ extraEnv: { YANDEX_ADS_PAGE_ID: "20404024" } });
   try {
     const home = await ads.client().call("GET", "/");
-    assert.match(home.text, /data-ads-slot/);
-    assert.match(home.text, /data-ads-page-id="20404024"/);
-    // Место блока — между избранным проектом и каталогом игр
-    assert.ok(home.text.indexOf("data-ads-slot") > home.text.indexOf('id="featuredTitle"'), "после избранного проекта");
-    assert.ok(home.text.indexOf("data-ads-slot") < home.text.indexOf('id="gamesTitle"'), "перед нашими играми");
+    assert.doesNotMatch(home.text, /data-ads-slot/);
+    const community = await ads.client().call("GET", "/community");
+    assert.match(community.text, /data-ads-slot/);
+    assert.match(community.text, /data-ads-page-id="20404024"/);
     // Без номера кампании рекламы на сайте нет
-    assert.doesNotMatch((await app.client().call("GET", "/")).text, /data-ads-slot/);
+    assert.doesNotMatch((await app.client().call("GET", "/community")).text, /data-ads-slot/);
   } finally {
     await ads.close();
   }
@@ -273,21 +274,19 @@ test("страница игры: скриншоты из game_media", async () =
   }
 });
 
-test("страница игры: roadmap, новости, devlog из публикаций", async () => {
+test("страница игры: последний devlog, без roadmap, новостей и миров", async () => {
   const admin = await app.user("Админ публикаций", "admin");
   const game = await app.db.prepare("SELECT id FROM games WHERE slug = 'endemion-life'").first();
 
-  // Создаем roadmap публикацию
+  // Roadmap и новости остаются в студийном разделе, но не дублируются на странице игры
   await admin.call("POST", "/api/admin/studio-posts", {
     slug: "roadmap-2026", kind: "roadmap", status: "published",
     title: "Roadmap 2026", summary: "Планы на год.", body: "Текстroadmap.", gameId: game.id
   });
-  // Создаем новость
   await admin.call("POST", "/api/admin/studio-posts", {
     slug: "news-update", kind: "news", status: "published",
     title: "Новость игры", summary: "Кратко.", body: "Текст новости.", gameId: game.id
   });
-  // Создаем devlog
   await admin.call("POST", "/api/admin/studio-posts", {
     slug: "devlog-entry", kind: "devlog", status: "published",
     title: "Devlog запись", summary: "Запись разработки.", body: "Текст devlog.", gameId: game.id
@@ -296,9 +295,11 @@ test("страница игры: roadmap, новости, devlog из публи
   try {
     const r = await app.client().call("GET", "/games/endemion-life");
     assert.equal(r.status, 200);
-    assert.match(r.text, /Roadmap 2026/);
-    assert.match(r.text, /Новость игры/);
     assert.match(r.text, /Devlog запись/);
+    assert.doesNotMatch(r.text, /Roadmap 2026/);
+    assert.doesNotMatch(r.text, /Новость игры/);
+    assert.doesNotMatch(r.text, /id="gameWorlds"/);
+    assert.doesNotMatch(r.text, /id="gameFeatures"/);
   } finally {
     await app.db.prepare("DELETE FROM studio_posts WHERE slug IN ('roadmap-2026', 'news-update', 'devlog-entry')").run();
   }

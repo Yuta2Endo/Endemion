@@ -315,6 +315,13 @@ export function askLogin(text = "Чтобы сохранять это, войд�
  * Шапка: меню на телефоне, кнопка профиля (аватар и имя или «Войти»), колокольчик с числом непрочитанных уведомлений
  */
 export async function initHeader() {
+  // Клики по всем кнопкам «Играть»: одна цель Метрики, место клика — в параметре placement
+  document.addEventListener("click", (event) => {
+    if (!(event.target instanceof Element)) return;
+    const link = event.target.closest("a[data-play]");
+    if (link) goal("play_click", { placement: link.dataset.play || "unknown" });
+  });
+
   const toggle = document.querySelector(".menu-toggle");
   const links = document.querySelector(".nav-links");
   if (toggle && links) {

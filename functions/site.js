@@ -3,6 +3,7 @@
 // Каждый экспорт — маршрут, адреса перечислены в src/worker.js
 
 import { escapeHtml as e } from "./_lib/html.js";
+import { adsBlock } from "./_lib/ads.js";
 import { renderPage } from "./_lib/layout.js";
 import { categoryIndex, listCategories } from "./_lib/studio.js";
 import { langOf, t } from "./_lib/i18n.js";
@@ -31,6 +32,7 @@ export const community = {
         <button type="button" role="tab" data-tab="readers" aria-selected="false">${en ? "Members" : "Участники"}</button>
       </div>
       <div id="communityBody" role="tabpanel" aria-live="polite"></div>
+      ${adsBlock(env, { id: "yandex-ads-community" })}
     </div>`;
     return renderPage(request, {
       title: en ? "Community" : "Сообщество", path: "/community", active: "community", body, scripts: ["community.js"], styles: ["studio.css"],

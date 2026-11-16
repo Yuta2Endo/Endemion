@@ -2,10 +2,9 @@
 // «О студии» и условия использования. HTML собирается на сервере из базы (SEO, работает без скриптов)
 
 import { escapeHtml as e } from "./_lib/html.js";
-import { adsBlock } from "./_lib/ads.js";
 import { renderPage } from "./_lib/layout.js";
 import {
-  categoryThreads, emptyCard, FORUM_PAGE, formatDate, gameArt, gameCard, gameCategory, gameCategoryIds, getCategoryBySlug,
+  categoryThreads, emptyCard, FORUM_PAGE, formatDate, gameCard, gameCategory, gameCategoryIds, getCategoryBySlug,
   getGameBySlug, getPostBySlug, getSettings, isoDate, listGameMedia, listGames, listGamesFiltered, listPosts, GAME_STATUS_LABELS, GAME_STATUS_LABELS_EN, POST_KIND_LABELS, POST_KIND_LABELS_EN, POST_KINDS,
   postCard, recentThreads, richText, statusBadge, threadRow, isGameFavorited,
   listGameReviews, getGameReview, getGameReviewStats
@@ -56,24 +55,22 @@ export const home = {
   async onRequestGet({ request, env }) {
     const origin = new URL(request.url).origin;
     const lang = langOf(request);
-    const [settings, games, upcoming, threads, devlog, threadTotal] = await Promise.all([
+    const [settings, games, upcoming, threads, devlog] = await Promise.all([
       getSettings(env),
       listGames(env, { upcoming: false }),
       listGames(env, { upcoming: true }),
       recentThreads(env, { limit: 6 }),
-      listPosts(env, { kinds: ["devlog"], limit: 1 }),
-      env.DB ? env.DB.prepare("SELECT COUNT(*) AS n FROM threads WHERE deleted_at IS NULL").first() : null
+      listPosts(env, { kinds: ["devlog"], limit: 1 })
     ]);
     const en = lang === "en";
     const s = t(lang);
     const featured = games.find((g) => g.slug === settings.featuredGame) || games[0] || null;
-    const discussion = featured ? await gameCategory(env, featured.id) : null;
+    const playUrl = featured?.websiteUrl
+      ? `${featured.websiteUrl}${featured.websiteUrl.includes("?") ? "&" : "?"}utm_source=portal&utm_medium=home_hero`
+      : "/games";
 
     // ==================== HERO ====================
-    const stats = [
-      { value: games.length, label: s.homeStatProjects },
-      { value: threadTotal?.n || 0, label: s.homeStatThreads }
-    ].filter((stat) => stat.value > 0);
+    // Первый экран продаёт одну игру, а не каталог: главная — воронка в Endemion Life.
     const hero = `
     <section class="home-hero" aria-labelledby="heroTitle">
       <div class="home-hero-bg" aria-hidden="true">${featured?.coverUrl ? `<img src="${e(featured.coverUrl)}" alt="" fetchpriority="high" decoding="async">` : ""}</div>
@@ -81,12 +78,12 @@ export const home = {
         <div class="home-hero-content rise">
           <div class="eyebrow">${e(s.homeEyebrow)}</div>
           <h1 class="display-1" id="heroTitle"><span class="gradient-text">${e(s.homeTitle)}</span></h1>
-          <p class="lead">${e(s.homeLead)}</p>
+          <p class="lead">${e(featured?.tagline || featured?.description || s.homeLead)}</p>
+          ${featured ? `<div class="hero-meta">${statusBadge(featured.status, lang)}<span>${e(featured.platforms.join(" · ") || (en ? "Browser" : "Браузер"))}</span></div>` : ""}
           <div class="hero-actions">
-            <a class="primary-btn btn-lg" href="/games">${e(s.homeExploreGames)}</a>
-            <a class="hero-alt-link" href="/community">${e(s.homeJoinCommunity)} <span aria-hidden="true">→</span></a>
+            <a class="primary-btn btn-lg" href="${e(playUrl)}" rel="noopener" data-play="hero">${e(featured ? s.homePlayCTA : s.homeExploreGames)}</a>
+            <a class="hero-alt-link" href="${featured ? `/games/${e(featured.slug)}` : "/games"}">${e(featured ? s.homeHowItWorks : s.homeExploreGames)} <span aria-hidden="true">→</span></a>
           </div>
-          ${stats.length ? `<ul class="hero-stats">${stats.map((stat) => `<li><strong>${stat.value}</strong><span>${e(stat.label)}</span></li>`).join("")}</ul>` : ""}
           <p class="hero-trust">${e(s.homeTrust)}</p>
         </div>
         <div class="home-hero-visual rise rise-2" aria-hidden="true">
@@ -102,47 +99,20 @@ export const home = {
       </div>
     </section>`;
 
-    // ==================== FEATURED PROJECT ====================
-    const featuredBlock = featured ? `
-    <section class="home-featured" aria-labelledby="featuredTitle">
-      <div class="container">
-        <div class="home-featured-grid">
-          <div class="home-featured-media">${gameArt(featured, { eager: true, lang })}</div>
-          <div class="home-featured-content rise rise-2">
-            <div class="eyebrow">${e(s.homeFeaturedProject)}</div>
-            <h2 class="display-2" id="featuredTitle">${e(featured.title)}</h2>
-            <p class="lead">${e(featured.tagline || featured.description || (en ? s.homeLead : featured.description || s.homeLead))}</p>
-            <dl class="featured-facts">
-              <dt>${e(s.homeStatus)}</dt><dd>${statusBadge(featured.status, lang)}</dd>
-              <dt>${e(s.homePlatforms)}</dt><dd>${e(featured.platforms.join(", ") || (en ? "not set" : "не указаны"))}</dd>
-            </dl>
-            <div class="btn-row">
-              ${featured.websiteUrl ? `<a class="primary-btn" href="${e(featured.websiteUrl)}" rel="noopener">${e(s.homePlayCTA)}</a>` : ""}
-              <a class="ghost-btn" href="/games/${e(featured.slug)}">${e(s.homeAboutGameCTA)}</a>
-              ${discussion ? `<a class="ghost-btn" href="/community/c/${e(discussion.slug)}">${e(s.homeDiscussionCTA)}</a>` : ""}
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>` : "";
-
-    // ==================== РЕКЛАМА ====================
-    // Блок Яндекс.РСЯ между «Избранным проектом» и «Нашими играми»: реклама не должна отодвигать
-    // главное — первый экран и каталог игр — и не должна прятаться в конце страницы
-    const adsSection = adsBlock(env, { id: "yandex-ads-home" });
-
-    // ==================== OUR GAMES ====================
-    const gamesBlock = `
+    // ==================== OTHER GAMES ====================
+    // Главная не повторяет избранную игру карточкой в каталоге: здесь остаются только другие проекты.
+    const otherGames = featured ? games.filter((g) => g.slug !== featured.slug) : games;
+    const gamesBlock = otherGames.length ? `
     <section class="home-games" aria-labelledby="gamesTitle">
       <div class="container">
         <div class="section-head"><div>
-          <div class="eyebrow">${e(s.homeOurGames)}</div>
-          <h2 id="gamesTitle">${e(s.homeOurGames)}</h2>
+          <div class="eyebrow">${e(s.homeOtherGames)}</div>
+          <h2 id="gamesTitle">${e(s.homeOtherGames)}</h2>
         </div>
         <a class="ghost-btn small-btn" href="/games">${e(s.homeAllGames)}</a></div>
-      ${games.length ? `<div class="grid-games">${games.map((g) => gameCard(g, lang)).join("")}</div>` : emptyCard(e(s.homeGamesEmptyTitle), e(s.homeGamesEmptyText))}
+      <div class="grid-games">${otherGames.map((g) => gameCard(g, lang)).join("")}</div>
       </div>
-    </section>`;
+    </section>` : "";
 
     // ==================== COMMUNITY ====================
     const communityBlock = `
@@ -190,13 +160,22 @@ export const home = {
     </section>` : "";
 
     const description = en
-      ? "Endemion is an independent game studio and community: our games, the forum, devlogs and development news."
-      : "Endemion — независимая игровая студия и сообщество: игры студии, форум, devlog и новости разработки.";
+      ? "Endemion Life is a browser life simulator with RPG elements: six worlds, choices, consequences and heirs. One Endemion ID account for the game and the community."
+      : "Endemion Life — браузерный симулятор жизни с элементами RPG: шесть миров, решения, последствия и наследники. Один аккаунт Endemion ID для игры и сообщества.";
+    const metaTitle = en ? "Endemion Life — browser life simulator" : "Endemion Life — браузерный симулятор жизни";
     return renderPage(request, {
-      path: "/", active: "home", styles: STYLES, scripts: SCRIPTS, description,
-      head: head({ title: "ENDEMION — Create. Play. Connect.", description, url: `${origin}/`, image: `${origin}/assets/og-image.png` })
-        + ld({ "@context": "https://schema.org", "@type": "Organization", name: "Endemion", url: `${origin}/` }),
-      body: hero + featuredBlock + adsSection + gamesBlock + communityBlock + devBlock + upcomingBlock
+      path: "/", active: "home", styles: STYLES, scripts: SCRIPTS, title: metaTitle, description,
+      head: head({ title: `${metaTitle} | ENDEMION`, description, url: `${origin}/`, image: `${origin}/assets/og-image.png` })
+        + ld({ "@context": "https://schema.org", "@type": "Organization", name: "Endemion", url: `${origin}/` })
+        + (featured ? ld({
+          "@context": "https://schema.org", "@type": "VideoGame", name: featured.title,
+          description: featured.description || featured.tagline || description,
+          url: featured.websiteUrl || `${origin}/games/${featured.slug}`,
+          image: featured.coverUrl ? new URL(featured.coverUrl, origin).href : undefined,
+          applicationCategory: "Game",
+          operatingSystem: featured.platforms.join(", ")
+        }) : ""),
+      body: hero + devBlock + communityBlock + gamesBlock + upcomingBlock
     });
   }
 };
@@ -328,8 +307,6 @@ export const gamesPage = {
   }
 };
 
-const DEVLOG_PAGE = 6;
-
 export const gamePage = {
   async onRequestGet({ request, env, params }) {
     const url = new URL(request.url);
@@ -342,16 +319,11 @@ export const gamePage = {
     if (!game || (!game.published && !hasRole(viewer, "admin"))) return notFoundPage(request, "games", en ? "No such game in the catalog." : "Такой игры нет в каталоге.");
 
     const profile = GAME_PROFILES[game.slug] || null;
-    const devlogPage = Math.max(1, Math.min(1000, Number.parseInt(url.searchParams.get("devlog") || "1", 10) || 1));
-    const [media, news, devlog, roadmapPosts, categoryIds, category, ideas, bugs, lastUpdate, isFavorited, userReview, reviews, stats] = await Promise.all([
+    const [media, devlog, categoryIds, category, lastUpdate, isFavorited, userReview, reviews, stats] = await Promise.all([
       listGameMedia(env, game.id),
-      listPosts(env, { gameId: game.id, kinds: ["update", "news", "announcement"], limit: 3 }),
-      listPosts(env, { gameId: game.id, kinds: ["devlog"], limit: DEVLOG_PAGE, offset: (devlogPage - 1) * DEVLOG_PAGE }),
-      listPosts(env, { gameId: game.id, kinds: ["roadmap"], limit: 3 }),
+      listPosts(env, { gameId: game.id, kinds: ["devlog"], limit: 1 }),
       gameCategoryIds(env, game.id),
       gameCategory(env, game.id),
-      getCategoryBySlug(env, "feature-requests"),
-      getCategoryBySlug(env, "bug-reports"),
       listPosts(env, { gameId: game.id, kinds: ["update", "devlog", "news", "announcement"], limit: 1 }),
       viewer ? isGameFavorited(env, viewer.id, game.id) : false,
       viewer ? getGameReview(env, viewer.id, game.id) : null,
@@ -362,12 +334,13 @@ export const gamePage = {
 
     const cover = coverSources(game, profile);
     const links = {
-      discuss: category ? `/community/c/${category.slug}` : null,
-      idea: ideas ? `/community/c/${ideas.slug}` : null,
-      bug: bugs ? `/community/c/${bugs.slug}` : null
+      discuss: category ? `/community/c/${category.slug}` : null
     };
     const latest = lastUpdate.posts[0];
     const latestDate = latest ? latest.publishedAt || latest.createdAt : null;
+    const playUrl = game.websiteUrl
+      ? `${game.websiteUrl}${game.websiteUrl.includes("?") ? "&" : "?"}utm_source=portal&utm_medium=game_page`
+      : null;
 
     // ==================== PREMIUM HERO ====================
     const heroImage = cover
@@ -382,14 +355,13 @@ export const gamePage = {
           <div class="eyebrow">${e(s.gameAbout)}</div>
           <h1 class="display-1" id="gameHeroTitle">${e(game.title)}</h1>
           ${game.tagline ? `<p class="game-tagline lead">${e(game.tagline)}</p>` : ""}
-          ${game.description ? `<p class="game-lead">${e(game.description)}</p>` : ""}
           <div class="game-hero-meta">
             <span class="badge status-${game.status || "unknown"}">${e(statusBadge(game.status, lang).replace(/<[^>]*>/g, ""))}</span>
             ${game.platforms.length ? `<span class="badge plain">${e(game.platforms.join(" · "))}</span>` : ""}
             ${profile?.genre ? `<span class="badge plain">${e(profile.genre)}</span>` : ""}
           </div>
           <div class="game-hero-cta">
-            ${game.websiteUrl ? `<a class="primary-btn" href="${e(game.websiteUrl)}" rel="noopener" target="_blank">${e(s.gamePlayCTA)}</a>` : ""}
+            ${playUrl ? `<a class="primary-btn" href="${e(playUrl)}" rel="noopener" target="_blank" data-play="game_page">${e(s.gamePlayCTA)}</a>` : ""}
             <a class="ghost-btn" href="#gameAbout">${e(s.gameAboutCTA)}</a>
             ${links.discuss ? `<a class="ghost-btn" href="${e(links.discuss)}">${e(s.gameDiscussCTA)}</a>` : ""}
             ${viewer ? `<button class="ghost-btn game-favorite-btn" data-game-id="${game.id}" data-favorited="${isFavorited ? 1 : 0}" data-favorited-short-added="${e(s.gameAddFavoriteShortCTA)}" data-favorited-short-removed="${e(s.gameRemoveFavoriteShortCTA)}" data-favorited-label-added="${e(s.gameRemoveFavoriteCTA)}" data-favorited-label-removed="${e(s.gameAddFavoriteCTA)}" aria-label="${isFavorited ? e(s.gameRemoveFavoriteCTA) : e(s.gameAddFavoriteCTA)}">${isFavorited ? e(s.gameRemoveFavoriteShortCTA) : e(s.gameAddFavoriteShortCTA)}</button>` : ""}
@@ -410,45 +382,6 @@ export const gamePage = {
         </div>
       </section>` : "";
 
-    const worldsSectionHtml = profile?.worlds
-      ? `<section id="gameWorlds" class="game-section" aria-labelledby="gameWorldsTitle">
-        <div class="container">
-          <div class="section-head"><div>
-            <div class="eyebrow">${e(profile.worldsHeading?.title || (en ? "Worlds" : "Миры"))}</div>
-            <h2 id="gameWorldsTitle">${e(profile.worldsHeading?.title || (en ? "Worlds" : "Миры"))}</h2>
-            ${profile.worldsHeading?.text ? `<p class="section-text">${e(profile.worldsHeading.text)}</p>` : ""}
-          </div></div>
-          <div class="game-worlds-grid">
-            ${profile.worlds.map((w) => `<article class="card">
-              <div class="card-body">
-                <h3 class="card-title">${e(w.name)}</h3>
-                ${w.tag ? `<p class="card-meta">${e(w.tag)}</p>` : ""}
-                ${w.summary ? `<p class="card-text">${e(w.summary)}</p>` : ""}
-              </div>
-            </article>`).join("")}
-          </div>
-        </div>
-      </section>` : "";
-
-    const featuresSectionHtml = profile?.features
-      ? `<section id="gameFeatures" class="game-section" aria-labelledby="gameFeaturesTitle">
-        <div class="container">
-          <div class="section-head"><div>
-            <div class="eyebrow">${e(profile?.featuresHeading?.title || (en ? "Features" : "Особенности"))}</div>
-            <h2 id="gameFeaturesTitle">${e(profile?.featuresHeading?.title || (en ? "Features" : "Особенности"))}</h2>
-          </div></div>
-          <div class="game-features-grid">
-            ${profile.features.map((f) => `<article class="card">
-              <div class="card-body">
-                <h3 class="card-title">${e(f.title)}</h3>
-                ${f.subtitle ? `<p class="card-meta">${e(f.subtitle)}</p>` : ""}
-                ${f.text ? `<p class="card-text">${e(f.text)}</p>` : ""}
-              </div>
-            </article>`).join("")}
-          </div>
-        </div>
-      </section>` : "";
-
     const screenshotsHtml = media.length
       ? `<section id="gameScreenshots" class="game-section" aria-labelledby="gameScreenshotsTitle">
         <div class="container">
@@ -465,62 +398,17 @@ export const gamePage = {
         </div>
       </section>` : "";
 
-    const roadmapHtml = roadmapPosts.posts.length
-      ? `<section id="gameRoadmap" class="game-section" aria-labelledby="gameRoadmapTitle">
-        <div class="container">
-          <div class="section-head"><div>
-            <div class="eyebrow">${e(s.gameRoadmap)}</div>
-            <h2 id="gameRoadmapTitle">${e(s.gameRoadmap)}</h2>
-          </div></div>
-          <div class="grid-posts">${roadmapPosts.posts.map((p) => postCard(p, lang)).join("")}</div>
-        </div>
-      </section>` : `<section id="gameRoadmap" class="game-section" aria-labelledby="gameRoadmapTitle">
-        <div class="container">
-          <div class="section-head"><div>
-            <div class="eyebrow">${e(s.gameRoadmap)}</div>
-            <h2 id="gameRoadmapTitle">${e(s.gameRoadmap)}</h2>
-          </div></div>
-          ${emptyCard(e(s.gameNoRoadmap), "")}
-        </div>
-      </section>`;
-
-    const newsHtml = news.posts.length
-      ? `<section id="gameNews" class="game-section" aria-labelledby="gameNewsTitle">
-        <div class="container">
-          <div class="section-head"><div>
-            <div class="eyebrow">${e(s.gameNews)}</div>
-            <h2 id="gameNewsTitle">${e(s.gameNews)}</h2>
-          </div></div>
-          <div class="grid-posts">${news.posts.map((p) => postCard(p, lang)).join("")}</div>
-        </div>
-      </section>` : `<section id="gameNews" class="game-section" aria-labelledby="gameNewsTitle">
-        <div class="container">
-          <div class="section-head"><div>
-            <div class="eyebrow">${e(s.gameNews)}</div>
-            <h2 id="gameNewsTitle">${e(s.gameNews)}</h2>
-          </div></div>
-          ${emptyCard(e(s.gameNoNews), "")}
-        </div>
-      </section>`;
-
-    const devlogHtml = devlog.posts.length
+    const latestDevlog = devlog.posts[0];
+    const devlogHtml = latestDevlog
       ? `<section id="gameDevlog" class="game-section" aria-labelledby="gameDevlogTitle">
         <div class="container">
           <div class="section-head"><div>
             <div class="eyebrow">${e(s.gameDevlog)}</div>
             <h2 id="gameDevlogTitle">${e(s.gameDevlog)}</h2>
           </div></div>
-          <div class="grid-posts">${devlog.posts.map((p) => postCard(p, lang)).join("")}</div>
+          <div class="grid-posts">${postCard(latestDevlog, lang)}</div>
         </div>
-      </section>` : `<section id="gameDevlog" class="game-section" aria-labelledby="gameDevlogTitle">
-        <div class="container">
-          <div class="section-head"><div>
-            <div class="eyebrow">${e(s.gameDevlog)}</div>
-            <h2 id="gameDevlogTitle">${e(s.gameDevlog)}</h2>
-          </div></div>
-          ${emptyCard(e(s.gameNoDevlog), "")}
-        </div>
-      </section>`;
+      </section>` : "";
 
     const communityHtml = links.discuss || threads.length
       ? `<section id="gameCommunity" class="game-section" aria-labelledby="gameCommunityTitle">
@@ -625,11 +513,7 @@ export const gamePage = {
 
     const sectionIds = [
       [aboutSectionHtml, "gameAbout", s.gameAbout],
-      [worldsSectionHtml, "gameWorlds", profile?.worldsHeading?.title || (en ? "Worlds" : "Миры")],
-      [featuresSectionHtml, "gameFeatures", profile?.featuresHeading?.title || (en ? "Features" : "Особенности")],
       [screenshotsHtml, "gameScreenshots", s.gameScreenshots],
-      [roadmapHtml, "gameRoadmap", s.gameRoadmap],
-      [newsHtml, "gameNews", s.gameNews],
       [devlogHtml, "gameDevlog", s.gameDevlog],
       [communityHtml, "gameCommunity", s.gameCommunity],
       [reviewsHtml, "gameReviews", s.gameReviewsTitle],
@@ -642,32 +526,14 @@ export const gamePage = {
       </nav>`
       : "";
 
-    // ==================== TELEGRAM ====================
-    const telegramHtml = `
-    <section class="home-telegram" aria-labelledby="telegramTitle">
-      <div class="container">
-        <div class="section-head"><div>
-          <div class="eyebrow">${e(s.telegramEyebrow)}</div>
-          <h2 id="telegramTitle">${e(s.telegramTitle)}</h2>
-          <p class="section-text">${e(s.telegramText)}</p>
-        </div></div>
-        <a class="primary-btn btn-lg" href="https://t.me/EndemionOfficial" target="_blank" rel="noopener">${e(s.telegramCTA)}</a>
-      </div>
-    </section>`;
-
     const body = `
     <div class="container page">
       ${hero}
       ${sectionNavHtml}
       ${aboutSectionHtml}
-      ${worldsSectionHtml}
-      ${featuresSectionHtml}
       ${screenshotsHtml}
-      ${roadmapHtml}
-      ${newsHtml}
       ${devlogHtml}
       ${communityHtml}
-      ${telegramHtml}
       ${reviewsHtml}
       ${statusHtml}
       <div class="gp-page-end"></div>
@@ -681,7 +547,7 @@ export const gamePage = {
     return renderPage(request, {
       title: seo.title || game.title, fullTitle: Boolean(seo.title), path: `/games/${game.slug}`, active: "games", body,
       styles: [...STYLES, "game-page.css"], scripts: ["game-page.js"], description, mainClass: "gp-page",
-      noindex: !game.published || devlogPage > 1,
+      noindex: !game.published,
       head: head({ title: ogTitle, description, url: pageUrl, image })
         + `\n  <meta property="og:image:alt" content="${e(`Обложка ${game.title}`)}">`
         + `\n  <meta name="twitter:title" content="${e(ogTitle)}">\n  <meta name="twitter:description" content="${e(description)}">`

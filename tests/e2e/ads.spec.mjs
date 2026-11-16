@@ -1,4 +1,4 @@
-// Реклама Яндекс.РСЯ на главной: блок стоит в отведённом месте и показывается только после согласия на cookie.
+// Реклама Яндекс.РСЯ в сообществе: блок показывается только после согласия на cookie.
 // Нужен сервер с YANDEX_ADS_PAGE_ID (любой номер из цифр). Запросы к Яндексу в тестах не уходят в интернет: отвечают заглушки
 
 import { expect, test } from "@playwright/test";
@@ -38,22 +38,15 @@ test.beforeEach(async ({ page }, testInfo) => {
 const yandexRequested = (page) => page.evaluate(() => [...document.scripts].some((script) => script.src.includes("yandex.ru")));
 
 test("без согласия реклама не загружается", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/community");
   await expect(page.locator(".consent-banner")).toBeVisible();
   expect(await yandexRequested(page)).toBe(false);
 });
 
-test("после согласия блок появляется между избранным проектом и нашими играми", async ({ page }) => {
-  await page.goto("/");
+test("после согласия блок появляется в сообществе", async ({ page }) => {
+  await page.goto("/community");
   await page.getByRole("button", { name: "Разрешить" }).click();
   await expect(page.locator(".ads-slot iframe")).toHaveCount(1);
-
-  // Место блока: после избранного проекта и до каталога игр
-  const featured = await page.locator("#featuredTitle").boundingBox();
-  const ad = await page.locator(".ads-slot").boundingBox();
-  const games = await page.locator("#gamesTitle").boundingBox();
-  expect(ad.y).toBeGreaterThan(featured.y + featured.height - 1);
-  expect(ad.y).toBeLessThan(games.y);
 
   // Выбор сохраняется: после перезагрузки реклама показывается без нового вопроса
   await page.reload();

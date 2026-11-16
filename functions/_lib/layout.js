@@ -21,7 +21,7 @@ export const NAV = [
 export const NAV_MORE = [];
 
 // Версия assets добавляется к URL, чтобы браузеры обновляли кеш при выкладке. Время сборки в base36
-export const ASSET_VERSION = "tnyz8c";
+export const ASSET_VERSION = "mwjd08l9";
 
 // Контуры иконок 24×24. Такие же есть в public/assets/app.js для иконок, которые рисует скрипт
 const ICONS = {
@@ -56,6 +56,7 @@ export function siteHeader(active, s) {
         </form>
         <a class="icon-btn" id="notifyButton" href="/notifications" aria-label="${e(s.notifications)}" hidden>${svgIcon("bell")}<span class="badge-count" id="notifyCount" hidden></span></a>
         <a class="ghost-btn register-btn" id="registerButton" href="/auth?mode=register" hidden>${e(s.register)}</a>
+        <a class="primary-btn play-now" href="https://life.endemion.online?utm_source=portal&amp;utm_medium=header" rel="noopener" data-play="header">${e(s.playNow)}</a>
         <a class="profile-btn" id="accountButton" href="/auth">${e(s.login)}</a>
         <button class="lang-btn" type="button" data-lang-toggle aria-label="${e(s.langSwitch)}">${e(s.langSwitch)}</button>
         <button class="icon-btn menu-toggle" type="button" aria-controls="navLinks" aria-expanded="false" aria-label="${e(s.menu)}">${svgIcon("menu", "icon-open")}${svgIcon("close", "icon-close")}</button>
