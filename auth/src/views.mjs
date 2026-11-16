@@ -24,13 +24,15 @@ function layout({ title, content, wide = false, scripts = [], home = "/account" 
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#080a10">
+  <meta name="theme-color" content="#08090b">
   <meta name="robots" content="noindex">
   <title>${escapeHtml(title)} — Endemion ID</title>
   <link rel="icon" href="/favicon.ico?v=2" sizes="32x32">
   <link rel="icon" href="/icons/favicon-32x32.png?v=2" type="image/png" sizes="32x32">
   <link rel="icon" href="/icons/favicon-16x16.png?v=2" type="image/png" sizes="16x16">
-  <link rel="stylesheet" href="/assets/auth.css">
+  <link rel="preload" href="/assets/fonts/alegreya-cyrillic-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/assets/fonts/golos-text-cyrillic-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/assets/auth.css?v=life1">
   <script type="module" src="/assets/reveal.js"></script>
 ${scripts.map((src) => `  <script type="module" src="${escapeHtml(src)}"></script>`).join("\n")}
 </head>

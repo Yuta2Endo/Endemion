@@ -1,5 +1,5 @@
 // Деплой прода: сайт endemion.online живёт на VPS (Docker: app + auth + Caddy), а не в воркере.
-// Скрипт переключает сервер на origin/<ветка>, пересобирает app, ждёт здоровье и гоняет смоук.
+// Скрипт переключает сервер на origin/<ветка>, пересобирает app и auth, ждёт здоровье и гоняет смоук.
 // Воркер `npm run deploy` остаётся предпросмотром на *.workers.dev и прод не обслуживает.
 //
 // Настройки через окружение: DEPLOY_HOST (root@185.175.156.196), DEPLOY_KEY (~/.ssh/endemion_vps),
@@ -39,8 +39,8 @@ cd ${DIR}
 git fetch -q origin ${BRANCH}
 git checkout -q --detach origin/${BRANCH}
 git log --oneline -1
-docker compose build app
-docker compose up -d --no-deps app
+docker compose build app auth
+docker compose up -d --no-deps app auth
 docker compose ps --format "table {{.Service}}\t{{.Status}}"`);
 
 console.log("\nЖду, пока сайт поднимется");
