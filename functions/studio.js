@@ -68,32 +68,125 @@ export const home = {
     const playUrl = featured?.websiteUrl
       ? `${featured.websiteUrl}${featured.websiteUrl.includes("?") ? "&" : "?"}utm_source=portal&utm_medium=home_hero`
       : "/games";
+    const heroCover = featured?.coverUrl || (featured?.slug === "endemion-life" ? "/assets/games/endemion-life/cover-1024.webp" : "");
+    const worlds = GAME_PROFILES["endemion-life"]?.worlds || [];
+    const gameHref = featured ? `/games/${e(featured.slug)}` : "/games";
 
     // ==================== HERO ====================
-    // Первый экран продаёт одну игру, а не каталог: главная — воронка в Endemion Life.
+    // Первый экран — редакционное фолио: одна жизнь, один род, одна история.
+    // Справа не абстрактная орбита, а конкретная жизнь из игры: так решение видно до перехода.
+    const folioEvents = [
+      [s.homeFolioYear1, s.homeFolioEvent1],
+      [s.homeFolioYear2, s.homeFolioEvent2],
+      [s.homeFolioYear3, s.homeFolioEvent3],
+      [s.homeFolioYear4, s.homeFolioEvent4]
+    ];
     const hero = `
     <section class="home-hero" aria-labelledby="heroTitle">
-      <div class="home-hero-bg" aria-hidden="true">${featured?.coverUrl ? `<img src="${e(featured.coverUrl)}" alt="" fetchpriority="high" decoding="async">` : ""}</div>
+      <div class="home-hero-bg" aria-hidden="true">${heroCover ? `<img src="${e(heroCover)}" alt="" fetchpriority="high" decoding="async">` : ""}</div>
       <div class="container home-hero-inner">
         <div class="home-hero-content rise">
           <div class="eyebrow">${e(s.homeEyebrow)}</div>
-          <h1 class="display-1" id="heroTitle"><span class="gradient-text">${e(s.homeTitle)}</span></h1>
-          <p class="lead">${e(featured?.tagline || featured?.description || s.homeLead)}</p>
+          <h1 class="display-1" id="heroTitle">${e(s.homeTitle)}</h1>
+          <p class="lead">${e(s.homeLead)}</p>
           ${featured ? `<div class="hero-meta">${statusBadge(featured.status, lang)}<span>${e(featured.platforms.join(" · ") || (en ? "Browser" : "Браузер"))}</span></div>` : ""}
           <div class="hero-actions">
             <a class="primary-btn btn-lg" href="${e(playUrl)}" rel="noopener" data-play="hero">${e(featured ? s.homePlayCTA : s.homeExploreGames)}</a>
-            <a class="hero-alt-link" href="${featured ? `/games/${e(featured.slug)}` : "/games"}">${e(featured ? s.homeHowItWorks : s.homeExploreGames)} <span aria-hidden="true">→</span></a>
+            <a class="hero-alt-link" href="${gameHref}${featured ? "#worlds" : ""}">${e(featured ? s.homeHowItWorks : s.homeExploreGames)} <span aria-hidden="true">→</span></a>
           </div>
           <p class="hero-trust">${e(s.homeTrust)}</p>
         </div>
-        <div class="home-hero-visual rise rise-2" aria-hidden="true">
-          <div class="orbit">
-            <span class="orbit-ring orbit-ring-1"></span>
-            <span class="orbit-ring orbit-ring-2"></span>
-            <span class="orbit-ring orbit-ring-3"></span>
-            <span class="orbit-dot orbit-dot-1"></span>
-            <span class="orbit-dot orbit-dot-2"></span>
-            <span class="orbit-core">E</span>
+        <aside class="folio rise rise-2" aria-label="${e(s.homeFolioAria)}">
+          <div class="folio-top">
+            <span class="folio-index">${e(s.homeFolioIndex)}</span>
+            <span class="folio-house">${e(s.homeFolioHouse)}</span>
+          </div>
+          <div class="folio-title">
+            <h2 class="folio-name">${e(s.homeFolioName)}</h2>
+            <span class="folio-seal" aria-hidden="true">E</span>
+          </div>
+          <div class="folio-tags">
+            <span class="folio-tag">${e(s.homeFolioTag1)}</span>
+            <span class="folio-tag is-jade">${e(s.homeFolioTag2)}</span>
+            <span class="folio-tag is-gold">${e(s.homeFolioTag3)}</span>
+          </div>
+          <dl class="folio-facts">
+            <div><dt>${e(s.homeFolioProfession)}</dt><dd>${e(s.homeFolioProfessionValue)}</dd></div>
+            <div><dt>${e(s.homeFolioHouseLabel)}</dt><dd>${e(s.homeFolioHouseValue)}</dd></div>
+            <div><dt>${e(s.homeFolioHeir)}</dt><dd>${e(s.homeFolioHeirValue)}</dd></div>
+            <div><dt>${e(s.homeFolioReputation)}</dt><dd>${e(s.homeFolioReputationValue)}</dd></div>
+          </dl>
+          <div class="folio-chronicle">
+            <div class="folio-chronicle-title">${e(s.homeFolioChronicleAria)}</div>
+            <ol aria-label="${e(s.homeFolioChronicleAria)}">
+              ${folioEvents.map(([year, event], index) => `<li${index === folioEvents.length - 1 ? ' class="is-current"' : ""}><span class="folio-year">${e(year)}</span><span class="folio-event">${e(event)}</span></li>`).join("")}
+            </ol>
+          </div>
+          <p class="folio-foot">${e(s.homeFolioFoot)}</p>
+        </aside>
+      </div>
+    </section>`;
+
+    // ==================== ATLAS OF WORLDS ====================
+    // Шесть миров из профиля игры: место рождения задаёт правила жизни.
+    const worldsBlock = worlds.length ? `
+    <section class="home-worlds" aria-labelledby="worldsTitle">
+      <div class="container">
+        <div class="section-head section-head-editorial">
+          <div>
+            <div class="eyebrow">${e(s.homeWorldsEyebrow)}</div>
+            <h2 id="worldsTitle">${e(s.homeWorldsTitle)}</h2>
+            <p class="section-text">${e(s.homeWorldsText)}</p>
+          </div>
+          <a class="ghost-btn small-btn" href="${gameHref}#worlds">${e(s.homeWorldsChoose)}</a>
+        </div>
+        <div class="home-worlds-grid">
+          ${worlds.map((world) => `
+          <article class="home-world world-${e(world.theme)}">
+            <span class="world-rule" aria-hidden="true"></span>
+            <div class="world-head">
+              <span class="world-glyph" aria-hidden="true">${e(world.glyph)}</span>
+              <span class="world-tag">${e(world.tag)}</span>
+            </div>
+            <h3 class="world-name">${e(world.name)}</h3>
+            <p class="world-summary">${e(world.summary)}</p>
+            <div class="world-actions">
+              <a class="world-birth" href="${e(playUrl)}" rel="noopener" data-play="world_${e(world.theme)}">${e(s.homeWorldsBirth)}</a>
+              <a class="world-choose" href="${gameHref}#worlds">${e(s.homeWorldsChoose)} <span aria-hidden="true">→</span></a>
+            </div>
+          </article>`).join("")}
+        </div>
+      </div>
+    </section>` : "";
+
+    // ==================== ONE YEAR ====================
+    // Один год игры как пример цикла: событие, выбор, последствие.
+    const yearChoices = [
+      [s.homeYearChoice1, s.homeYearChoice1Meta],
+      [s.homeYearChoice2, s.homeYearChoice2Meta],
+      [s.homeYearChoice3, s.homeYearChoice3Meta]
+    ];
+    const yearBlock = `
+    <section class="home-year" aria-labelledby="yearTitle">
+      <div class="container">
+        <div class="home-year-grid">
+          <div class="year-copy">
+            <div class="eyebrow">${e(s.homeYearEyebrow)}</div>
+            <h2 id="yearTitle">${e(s.homeYearTitle)}</h2>
+            <p class="section-text">${e(s.homeYearLead)}</p>
+            <a class="primary-btn year-cta" href="${e(playUrl)}" rel="noopener" data-play="year">${e(s.homeYearCta)}</a>
+          </div>
+          <div class="year-card">
+            <div class="year-card-top">
+              <span>${e(s.homeYearLabel)}</span>
+              <span class="year-card-mark" aria-hidden="true">III</span>
+            </div>
+            <h3 class="year-event">${e(s.homeYearEvent)}</h3>
+            <p class="year-text">${e(s.homeYearText)}</p>
+            <div class="year-choices">
+              ${yearChoices.map(([label, meta]) => `<a class="year-choice" href="${e(playUrl)}" rel="noopener" data-play="year_choice"><span>${e(label)}</span><span class="year-choice-meta">${e(meta)}</span></a>`).join("")}
+            </div>
+            <p class="year-foot">${e(s.homeYearFoot)}</p>
           </div>
         </div>
       </div>
@@ -106,7 +199,7 @@ export const home = {
     <section class="home-games" aria-labelledby="gamesTitle">
       <div class="container">
         <div class="section-head"><div>
-          <div class="eyebrow">${e(s.homeOtherGames)}</div>
+          <div class="eyebrow">${e(s.homeOtherGamesEyebrow)}</div>
           <h2 id="gamesTitle">${e(s.homeOtherGames)}</h2>
         </div>
         <a class="ghost-btn small-btn" href="/games">${e(s.homeAllGames)}</a></div>
@@ -119,7 +212,7 @@ export const home = {
     <section class="home-community" aria-labelledby="communityTitle">
       <div class="container">
         <div class="section-head"><div>
-          <div class="eyebrow">${e(s.homeCommunityLatest)}</div>
+          <div class="eyebrow">${e(s.homeCommunityEyebrow)}</div>
           <h2 id="communityTitle">${e(s.homeCommunityLatest)}</h2>
         </div>
         <a class="ghost-btn small-btn" href="/community">${e(s.homeVisitCommunity)}</a></div>
@@ -134,7 +227,7 @@ export const home = {
     <section class="home-devlog" aria-labelledby="devTitle">
       <div class="container">
         <div class="section-head"><div>
-          <div class="eyebrow">${e(s.homeDevUpdates)}</div>
+          <div class="eyebrow">${e(s.homeDevEyebrow)}</div>
           <h2 id="devTitle">${e(s.homeDevNews)}</h2>
         </div>
         <a class="ghost-btn small-btn" href="/studio?tab=devlog">${e(s.homeAllEntries)}</a></div>
@@ -152,7 +245,7 @@ export const home = {
     <section class="home-upcoming" aria-labelledby="upcomingTitle">
       <div class="container">
         <div class="section-head"><div>
-          <div class="eyebrow">${e(s.homeUpcoming)}</div>
+          <div class="eyebrow">${e(s.homeUpcomingEyebrow)}</div>
           <h2 id="upcomingTitle">${e(s.homeUpcoming)}</h2>
         </div></div>
       <div class="grid-games">${upcoming.map((g) => gameCard(g, lang)).join("")}</div>
@@ -165,17 +258,17 @@ export const home = {
     const metaTitle = en ? "Endemion Life — browser life simulator" : "Endemion Life — браузерный симулятор жизни";
     return renderPage(request, {
       path: "/", active: "home", styles: STYLES, scripts: SCRIPTS, title: metaTitle, description,
-      head: head({ title: `${metaTitle} | ENDEMION`, description, url: `${origin}/`, image: `${origin}/assets/og-image.png` })
+      head: head({ title: `${metaTitle} | ENDEMION`, description, url: `${origin}/`, image: `${origin}/assets/games/endemion-life/og.jpg` })
         + ld({ "@context": "https://schema.org", "@type": "Organization", name: "Endemion", url: `${origin}/` })
         + (featured ? ld({
           "@context": "https://schema.org", "@type": "VideoGame", name: featured.title,
           description: featured.description || featured.tagline || description,
           url: featured.websiteUrl || `${origin}/games/${featured.slug}`,
-          image: featured.coverUrl ? new URL(featured.coverUrl, origin).href : undefined,
+          image: new URL(heroCover || "/assets/games/endemion-life/og.jpg", origin).href,
           applicationCategory: "Game",
           operatingSystem: featured.platforms.join(", ")
         }) : ""),
-      body: hero + devBlock + communityBlock + gamesBlock + upcomingBlock
+      body: hero + worldsBlock + yearBlock + communityBlock + devBlock + gamesBlock + upcomingBlock
     });
   }
 };

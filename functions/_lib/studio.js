@@ -310,8 +310,14 @@ function initials(title) {
 /** Обложка игры или заглушка с явной подписью: временная картинка не выдаётся за игровой ассет */
 export function gameArt(game, { eager = false, lang = "ru" } = {}) {
   const cover = lang === "en" ? "Cover" : "Обложка";
-  if (game.coverUrl) {
-    return `<img src="${e(game.coverUrl)}" alt="${cover} ${e(game.title)}" ${eager ? 'fetchpriority="high"' : 'loading="lazy"'} decoding="async" width="1280" height="720">`;
+  // Обложка Endemion Life лежит в репозитории: показываем её, даже если в базе
+  // ещё нет cover_version (миграция старых игр).
+  const bundled = !game.coverUrl && game.slug === "endemion-life"
+    ? "/assets/games/endemion-life/cover-1024.webp"
+    : "";
+  const src = game.coverUrl || bundled;
+  if (src) {
+    return `<img src="${e(src)}" alt="${cover} ${e(game.title)}" ${eager ? 'fetchpriority="high"' : 'loading="lazy"'} decoding="async" width="1280" height="720">`;
   }
   const soon = lang === "en" ? "Cover coming soon" : "Обложка скоро появится";
   return `<div class="placeholder-art art-${artVariant(game.slug)}" role="img" aria-label="${cover} ${e(game.title)}">

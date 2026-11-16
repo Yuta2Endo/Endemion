@@ -21,7 +21,7 @@ export const NAV = [
 export const NAV_MORE = [];
 
 // Версия assets добавляется к URL, чтобы браузеры обновляли кеш при выкладке. Время сборки в base36
-export const ASSET_VERSION = "mwjd08l9";
+export const ASSET_VERSION = "mwlife01";
 
 // Контуры иконок 24×24. Такие же есть в public/assets/app.js для иконок, которые рисует скрипт
 const ICONS = {
@@ -71,7 +71,7 @@ export function siteFooter(s) {
     <div class="container footer-grid">
       <div class="footer-about">
         <a class="logo" href="/" aria-label="${e(s.homeAria)}"><span class="logo-mark" aria-hidden="true"></span><span class="logo-text">ENDEMION</span></a>
-        <p class="footer-tagline">Create. Play. Connect.</p>
+        <p class="footer-tagline">${e(s.homeTitle)}</p>
         <p class="footer-text">${e(s.footerText)}</p>
         <ul class="footer-social" id="footerSocial" aria-label="${e(s.social)}">
           <li data-static><a href="https://t.me/EndemionOfficial" rel="noopener" target="_blank">${svgIcon("telegram")} ${e(s.telegramCTA)}</a></li>
@@ -123,7 +123,7 @@ export function renderPage(request, {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#080a10">
+  <meta name="theme-color" content="#08090b">
   <title>${e(fullTitle)}</title>
   <meta name="description" content="${e(desc)}">
   ${noindex ? '<meta name="robots" content="noindex">' : ""}
@@ -141,11 +141,12 @@ export function renderPage(request, {
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png?v=2" sizes="180x180">
   <meta name="apple-mobile-web-app-title" content="ENDEMION">
-  <link rel="preload" href="/assets/fonts/manrope-cyrillic-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="preload" href="/assets/fonts/unbounded-cyrillic-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/assets/fonts/alegreya-cyrillic-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/assets/fonts/golos-text-cyrillic-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/assets/base.css?v=${ASSET_VERSION}">
   <link rel="stylesheet" href="/assets/ui.css?v=${ASSET_VERSION}">
   ${styles.map((file) => `<link rel="stylesheet" href="/assets/${file}?v=${ASSET_VERSION}">`).join("\n  ")}
+  <link rel="stylesheet" href="/assets/life-theme.css?v=${ASSET_VERSION}">
   <script type="module" src="/assets/lang.js?v=${ASSET_VERSION}"></script>
   ${scripts.map((file) => `<script type="module" src="/assets/${file}?v=${ASSET_VERSION}"></script>`).join("\n  ")}
 </head>

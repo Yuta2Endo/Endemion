@@ -26,10 +26,12 @@ export function icon(name) {
     `stroke-linejoin="round" aria-hidden="true">${ICONS[name] || ICONS.globe}</svg>`;
 }
 
-/** Обложка: оптимизированные копии из профиля, пока в админке не загружена новая; иначе — оригинал из хранилища */
+/** Обложка: оптимизированные копии из профиля, пока в админке не загружена новая; иначе — оригинал из хранилища.
+ *  Для Endemion Life профильная обложка лежит в репозитории, поэтому показываем её и без cover_version в базе. */
 export function coverSources(game, profile) {
   const art = profile?.cover;
-  if (art && game.coverVersion === art.version) {
+  const bundledCover = game.slug === "endemion-life" && !game.coverVersion;
+  if (art && (game.coverVersion === art.version || bundledCover)) {
     const srcset = art.widths.map((w) => `${art.base}-${w}.webp ${w}w`).join(", ");
     return { src: `${art.base}-${art.widths.at(-1)}.webp`, srcset, width: art.width, height: art.height, og: art.og };
   }
